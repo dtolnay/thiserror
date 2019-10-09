@@ -1,8 +1,8 @@
 [package]
-name = "thiserror"
+name = "thiserror-impl"
 version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 
-[dependencies]
-thiserror-impl = { version = "0.0", path = "impl" }
+[lib]
+proc-macro = true
