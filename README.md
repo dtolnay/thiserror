@@ -44,6 +44,11 @@ pub enum DataStoreError {
 
 ## Details
 
+- Thiserror deliberately does not appear in your public API. You get the same
+  thing as if you had written an implementation of `std::error::Error` by hand,
+  and switching from handwritten impls to thiserror or vice versa is not a
+  breaking change.
+
 - Errors may be enums, structs with named fields, tuple structs, or unit
   structs.
 
