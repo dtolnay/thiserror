@@ -2,8 +2,8 @@ use crate::attr;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, FieldsNamed, FieldsUnnamed, Index,
-    Member, Result, Type,
+    Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident, Index, Member, Result,
+    Type,
 };
 
 pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
@@ -22,14 +22,14 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let source = match &data.fields {
-        Fields::Named(fields) => braced_struct_source(fields)?,
-        Fields::Unnamed(fields) => tuple_struct_source(fields)?,
+        Fields::Named(fields) => source_member(&fields.named)?,
+        Fields::Unnamed(fields) => source_member(&fields.unnamed)?,
         Fields::Unit => None,
     };
 
     let backtrace = match &data.fields {
-        Fields::Named(fields) => braced_struct_backtrace(fields)?,
-        Fields::Unnamed(fields) => tuple_struct_backtrace(fields)?,
+        Fields::Named(fields) => backtrace_member(&fields.named)?,
+        Fields::Unnamed(fields) => backtrace_member(&fields.unnamed)?,
         Fields::Unit => None,
     };
 
@@ -57,37 +57,19 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     })
 }
 
-fn braced_struct_source(fields: &FieldsNamed) -> Result<Option<Member>> {
-    for field in &fields.named {
+fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
+    for (i, field) in fields.into_iter().enumerate() {
         if attr::is_source(field)? {
-            return Ok(Some(Member::Named(field.ident.as_ref().unwrap().clone())));
+            return Ok(Some(member(i, &field.ident)));
         }
     }
     Ok(None)
 }
 
-fn tuple_struct_source(fields: &FieldsUnnamed) -> Result<Option<Member>> {
-    for (i, field) in fields.unnamed.iter().enumerate() {
-        if attr::is_source(field)? {
-            return Ok(Some(Member::Unnamed(Index::from(i))));
-        }
-    }
-    Ok(None)
-}
-
-fn braced_struct_backtrace(fields: &FieldsNamed) -> Result<Option<Member>> {
-    for field in &fields.named {
+fn backtrace_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
+    for (i, field) in fields.into_iter().enumerate() {
         if type_is_backtrace(&field.ty) {
-            return Ok(Some(Member::Named(field.ident.as_ref().unwrap().clone())));
-        }
-    }
-    Ok(None)
-}
-
-fn tuple_struct_backtrace(fields: &FieldsUnnamed) -> Result<Option<Member>> {
-    for (i, field) in fields.unnamed.iter().enumerate() {
-        if type_is_backtrace(&field.ty) {
-            return Ok(Some(Member::Unnamed(Index::from(i))));
+            return Ok(Some(member(i, &field.ident)));
         }
     }
     Ok(None)
@@ -101,6 +83,13 @@ fn type_is_backtrace(ty: &Type) -> bool {
 
     let last = path.segments.last().unwrap();
     last.ident == "Backtrace" && last.arguments.is_empty()
+}
+
+fn member(i: usize, ident: &Option<Ident>) -> Member {
+    match ident {
+        Some(ident) => Member::Named(ident.clone()),
+        None => Member::Unnamed(Index::from(i)),
+    }
 }
 
 fn enum_error(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
