@@ -19,7 +19,7 @@ pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
 }
 
 fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
-    let ident = &input.ident;
+    let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let source = match &data.fields {
@@ -65,7 +65,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
             Fields::Unit => quote!(_),
         };
         quote! {
-            impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
+            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #[allow(unused_variables)]
                     let #pat = self;
@@ -76,7 +76,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     });
 
     Ok(quote! {
-        impl #impl_generics std::error::Error for #ident #ty_generics #where_clause {
+        impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
@@ -85,7 +85,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
 }
 
 fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
-    let ident = &input.ident;
+    let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let sources = data
@@ -113,10 +113,10 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
             let ident = &variant.ident;
             match source {
                 Some(source) => quote! {
-                    Self::#ident {#source: source, ..} => std::option::Option::Some(source.as_dyn_error()),
+                    #ty::#ident {#source: source, ..} => std::option::Option::Some(source.as_dyn_error()),
                 },
                 None => quote! {
-                    Self::#ident {..} => std::option::Option::None,
+                    #ty::#ident {..} => std::option::Option::None,
                 },
             }
         });
@@ -137,10 +137,10 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
             let ident = &variant.ident;
             match backtrace {
                 Some(backtrace) => quote! {
-                    Self::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
+                    #ty::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
                 },
                 None => quote! {
-                    Self::#ident {..} => std::option::Option::None,
+                    #ty::#ident {..} => std::option::Option::None,
                 },
             }
         });
@@ -173,18 +173,18 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
                 Ok(match &variant.fields {
                     Fields::Named(fields) => {
                         let var = fields.named.iter().map(|field| &field.ident);
-                        quote!(Self::#ident { #(#var),* } => #display)
+                        quote!(#ty::#ident { #(#var),* } => #display)
                     }
                     Fields::Unnamed(fields) => {
                         let var = (0..fields.unnamed.len()).map(|i| format_ident!("_{}", i));
-                        quote!(Self::#ident(#(#var),*) => #display)
+                        quote!(#ty::#ident(#(#var),*) => #display)
                     }
-                    Fields::Unit => quote!(Self::#ident => #display),
+                    Fields::Unit => quote!(#ty::#ident => #display),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
         Some(quote! {
-            impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
+            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #[allow(unused_variables)]
                     match self {
@@ -198,7 +198,7 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     };
 
     Ok(quote! {
-        impl #impl_generics std::error::Error for #ident #ty_generics #where_clause {
+        impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
