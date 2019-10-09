@@ -21,6 +21,16 @@ struct TupleError(usize);
 #[error("unit error")]
 struct UnitError;
 
+#[derive(Error, Debug)]
+enum EnumError {
+    #[error("braced error: {}", .id)]
+    Braced { id: usize, },
+    #[error("tuple error: {}", .0)]
+    Tuple(usize),
+    #[error("unit error")]
+    Unit,
+}
+
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }
@@ -36,4 +46,7 @@ fn test_display() {
     assert("braced error", BracedUnused { extra: 0 });
     assert("tuple error: 0", TupleError(0));
     assert("unit error", UnitError);
+    assert("braced error: 0", EnumError::Braced { id: 0 });
+    assert("tuple error: 0", EnumError::Tuple(0));
+    assert("unit error", EnumError::Unit);
 }

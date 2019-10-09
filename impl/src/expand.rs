@@ -155,11 +155,54 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         None
     };
 
+    let displays = data
+        .variants
+        .iter()
+        .map(|variant| attr::display(&variant.attrs))
+        .collect::<Result<Vec<_>>>()?;
+    let display = if displays.iter().any(Option::is_some) {
+        let arms = data
+            .variants
+            .iter()
+            .zip(displays)
+            .map(|(variant, display)| {
+                let display = display.ok_or_else(|| {
+                    Error::new_spanned(variant, "missing #[error(\"...\")] display attribute")
+                })?;
+                let ident = &variant.ident;
+                Ok(match &variant.fields {
+                    Fields::Named(fields) => {
+                        let var = fields.named.iter().map(|field| &field.ident);
+                        quote!(Self::#ident { #(#var),* } => #display)
+                    }
+                    Fields::Unnamed(fields) => {
+                        let var = (0..fields.unnamed.len()).map(|i| format_ident!("_{}", i));
+                        quote!(Self::#ident(#(#var),*) => #display)
+                    }
+                    Fields::Unit => quote!(Self::#ident => #display),
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Some(quote! {
+            impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
+                fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    #[allow(unused_variables)]
+                    match self {
+                        #(#arms,)*
+                    }
+                }
+            }
+        })
+    } else {
+        None
+    };
+
     Ok(quote! {
         impl #impl_generics std::error::Error for #ident #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
+        #display
     })
 }
 
