@@ -36,7 +36,9 @@ impl Parse for Display {
             args.extend(once(token));
         }
 
-        Ok(Display { fmt, args })
+        let mut display = Display { fmt, args };
+        display.expand_shorthand();
+        Ok(display)
     }
 }
 
