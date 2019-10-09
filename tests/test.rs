@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fmt::{self, Display};
 use std::io;
 use thiserror::Error;
@@ -36,8 +38,19 @@ struct WithAnyhow {
     cause: anyhow::Error,
 }
 
+#[derive(Error, Debug)]
+enum EnumError {
+    Braced {
+        #[source]
+        cause: io::Error,
+    },
+    Tuple(#[source] io::Error),
+    Unit,
+}
+
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
 unimplemented_display!(UnitError);
 unimplemented_display!(WithSource);
 unimplemented_display!(WithAnyhow);
+unimplemented_display!(EnumError);
