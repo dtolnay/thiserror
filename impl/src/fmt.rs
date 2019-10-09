@@ -17,7 +17,7 @@ impl Display {
         let mut args = TokenStream::new();
 
         while let Some(brace) = read.find('{') {
-            out += &read[..brace + 1];
+            out += &read[..=brace];
             read = &read[brace + 1..];
             if read.starts_with('{') {
                 out.push('{');
