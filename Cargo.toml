@@ -3,6 +3,11 @@ name = "thiserror"
 version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "derive(Error)"
+repository = "https://github.com/dtolnay/thiserror"
+documentation = "https://docs.rs/thiserror"
+readme = "README.md"
 
 [dependencies]
 thiserror-impl = { version = "0.0", path = "impl" }

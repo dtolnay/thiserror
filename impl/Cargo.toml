@@ -3,6 +3,9 @@ name = "thiserror-impl"
 version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Implementation detail of the `thiserror` crate"
+repository = "https://github.com/dtolnay/thiserror"
 
 [lib]
 proc-macro = true
