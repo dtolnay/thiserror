@@ -1,6 +1,6 @@
 [package]
 name = "thiserror"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,7 @@ documentation = "https://docs.rs/thiserror"
 readme = "README.md"
 
 [dependencies]
-thiserror-impl = { version = "1.0", path = "impl" }
+thiserror-impl = { version = "=1.0.0", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0"
