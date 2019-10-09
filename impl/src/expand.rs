@@ -35,10 +35,11 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     };
 
     let source_method = source.map(|source| {
-        let member = quote_spanned!(source.span()=> &self.#source);
+        let member = quote_spanned!(source.span()=> self.#source);
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
-                std::option::Option::Some(#member)
+                use thiserror::private::AsDynError;
+                std::option::Option::Some(#member.as_dyn_error())
             }
         }
     });
