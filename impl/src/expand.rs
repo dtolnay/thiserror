@@ -1,6 +1,7 @@
 use crate::attr;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, quote_spanned};
+use syn::spanned::Spanned;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident, Index, Member, Result,
     Type,
@@ -34,9 +35,10 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     };
 
     let source_method = source.map(|source| {
+        let member = quote_spanned!(source.span()=> &self.#source);
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
-                std::option::Option::Some(&self.#source)
+                std::option::Option::Some(#member)
             }
         }
     });
