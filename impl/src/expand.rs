@@ -1,6 +1,6 @@
 use crate::attr;
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident, Index, Member, Result,
@@ -9,8 +9,8 @@ use syn::{
 
 pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
     match &input.data {
-        Data::Struct(data) => struct_error(input, data),
-        Data::Enum(data) => enum_error(input, data),
+        Data::Struct(data) => impl_struct(input, data),
+        Data::Enum(data) => impl_enum(input, data),
         Data::Union(_) => Err(Error::new_spanned(
             input,
             "union as errors are not supported",
@@ -18,7 +18,7 @@ pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
     }
 }
 
-fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
+fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let ident = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
@@ -52,15 +52,39 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         }
     });
 
+    let display = attr::display(&input.attrs)?.map(|display| {
+        let pat = match &data.fields {
+            Fields::Named(fields) => {
+                let var = fields.named.iter().map(|field| &field.ident);
+                quote!(Self { #(#var),* })
+            }
+            Fields::Unnamed(fields) => {
+                let var = (0..fields.unnamed.len()).map(|i| format_ident!("_{}", i));
+                quote!(Self(#(#var),*))
+            }
+            Fields::Unit => quote!(_),
+        };
+        quote! {
+            impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
+                fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    #[allow(unused_variables)]
+                    let #pat = self;
+                    #display
+                }
+            }
+        }
+    });
+
     Ok(quote! {
         impl #impl_generics std::error::Error for #ident #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
+        #display
     })
 }
 
-fn enum_error(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
+fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     let ident = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
