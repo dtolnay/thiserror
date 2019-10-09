@@ -31,6 +31,10 @@ enum EnumError {
     Unit,
 }
 
+#[derive(Error, Debug)]
+#[error("1 + 1 = {}", 1 + 1)]
+struct Arithmetic;
+
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }
@@ -49,4 +53,5 @@ fn test_display() {
     assert("braced error: 0", EnumError::Braced { id: 0 });
     assert("tuple error: 0", EnumError::Tuple(0));
     assert("unit error", EnumError::Unit);
+    assert("1 + 1 = 2", Arithmetic);
 }
