@@ -1,8 +1,9 @@
+use crate::attr;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, FieldsNamed, FieldsUnnamed, Member,
-    Result,
+    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, FieldsNamed, FieldsUnnamed, Index,
+    Member, Result,
 };
 
 pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
@@ -21,8 +22,8 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let source = match &data.fields {
-        Fields::Named(fields) => braced_struct_source(input, fields)?,
-        Fields::Unnamed(fields) => tuple_struct_source(input, fields)?,
+        Fields::Named(fields) => braced_struct_source(fields)?,
+        Fields::Unnamed(fields) => tuple_struct_source(fields)?,
         Fields::Unit => None,
     };
 
@@ -41,16 +42,22 @@ fn struct_error(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     })
 }
 
-fn braced_struct_source(input: &DeriveInput, fields: &FieldsNamed) -> Result<Option<Member>> {
-    let _ = input;
-    let _ = fields;
-    unimplemented!()
+fn braced_struct_source(fields: &FieldsNamed) -> Result<Option<Member>> {
+    for field in &fields.named {
+        if attr::is_source(field)? {
+            return Ok(Some(Member::Named(field.ident.as_ref().unwrap().clone())));
+        }
+    }
+    Ok(None)
 }
 
-fn tuple_struct_source(input: &DeriveInput, fields: &FieldsUnnamed) -> Result<Option<Member>> {
-    let _ = input;
-    let _ = fields;
-    unimplemented!()
+fn tuple_struct_source(fields: &FieldsUnnamed) -> Result<Option<Member>> {
+    for (i, field) in fields.unnamed.iter().enumerate() {
+        if attr::is_source(field)? {
+            return Ok(Some(Member::Unnamed(Index::from(i))));
+        }
+    }
+    Ok(None)
 }
 
 fn enum_error(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
