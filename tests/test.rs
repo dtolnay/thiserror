@@ -1,4 +1,5 @@
 use std::fmt::{self, Display};
+use std::io;
 use thiserror::Error;
 
 macro_rules! unimplemented_display {
@@ -23,6 +24,20 @@ struct TupleError(String, usize);
 #[derive(Error, Debug)]
 struct UnitError;
 
+#[derive(Error, Debug)]
+struct WithSource {
+    #[source]
+    cause: io::Error,
+}
+
+#[derive(Error, Debug)]
+struct WithAnyhow {
+    #[source]
+    cause: anyhow::Error,
+}
+
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
 unimplemented_display!(UnitError);
+unimplemented_display!(WithSource);
+unimplemented_display!(WithAnyhow);

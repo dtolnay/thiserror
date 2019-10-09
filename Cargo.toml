@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 thiserror-impl = { version = "0.0", path = "impl" }
+
+[dev-dependencies]
+anyhow = "1.0"
