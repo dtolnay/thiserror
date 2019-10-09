@@ -8,6 +8,7 @@
 //! # Example
 //!
 //! ```rust
+//! # use std::io;
 //! use thiserror::Error;
 //!
 //! #[derive(Error, Debug)]
@@ -52,6 +53,9 @@
 //!   `.0` to refer to tuple fields.
 //!
 //!   ```rust
+//!   # use thiserror::Error;
+//!   #
+//!   #[derive(Error, Debug)]
 //!   pub enum Error {
 //!       #[error("invalid rdo_lookahead_frames {} (expected < {})", .0, i32::max_value())]
 //!       InvalidLookahead(i32),
@@ -66,18 +70,28 @@
 //!   std::error::Error` will work as a source.
 //!
 //!   ```rust
+//!   # use std::fmt::{self, Display};
+//!   # use thiserror::Error;
+//!   #
 //!   #[derive(Error, Debug)]
 //!   pub struct MyError {
 //!       msg: String,
 //!       #[source]
 //!       source: anyhow::Error,
 //!   }
+//!   #
+//!   # impl Display for MyError {
+//!   #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//!   #         unimplemented!()
+//!   #     }
+//!   # }
 //!   ```
 //!
 //! - The Error trait's `backtrace()` method is implemented to return whichever
 //!   field has a type named `Backtrace`, if any.
 //!
 //!   ```rust
+//!   # const IGNORE: &str = stringify! {
 //!   use std::backtrace::Backtrace;
 //!
 //!   #[derive(Error, Debug)]
@@ -85,6 +99,7 @@
 //!       msg: String,
 //!       backtrace: Backtrace, // automatically detected
 //!   }
+//!   # };
 //!   ```
 //!
 //! - See also the [`anyhow`] library for a convenient single error type to use

@@ -66,6 +66,7 @@ pub enum DataStoreError {
   to refer to tuple fields.
 
   ```rust
+  #[derive(Error, Debug)]
   pub enum Error {
       #[error("invalid rdo_lookahead_frames {} (expected < {})", .0, i32::max_value())]
       InvalidLookahead(i32),
