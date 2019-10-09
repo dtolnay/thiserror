@@ -2,7 +2,7 @@ use std::fmt::Display;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[error("braced error: {}", msg)]
+#[error("braced error: {msg}")]
 struct BracedError {
     msg: String,
 }
@@ -14,7 +14,7 @@ struct BracedUnused {
 }
 
 #[derive(Error, Debug)]
-#[error("tuple error: {}", .0)]
+#[error("tuple error: {0}")]
 struct TupleError(usize);
 
 #[derive(Error, Debug)]
@@ -23,9 +23,9 @@ struct UnitError;
 
 #[derive(Error, Debug)]
 enum EnumError {
-    #[error("braced error: {}", .id)]
+    #[error("braced error: {id}")]
     Braced { id: usize, },
-    #[error("tuple error: {}", .0)]
+    #[error("tuple error: {0}")]
     Tuple(usize),
     #[error("unit error")]
     Unit,
