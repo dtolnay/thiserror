@@ -12,7 +12,7 @@ This library provides a convenient derive macro for the standard library's
 
 ```toml
 [dependencies]
-thiserror = "0.0"
+thiserror = "1.0"
 ```
 
 *Compiler support: requires rustc 1.31+*
