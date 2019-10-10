@@ -62,6 +62,16 @@ pub fn is_source(field: &Field) -> Result<bool> {
     Ok(false)
 }
 
+pub fn is_from(field: &Field) -> Result<bool> {
+    for attr in &field.attrs {
+        if attr.path.is_ident("from") {
+            syn::parse2::<Nothing>(attr.tokens.clone())?;
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 pub fn display(attrs: &[Attribute]) -> Result<Option<Display>> {
     let mut display = None;
 

@@ -28,6 +28,12 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         Fields::Unit => None,
     };
 
+    let from = match &data.fields {
+        Fields::Named(fields) => from_member_type(&fields.named)?,
+        Fields::Unnamed(fields) => from_member_type(&fields.unnamed)?,
+        Fields::Unit => None,
+    };
+
     let backtrace = match &data.fields {
         Fields::Named(fields) => backtrace_member(&fields.named)?,
         Fields::Unnamed(fields) => backtrace_member(&fields.unnamed)?,
@@ -75,12 +81,23 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         }
     });
 
+    let from_derive = from.map(|(from_member, from_type)| {
+        quote! {
+            impl #impl_generics std::convert::From<#from_type> for #ty #ty_generics #where_clause {
+                fn from(src_err: #from_type) -> Self {
+                    
+                }
+            }
+        }
+    });
+
     Ok(quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display
+        #from_derive
     })
 }
 
@@ -210,6 +227,22 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Opti
     for (i, field) in fields.into_iter().enumerate() {
         if attr::is_source(field)? {
             return Ok(Some(member(i, &field.ident)));
+        }
+    }
+    Ok(None)
+}
+
+fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<(Member, Type)>> {
+    for (i, field) in fields.into_iter().enumerate() {
+        let is_from = attr::is_from(field)?;
+
+        // TODO is_source can also be a field named source in the future.
+        if is_from && attr::is_source(field)? {
+            return Ok(Some(
+                (member(i, &field.ident), field.ty.clone())
+            ));
+        } else if is_from {
+            return Err(Error::new_spanned(field, "To derive From on this field, it must have a source (a field `source` or attr #[source])"));
         }
     }
     Ok(None)
