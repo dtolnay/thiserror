@@ -91,6 +91,10 @@ mod tests {
     fn test_expand() {
         assert("error {var}", "error {}", ", var");
         assert("fn main() {{ }}", "fn main() {{ }}", "");
-        assert("{v} {v:?} {0} {0:?}", "{} {:?} {} {:?}", ", v , v , _0 , _0");
+        assert(
+            "{v} {v:?} {0} {0:?}",
+            "{} {:?} {} {:?}",
+            ", v , v , _0 , _0",
+        );
     }
 }

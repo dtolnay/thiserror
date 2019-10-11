@@ -24,7 +24,7 @@ struct UnitError;
 #[derive(Error, Debug)]
 enum EnumError {
     #[error("braced error: {id}")]
-    Braced { id: usize, },
+    Braced { id: usize },
     #[error("tuple error: {0}")]
     Tuple(usize),
     #[error("unit error")]
