@@ -77,9 +77,21 @@ impl ToTokens for Display {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let fmt = &self.fmt;
         let args = &self.args;
-        tokens.extend(quote! {
-            write!(formatter, #fmt #args)
-        });
+        if self.was_shorthand && fmt.value() == "{}" {
+            let arg = args.clone().into_iter().skip(1).next().unwrap();
+            tokens.extend(quote! {
+                std::fmt::Display::fmt(#arg, formatter)
+            });
+        } else if self.was_shorthand && fmt.value() == "{:?}" {
+            let arg = args.clone().into_iter().skip(1).next().unwrap();
+            tokens.extend(quote! {
+                std::fmt::Debug::fmt(#arg, formatter)
+            });
+        } else {
+            tokens.extend(quote! {
+                write!(formatter, #fmt #args)
+            });
+        }
     }
 }
 
