@@ -82,10 +82,15 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     });
 
     let from_derive = from.map(|(from_member, from_type)| {
+        let from_struct = match from_member {
+            Member::Named(ident) => quote!(Self { #ident: src_err }),
+            Member::Unnamed(_) => quote!(Self(src_err)),
+        };
+
         quote! {
             impl #impl_generics std::convert::From<#from_type> for #ty #ty_generics #where_clause {
                 fn from(src_err: #from_type) -> Self {
-                    
+                    #from_struct
                 }
             }
         }
