@@ -40,6 +40,7 @@ impl Display {
         out += read;
         self.fmt = LitStr::new(&out, self.fmt.span());
         self.args = args;
+        self.was_shorthand = true;
     }
 }
 

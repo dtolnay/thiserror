@@ -10,13 +10,16 @@ use syn::{
 pub struct Display {
     pub fmt: LitStr,
     pub args: TokenStream,
+    pub was_shorthand: bool,
 }
 
 impl Parse for Display {
     fn parse(input: ParseStream) -> Result<Self> {
-        let fmt: LitStr = input.parse()?;
-        let args = parse_token_expr(input, false)?;
-        let mut display = Display { fmt, args };
+        let mut display = Display {
+            fmt: input.parse()?,
+            args: parse_token_expr(input, false)?,
+            was_shorthand: false,
+        };
         display.expand_shorthand();
         Ok(display)
     }
