@@ -49,7 +49,7 @@ enum EnumError {
 }
 
 #[derive(Error, Debug)]
-struct BracedWithFrom{
+struct BracedWithFrom {
     #[source]
     #[from]
     cause: io::Error,
@@ -57,6 +57,17 @@ struct BracedWithFrom{
 
 #[derive(Error, Debug)]
 struct TupleWithFrom( #[source] #[from] io::Error);
+
+#[derive(Error, Debug)]
+enum EnumWithFrom {
+    BracedOne {
+        #[source]
+        #[from]
+        cause: io::Error,
+    },
+    Tuple(#[source] #[from] anyhow::Error),
+    Unit,
+}
 
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
@@ -66,3 +77,4 @@ unimplemented_display!(WithAnyhow);
 unimplemented_display!(EnumError);
 unimplemented_display!(BracedWithFrom);
 unimplemented_display!(TupleWithFrom);
+unimplemented_display!(EnumWithFrom);

@@ -120,6 +120,16 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         })
         .collect::<Result<Vec<_>>>()?;
 
+    let froms = data
+        .variants
+        .iter()
+        .map(|variant| match &variant.fields {
+            Fields::Named(fields) => from_member_type(&fields.named),
+            Fields::Unnamed(fields) => from_member_type(&fields.unnamed),
+            Fields::Unit => Ok(None),
+        })
+        .collect::<Result<Vec<_>>>()?;
+
     let backtraces = data
         .variants
         .iter()
@@ -219,12 +229,36 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         None
     };
 
+    let froms_derive = froms
+        .iter()
+        .zip(data.variants.iter())
+        .filter_map(|(from, variant)| {
+            let variant_ident = &variant.ident;
+            from.as_ref()
+                .map(|(from_member, from_type)| {
+                    let from_struct = match from_member {
+                        Member::Named(ident) => quote!(Self::#variant_ident { #ident: src_err }),
+                        Member::Unnamed(_) => quote!(Self::#variant_ident(src_err)),
+                    };
+
+                    quote! {
+                        impl #impl_generics std::convert::From<#from_type> for #ty #ty_generics #where_clause {
+                            fn from(src_err: #from_type) -> Self {
+                                #from_struct
+                            }
+                        }
+                    }
+                })
+        });
+
+
     Ok(quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display
+        #(#froms_derive)*
     })
 }
 
