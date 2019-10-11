@@ -49,12 +49,8 @@ fn assert<T: Display>(expected: &str, value: T) {
 
 #[test]
 fn test_display() {
-    assert(
-        "braced error: T",
-        BracedError {
-            msg: "T".to_owned(),
-        },
-    );
+    let msg = "T".to_owned();
+    assert("braced error: T", BracedError { msg });
     assert("braced error", BracedUnused { extra: 0 });
     assert("tuple error: 0", TupleError(0));
     assert("unit error", UnitError);
