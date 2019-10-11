@@ -78,12 +78,12 @@ impl ToTokens for Display {
         let fmt = &self.fmt;
         let args = &self.args;
         if self.was_shorthand && fmt.value() == "{}" {
-            let arg = args.clone().into_iter().skip(1).next().unwrap();
+            let arg = args.clone().into_iter().nth(1).unwrap();
             tokens.extend(quote! {
                 std::fmt::Display::fmt(#arg, formatter)
             });
         } else if self.was_shorthand && fmt.value() == "{:?}" {
-            let arg = args.clone().into_iter().skip(1).next().unwrap();
+            let arg = args.clone().into_iter().nth(1).unwrap();
             tokens.extend(quote! {
                 std::fmt::Debug::fmt(#arg, formatter)
             });
