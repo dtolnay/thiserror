@@ -49,6 +49,14 @@ enum EnumError {
 }
 
 #[derive(Error, Debug)]
+struct BracedImpliedSource {
+    source: io::Error,
+// this should cause compilation error
+//    #[source]
+//    cause: io::Error,
+}
+
+#[derive(Error, Debug)]
 struct BracedWithFrom {
     #[source]
     #[from]
@@ -75,6 +83,7 @@ unimplemented_display!(UnitError);
 unimplemented_display!(WithSource);
 unimplemented_display!(WithAnyhow);
 unimplemented_display!(EnumError);
+unimplemented_display!(BracedImpliedSource);
 unimplemented_display!(BracedWithFrom);
 unimplemented_display!(TupleWithFrom);
 unimplemented_display!(EnumWithFrom);

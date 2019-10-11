@@ -1,5 +1,5 @@
 use crate::attr;
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Span};
 use quote::{format_ident, quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{
@@ -23,8 +23,8 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let source = match &data.fields {
-        Fields::Named(fields) => source_member(&fields.named)?,
-        Fields::Unnamed(fields) => source_member(&fields.unnamed)?,
+        Fields::Named(fields) => source_member(&fields.named, &ty.span())?,
+        Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span())?,
         Fields::Unit => None,
     };
 
@@ -114,8 +114,8 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         .variants
         .iter()
         .map(|variant| match &variant.fields {
-            Fields::Named(fields) => source_member(&fields.named),
-            Fields::Unnamed(fields) => source_member(&fields.unnamed),
+            Fields::Named(fields) => source_member(&fields.named, &ty.span()),
+            Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span()),
             Fields::Unit => Ok(None),
         })
         .collect::<Result<Vec<_>>>()?;
@@ -262,13 +262,22 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     })
 }
 
-fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
+fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &Span) -> Result<Option<Member>> {
+    let mut source_member_count = 0;
+    let mut res = None;
+
     for (i, field) in fields.into_iter().enumerate() {
-        if attr::is_source(field)? {
-            return Ok(Some(member(i, &field.ident)));
+        if  source_member_count == 1 {
+            return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant"));
+        }
+
+        if field_is_source(&field)? {
+            res = Some(member(i, &field.ident));
+            source_member_count += 1;
         }
     }
-    Ok(None)
+
+    Ok(res)
 }
 
 fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<(Member, Type)>> {
@@ -311,4 +320,15 @@ fn member(i: usize, ident: &Option<Ident>) -> Member {
         Some(ident) => Member::Named(ident.clone()),
         None => Member::Unnamed(Index::from(i)),
     }
+}
+
+fn ident_is_source(ident: &Option<Ident>) -> bool {
+    match ident {
+        Some(s) => s == "source",
+        None => false,
+    }
+}
+
+fn field_is_source(field: &Field) -> Result<bool> {
+    Ok(attr::is_source(field)? || ident_is_source(&field.ident))
 }
