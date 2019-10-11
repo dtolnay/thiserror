@@ -1,8 +1,11 @@
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::iter::once;
 use syn::parse::{Nothing, Parse, ParseStream};
-use syn::{Attribute, Error, Field, Ident, Index, LitInt, LitStr, Result, Token};
+use syn::{
+    braced, bracketed, parenthesized, token, Attribute, Error, Field, Ident, Index, LitInt, LitStr,
+    Result, Token,
+};
 
 pub struct Display {
     pub fmt: LitStr,
@@ -12,34 +15,59 @@ pub struct Display {
 impl Parse for Display {
     fn parse(input: ParseStream) -> Result<Self> {
         let fmt: LitStr = input.parse()?;
-
-        let mut args = TokenStream::new();
-        let mut last_is_comma = false;
-        while !input.is_empty() {
-            if last_is_comma && input.peek(Token![.]) {
-                if input.peek2(Ident) {
-                    input.parse::<Token![.]>()?;
-                    last_is_comma = false;
-                    continue;
-                }
-                if input.peek2(LitInt) {
-                    input.parse::<Token![.]>()?;
-                    let int: Index = input.parse()?;
-                    let ident = format_ident!("_{}", int.index, span = int.span);
-                    args.extend(once(TokenTree::Ident(ident)));
-                    last_is_comma = false;
-                    continue;
-                }
-            }
-            last_is_comma = input.peek(Token![,]);
-            let token: TokenTree = input.parse()?;
-            args.extend(once(token));
-        }
-
+        let args = parse_token_expr(input, false)?;
         let mut display = Display { fmt, args };
         display.expand_shorthand();
         Ok(display)
     }
+}
+
+fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<TokenStream> {
+    let mut tokens = TokenStream::new();
+    while !input.is_empty() {
+        if last_is_comma && input.peek(Token![.]) {
+            if input.peek2(Ident) {
+                input.parse::<Token![.]>()?;
+                last_is_comma = false;
+                continue;
+            }
+            if input.peek2(LitInt) {
+                input.parse::<Token![.]>()?;
+                let int: Index = input.parse()?;
+                let ident = format_ident!("_{}", int.index, span = int.span);
+                tokens.extend(once(TokenTree::Ident(ident)));
+                last_is_comma = false;
+                continue;
+            }
+        }
+        last_is_comma = input.peek(Token![,]);
+        let token: TokenTree = if input.peek(token::Paren) {
+            let content;
+            let delimiter = parenthesized!(content in input);
+            let nested = parse_token_expr(&content, true)?;
+            let mut group = Group::new(Delimiter::Parenthesis, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else if input.peek(token::Brace) {
+            let content;
+            let delimiter = braced!(content in input);
+            let nested = parse_token_expr(&content, true)?;
+            let mut group = Group::new(Delimiter::Brace, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else if input.peek(token::Bracket) {
+            let content;
+            let delimiter = bracketed!(content in input);
+            let nested = parse_token_expr(&content, true)?;
+            let mut group = Group::new(Delimiter::Bracket, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else {
+            input.parse()?
+        };
+        tokens.extend(once(token));
+    }
+    Ok(tokens)
 }
 
 impl ToTokens for Display {

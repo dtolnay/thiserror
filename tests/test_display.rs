@@ -35,6 +35,14 @@ enum EnumError {
 #[error("1 + 1 = {}", 1 + 1)]
 struct Arithmetic;
 
+#[derive(Error, Debug)]
+#[error("!bool = {}", not(.0))]
+struct NestedShorthand(bool);
+
+fn not(bool: &bool) -> bool {
+    !*bool
+}
+
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }
@@ -54,4 +62,5 @@ fn test_display() {
     assert("tuple error: 0", EnumError::Tuple(0));
     assert("unit error", EnumError::Unit);
     assert("1 + 1 = 2", Arithmetic);
+    assert("!bool = false", NestedShorthand(true));
 }
