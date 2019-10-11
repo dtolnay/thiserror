@@ -1,11 +1,15 @@
 use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::iter::once;
-use syn::parse::{Nothing, Parse, ParseStream};
+use syn::parse::{Nothing, ParseStream};
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Error, Field, Ident, Index, LitInt, LitStr,
-    Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Ident, Index, LitInt, LitStr, Result, Token,
 };
+
+pub struct Attrs {
+    pub display: Option<Display>,
+    pub source: bool,
+}
 
 pub struct Display {
     pub fmt: LitStr,
@@ -13,8 +17,27 @@ pub struct Display {
     pub was_shorthand: bool,
 }
 
-impl Parse for Display {
-    fn parse(input: ParseStream) -> Result<Self> {
+pub fn get(input: &[Attribute]) -> Result<Attrs> {
+    let mut attrs = Attrs {
+        display: None,
+        source: false,
+    };
+
+    for attr in input {
+        if attr.path.is_ident("error") {
+            let display = parse_display(attr)?;
+            attrs.display = Some(display);
+        } else if attr.path.is_ident("source") {
+            parse_source(attr)?;
+            attrs.source = true;
+        }
+    }
+
+    Ok(attrs)
+}
+
+fn parse_display(attr: &Attribute) -> Result<Display> {
+    attr.parse_args_with(|input: ParseStream| {
         let mut display = Display {
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
@@ -22,7 +45,7 @@ impl Parse for Display {
         };
         display.expand_shorthand();
         Ok(display)
-    }
+    })
 }
 
 fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<TokenStream> {
@@ -73,6 +96,11 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
     Ok(tokens)
 }
 
+fn parse_source(attr: &Attribute) -> Result<()> {
+    syn::parse2::<Nothing>(attr.tokens.clone())?;
+    Ok(())
+}
+
 impl ToTokens for Display {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let fmt = &self.fmt;
@@ -93,32 +121,4 @@ impl ToTokens for Display {
             });
         }
     }
-}
-
-pub fn is_source(field: &Field) -> Result<bool> {
-    for attr in &field.attrs {
-        if attr.path.is_ident("source") {
-            syn::parse2::<Nothing>(attr.tokens.clone())?;
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
-pub fn display(attrs: &[Attribute]) -> Result<Option<Display>> {
-    let mut display = None;
-
-    for attr in attrs {
-        if attr.path.is_ident("error") {
-            if display.is_some() {
-                return Err(Error::new_spanned(
-                    attr,
-                    "only one #[error(...)] attribute is allowed",
-                ));
-            }
-            display = Some(attr.parse_args()?);
-        }
-    }
-
-    Ok(display)
 }
