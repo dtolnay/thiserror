@@ -287,8 +287,8 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Opti
 //
 // `from` implies `source`
 fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<(Member, Type)>> {
-    let mut count = 0;
-    let mut from_member_count = 0;
+    let mut got_non_from = false;
+    let mut got_from = false;
     let mut non_from_ident= None;
     let mut res = None;
 
@@ -297,7 +297,7 @@ fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<O
 
         // Early return on errors
         if is_from {
-            if  from_member_count == 1 {
+            if got_from {
                 return Err(Error::new_spanned(&field.ident, "Only one `#[from]` field allowed per struct or struct variant"));
             }
         }
@@ -307,15 +307,15 @@ fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<O
             res = Some(
                 (member(i, &field.ident), field.ty.clone())
             );
-            from_member_count += 1;
+            got_from = true;
         } else {
             // get the latest non-member ident for error purposes
             non_from_ident= Some(&field.ident);
+            got_non_from = true;
         }
 
         // late return on this error, becaue it requires counts at end of cycle
-        count += 1;
-        if from_member_count != 0 && count > from_member_count {
+        if got_from && got_non_from  {
             return Err(Error::new_spanned(non_from_ident, "When deriving `From`, non-`#[from]` fields are not allowed"));
         }
     }
