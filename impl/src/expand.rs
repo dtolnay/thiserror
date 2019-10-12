@@ -84,10 +84,8 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     });
 
     let from_derive = from.map(|(from_member, from_type)| {
-        //TODO when we figure out whether to use `Option<Backtrace>` update the `unwrap`
-        let backtrace_field = backtrace.map(|backtrace| quote!(#backtrace: *(src_err.backtrace().unwrap()).clone()));
         let from_struct = match from_member {
-            Member::Named(ident) => quote!(Self { #ident: src_err, #backtrace_field}),
+            Member::Named(ident) => quote!(Self { #ident: src_err}),
             Member::Unnamed(_) => quote!(Self(src_err)),
         };
 
