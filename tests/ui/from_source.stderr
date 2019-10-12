@@ -21,9 +21,3 @@ error: When deriving `From`, non-`#[from]` fields are not allowed
    |
 40 |     msg: String,
    |     ^^^
-
-error: When deriving `From`, non-`#[from]` fields are not allowed
-  --> $DIR/from_source.rs:47:5
-   |
-47 |     msg: String,
-   |     ^^^

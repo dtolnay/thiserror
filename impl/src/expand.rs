@@ -52,7 +52,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         }
     });
 
-    let backtrace_method = backtrace.map(|backtrace| {
+    let backtrace_method = backtrace.as_ref().map(|backtrace| {
         quote! {
             fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
                 std::option::Option::Some(&self.#backtrace)
@@ -84,8 +84,10 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     });
 
     let from_derive = from.map(|(from_member, from_type)| {
+        //TODO when we figure out whether to use `Option<Backtrace>` update the `unwrap`
+        let backtrace_field = backtrace.map(|backtrace| quote!(#backtrace: *(src_err.backtrace().unwrap()).clone()));
         let from_struct = match from_member {
-            Member::Named(ident) => quote!(Self { #ident: src_err }),
+            Member::Named(ident) => quote!(Self { #ident: src_err, #backtrace_field}),
             Member::Unnamed(_) => quote!(Self(src_err)),
         };
 
@@ -310,11 +312,14 @@ fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<O
             got_from = true;
         } else {
             // get the latest non-member ident for error purposes
-            non_from_ident= Some(&field.ident);
-            got_non_from = true;
+            // skip backtrace field, that's allowed to be in From impl
+            if !type_is_backtrace(&field.ty) {
+                non_from_ident= Some(&field.ident);
+                got_non_from = true;
+            }
         }
 
-        // late return on this error, becaue it requires counts at end of cycle
+        // late return on this error, becaue it requires checking state at end of cycle
         if got_from && got_non_from  {
             return Err(Error::new_spanned(non_from_ident, "When deriving `From`, non-`#[from]` fields are not allowed"));
         }

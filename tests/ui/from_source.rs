@@ -40,13 +40,4 @@ struct BracedWithFromExtraField1 {
     msg: String,
 }
 
-#[derive(Error, Debug)]
-struct BracedWithFromExtraField2 {
-    // this should cause compilation error
-    // because fields other than `from` are not allowed (except backtrace in future)
-    msg: String,
-    #[from]
-    source: io::Error,
-}
-
 fn main() {}
