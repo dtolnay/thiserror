@@ -110,6 +110,11 @@ fn impl_enum(input: Enum) -> TokenStream {
     };
 
     let display_impl = if input.has_display() {
+        let void_deref = if input.variants.is_empty() {
+            Some(quote!(*))
+        } else {
+            None
+        };
         let arms = input.variants.iter().map(|variant| {
             let display = variant.attrs.display.as_ref().expect(valid::CHECKED);
             let ident = &variant.ident;
@@ -122,7 +127,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #[allow(unused_variables)]
-                    match self {
+                    match #void_deref self {
                         #(#arms,)*
                     }
                 }
