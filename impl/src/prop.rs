@@ -6,8 +6,8 @@ impl Struct<'_> {
         source_member(&self.fields)
     }
 
-    pub(crate) fn backtrace_member(&self) -> Option<&Member> {
-        backtrace_member(&self.fields)
+    pub(crate) fn backtrace_field(&self) -> Option<&Field> {
+        backtrace_field(&self.fields)
     }
 }
 
@@ -21,7 +21,7 @@ impl Enum<'_> {
     pub(crate) fn has_backtrace(&self) -> bool {
         self.variants
             .iter()
-            .any(|variant| variant.backtrace_member().is_some())
+            .any(|variant| variant.backtrace_field().is_some())
     }
 
     pub(crate) fn has_display(&self) -> bool {
@@ -38,8 +38,8 @@ impl Variant<'_> {
         source_member(&self.fields)
     }
 
-    pub(crate) fn backtrace_member(&self) -> Option<&Member> {
-        backtrace_member(&self.fields)
+    pub(crate) fn backtrace_field(&self) -> Option<&Field> {
+        backtrace_field(&self.fields)
     }
 }
 
@@ -58,15 +58,15 @@ fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
     None
 }
 
-fn backtrace_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
+fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.backtrace.is_some() {
-            return Some(&field.member);
+            return Some(&field);
         }
     }
     for field in fields {
         if type_is_backtrace(field.ty) {
-            return Some(&field.member);
+            return Some(&field);
         }
     }
     None

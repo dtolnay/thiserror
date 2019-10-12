@@ -28,7 +28,8 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let backtrace_method = input.backtrace_member().map(|backtrace| {
+    let backtrace_method = input.backtrace_field().map(|backtrace| {
+        let backtrace = &backtrace.member;
         let body = if let Some(source) = input.source_member() {
             let dyn_error = quote_spanned!(source.span()=> self.#source.as_dyn_error());
             quote!({
@@ -103,8 +104,9 @@ fn impl_enum(input: Enum) -> TokenStream {
     let backtrace_method = if input.has_backtrace() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            match (variant.backtrace_member(), variant.source_member()) {
-                (Some(backtrace), Some(source)) => {
+            match (variant.backtrace_field(), variant.source_member()) {
+                (Some(backtrace), Some(source)) if backtrace.attrs.backtrace.is_none() => {
+                    let backtrace = &backtrace.member;
                     let dyn_error = quote_spanned!(source.span()=> source.as_dyn_error());
                     quote! {
                         #ty::#ident {
@@ -117,9 +119,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                         }),
                     }
                 }
-                (Some(backtrace), None) => quote! {
-                    #ty::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
-                },
+                (Some(backtrace), _) => {
+                    let backtrace = &backtrace.member;
+                    quote! {
+                        #ty::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
+                    }
+                }
                 (None, _) => quote! {
                     #ty::#ident {..} => std::option::Option::None,
                 },
