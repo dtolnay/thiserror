@@ -87,13 +87,13 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
 
     let sources: Vec<Option<Member>> = variant_fields
         .iter()
-        .copied()
+        .cloned()
         .map(source_member)
         .collect::<Result<_>>()?;
 
     let backtraces: Vec<Option<Member>> = variant_fields
         .iter()
-        .copied()
+        .cloned()
         .map(backtrace_member)
         .collect::<Result<_>>()?;
 
