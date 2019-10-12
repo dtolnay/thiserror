@@ -29,9 +29,20 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let backtrace_method = input.backtrace_member().map(|backtrace| {
+        let body = if let Some(source) = input.source_member() {
+            let dyn_error = quote_spanned!(source.span()=> self.#source.as_dyn_error());
+            quote!({
+                use thiserror::private::AsDynError;
+                #dyn_error.backtrace().unwrap_or(&self.#backtrace)
+            })
+        } else {
+            quote! {
+                &self.#backtrace
+            }
+        };
         quote! {
             fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                std::option::Option::Some(&self.#backtrace)
+                std::option::Option::Some(#body)
             }
         }
     });
@@ -67,10 +78,9 @@ fn impl_enum(input: Enum) -> TokenStream {
             let ident = &variant.ident;
             match variant.source_member() {
                 Some(source) => {
-                    let var = quote_spanned!(source.span()=> source);
-                    let dyn_error = quote_spanned!(source.span()=> #var.as_dyn_error());
+                    let dyn_error = quote_spanned!(source.span()=> source.as_dyn_error());
                     quote! {
-                        #ty::#ident {#source: #var, ..} => std::option::Option::Some(#dyn_error),
+                        #ty::#ident {#source: source, ..} => std::option::Option::Some(#dyn_error),
                     }
                 }
                 None => quote! {
@@ -93,11 +103,24 @@ fn impl_enum(input: Enum) -> TokenStream {
     let backtrace_method = if input.has_backtrace() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            match variant.backtrace_member() {
-                Some(backtrace) => quote! {
+            match (variant.backtrace_member(), variant.source_member()) {
+                (Some(backtrace), Some(source)) => {
+                    let dyn_error = quote_spanned!(source.span()=> source.as_dyn_error());
+                    quote! {
+                        #ty::#ident {
+                            #backtrace: backtrace,
+                            #source: source,
+                            ..
+                        } => std::option::Option::Some({
+                            use thiserror::private::AsDynError;
+                            #dyn_error.backtrace().unwrap_or(backtrace)
+                        }),
+                    }
+                }
+                (Some(backtrace), None) => quote! {
                     #ty::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
                 },
-                None => quote! {
+                (None, _) => quote! {
                     #ty::#ident {..} => std::option::Option::None,
                 },
             }
