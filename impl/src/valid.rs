@@ -67,13 +67,13 @@ impl Field<'_> {
 fn check_no_source_or_backtrace(attrs: &Attrs) -> Result<()> {
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
-            source.original,
+            source,
             "not expected here; the #[source] attribute belongs on a specific field",
         ));
     }
     if let Some(backtrace) = &attrs.backtrace {
         return Err(Error::new_spanned(
-            backtrace.original,
+            backtrace,
             "not expected here; the #[backtrace] attribute belongs on a specific field",
         ));
     }
@@ -86,17 +86,14 @@ fn check_no_duplicate_source_or_backtrace(fields: &[Field]) -> Result<()> {
     for field in fields {
         if let Some(source) = &field.attrs.source {
             if has_source {
-                return Err(Error::new_spanned(
-                    source.original,
-                    "duplicate #[source] attribute",
-                ));
+                return Err(Error::new_spanned(source, "duplicate #[source] attribute"));
             }
             has_source = true;
         }
         if let Some(backtrace) = &field.attrs.backtrace {
             if has_backtrace {
                 return Err(Error::new_spanned(
-                    backtrace.original,
+                    backtrace,
                     "duplicate #[backtrace] attribute",
                 ));
             }
