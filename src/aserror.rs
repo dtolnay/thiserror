@@ -5,18 +5,21 @@ pub trait AsDynError {
 }
 
 impl<T: Error + 'static> AsDynError for T {
+    #[inline]
     fn as_dyn_error(&self) -> &(dyn Error + 'static) {
         self
     }
 }
 
 impl AsDynError for dyn Error + 'static {
+    #[inline]
     fn as_dyn_error(&self) -> &(dyn Error + 'static) {
         self
     }
 }
 
 impl AsDynError for dyn Error + Send + Sync + 'static {
+    #[inline]
     fn as_dyn_error(&self) -> &(dyn Error + 'static) {
         self
     }
