@@ -10,8 +10,20 @@ error: Only one `#[from]` field allowed per struct or struct variant
 20 |     cause: io::Error,
    |     ^^^^^
 
-error: Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)
-  --> $DIR/from_source.rs:29:5
+error: When deriving `From`, non-`#[from]` fields are not allowed
+  --> $DIR/from_source.rs:25:5
    |
-29 |     cause: io::Error,
-   |     ^^^^^
+25 |     source: io::Error,
+   |     ^^^^^^
+
+error: When deriving `From`, non-`#[from]` fields are not allowed
+  --> $DIR/from_source.rs:40:5
+   |
+40 |     msg: String,
+   |     ^^^
+
+error: When deriving `From`, non-`#[from]` fields are not allowed
+  --> $DIR/from_source.rs:47:5
+   |
+47 |     msg: String,
+   |     ^^^

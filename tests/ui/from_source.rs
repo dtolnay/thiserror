@@ -4,8 +4,8 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 struct BracedWithSourceDuplicate {
     source: io::Error,
-// this should cause compilation error
-// becuase there's two `source`
+    // this should cause compilation error
+    // becuase there's two `source`
     #[source]
     cause: io::Error,
 }
@@ -14,8 +14,8 @@ struct BracedWithSourceDuplicate {
 struct BracedWithFromDuplicate1 {
     #[from]
     source: io::Error,
-// this should cause compilation error
-// because there's two `from`
+    // this should cause compilation error
+    // because there's two `from`
     #[from]
     cause: io::Error,
 }
@@ -23,10 +23,30 @@ struct BracedWithFromDuplicate1 {
 #[derive(Error, Debug)]
 struct BracedWithFromDuplicateSource {
     source: io::Error,
-// this should cause compilation error
-// because from implies source
+    // this should cause compilation error
+    // because from implies source
+    //
+    // TODO should this error actually be that there's a from tha't not on source?
     #[from]
     cause: io::Error,
+}
+
+#[derive(Error, Debug)]
+struct BracedWithFromExtraField1 {
+    #[from]
+    source: io::Error,
+    // this should cause compilation error
+    // because fields other than `from` are not allowed (except backtrace in future)
+    msg: String,
+}
+
+#[derive(Error, Debug)]
+struct BracedWithFromExtraField2 {
+    // this should cause compilation error
+    // because fields other than `from` are not allowed (except backtrace in future)
+    msg: String,
+    #[from]
+    source: io::Error,
 }
 
 fn main() {}
