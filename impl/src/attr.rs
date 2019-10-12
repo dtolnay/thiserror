@@ -3,7 +3,8 @@ use quote::{format_ident, quote, ToTokens};
 use std::iter::once;
 use syn::parse::{Nothing, ParseStream};
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Ident, Index, LitInt, LitStr, Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr,
+    Result, Token,
 };
 
 pub struct Attrs {
@@ -26,9 +27,18 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
     for attr in input {
         if attr.path.is_ident("error") {
             let display = parse_display(attr)?;
+            if attrs.display.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "only one #[error(...)] attribute is allowed",
+                ));
+            }
             attrs.display = Some(display);
         } else if attr.path.is_ident("source") {
             parse_source(attr)?;
+            if attrs.source {
+                return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
+            }
             attrs.source = true;
         }
     }
