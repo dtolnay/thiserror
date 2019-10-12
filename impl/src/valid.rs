@@ -15,8 +15,8 @@ impl Input<'_> {
 
 impl Struct<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source(&self.attrs)?;
-        find_duplicate_source(&self.fields)?;
+        check_no_source_or_backtrace(&self.attrs)?;
+        check_no_duplicate_source_or_backtrace(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
         }
@@ -26,7 +26,7 @@ impl Struct<'_> {
 
 impl Enum<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source(&self.attrs)?;
+        check_no_source_or_backtrace(&self.attrs)?;
         let has_display = self.has_display();
         for variant in &self.variants {
             variant.validate()?;
@@ -43,8 +43,8 @@ impl Enum<'_> {
 
 impl Variant<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source(&self.attrs)?;
-        find_duplicate_source(&self.fields)?;
+        check_no_source_or_backtrace(&self.attrs)?;
+        check_no_duplicate_source_or_backtrace(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
         }
@@ -64,18 +64,25 @@ impl Field<'_> {
     }
 }
 
-fn check_no_source(attrs: &Attrs) -> Result<()> {
+fn check_no_source_or_backtrace(attrs: &Attrs) -> Result<()> {
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
             source.original,
             "not expected here; the #[source] attribute belongs on a specific field",
         ));
     }
+    if let Some(backtrace) = &attrs.backtrace {
+        return Err(Error::new_spanned(
+            backtrace.original,
+            "not expected here; the #[backtrace] attribute belongs on a specific field",
+        ));
+    }
     Ok(())
 }
 
-fn find_duplicate_source(fields: &[Field]) -> Result<()> {
+fn check_no_duplicate_source_or_backtrace(fields: &[Field]) -> Result<()> {
     let mut has_source = false;
+    let mut has_backtrace = false;
     for field in fields {
         if let Some(source) = &field.attrs.source {
             if has_source {
@@ -85,6 +92,15 @@ fn find_duplicate_source(fields: &[Field]) -> Result<()> {
                 ));
             }
             has_source = true;
+        }
+        if let Some(backtrace) = &field.attrs.backtrace {
+            if has_backtrace {
+                return Err(Error::new_spanned(
+                    backtrace.original,
+                    "duplicate #[backtrace] attribute",
+                ));
+            }
+            has_backtrace = true;
         }
     }
     Ok(())

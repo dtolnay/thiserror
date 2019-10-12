@@ -43,12 +43,6 @@ impl Variant<'_> {
     }
 }
 
-impl Field<'_> {
-    fn is_backtrace(&self) -> bool {
-        type_is_backtrace(self.ty)
-    }
-}
-
 fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
     for field in fields {
         if field.attrs.source.is_some() {
@@ -65,10 +59,17 @@ fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
 }
 
 fn backtrace_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
-    fields
-        .iter()
-        .find(|field| field.is_backtrace())
-        .map(|field| &field.member)
+    for field in fields {
+        if field.attrs.backtrace.is_some() {
+            return Some(&field.member);
+        }
+    }
+    for field in fields {
+        if type_is_backtrace(field.ty) {
+            return Some(&field.member);
+        }
+    }
+    None
 }
 
 fn type_is_backtrace(ty: &Type) -> bool {

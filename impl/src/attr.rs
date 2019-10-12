@@ -10,6 +10,7 @@ use syn::{
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
     pub source: Option<Source<'a>>,
+    pub backtrace: Option<Backtrace<'a>>,
 }
 
 #[derive(Clone)]
@@ -24,10 +25,15 @@ pub struct Source<'a> {
     pub original: &'a Attribute,
 }
 
+pub struct Backtrace<'a> {
+    pub original: &'a Attribute,
+}
+
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
     let mut attrs = Attrs {
         display: None,
         source: None,
+        backtrace: None,
     };
 
     for attr in input {
@@ -46,6 +52,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
             attrs.source = Some(source);
+        } else if attr.path.is_ident("backtrace") {
+            let backtrace = parse_backtrace(attr)?;
+            if attrs.backtrace.is_some() {
+                return Err(Error::new_spanned(attr, "duplicate #[backtrace] attribute"));
+            }
+            attrs.backtrace = Some(backtrace);
         }
     }
 
@@ -116,6 +128,11 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
 fn parse_source(attr: &Attribute) -> Result<Source> {
     syn::parse2::<Nothing>(attr.tokens.clone())?;
     Ok(Source { original: attr })
+}
+
+fn parse_backtrace(attr: &Attribute) -> Result<Backtrace> {
+    syn::parse2::<Nothing>(attr.tokens.clone())?;
+    Ok(Backtrace { original: attr })
 }
 
 impl ToTokens for Display<'_> {
