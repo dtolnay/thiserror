@@ -7,9 +7,9 @@ use syn::{
     Result, Token,
 };
 
-pub struct Attrs {
+pub struct Attrs<'a> {
     pub display: Option<Display>,
-    pub source: bool,
+    pub source: Option<Source<'a>>,
 }
 
 pub struct Display {
@@ -18,10 +18,14 @@ pub struct Display {
     pub was_shorthand: bool,
 }
 
+pub struct Source<'a> {
+    pub original: &'a Attribute,
+}
+
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
     let mut attrs = Attrs {
         display: None,
-        source: false,
+        source: None,
     };
 
     for attr in input {
@@ -35,11 +39,11 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             }
             attrs.display = Some(display);
         } else if attr.path.is_ident("source") {
-            parse_source(attr)?;
-            if attrs.source {
+            let source = parse_source(attr)?;
+            if attrs.source.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
-            attrs.source = true;
+            attrs.source = Some(source);
         }
     }
 
@@ -106,9 +110,9 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
     Ok(tokens)
 }
 
-fn parse_source(attr: &Attribute) -> Result<()> {
+fn parse_source(attr: &Attribute) -> Result<Source> {
     syn::parse2::<Nothing>(attr.tokens.clone())?;
-    Ok(())
+    Ok(Source { original: attr })
 }
 
 impl ToTokens for Display {

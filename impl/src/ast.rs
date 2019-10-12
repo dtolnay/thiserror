@@ -10,14 +10,14 @@ pub enum Input<'a> {
 }
 
 pub struct Struct<'a> {
-    pub attrs: Attrs,
+    pub attrs: Attrs<'a>,
     pub ident: Ident,
     pub generics: &'a Generics,
     pub fields: Vec<Field<'a>>,
 }
 
 pub struct Enum<'a> {
-    pub attrs: Attrs,
+    pub attrs: Attrs<'a>,
     pub ident: Ident,
     pub generics: &'a Generics,
     pub variants: Vec<Variant<'a>>,
@@ -25,14 +25,14 @@ pub struct Enum<'a> {
 
 pub struct Variant<'a> {
     pub original: &'a syn::Variant,
-    pub attrs: Attrs,
+    pub attrs: Attrs<'a>,
     pub ident: Ident,
     pub fields: Vec<Field<'a>>,
 }
 
 pub struct Field<'a> {
     pub original: &'a syn::Field,
-    pub attrs: Attrs,
+    pub attrs: Attrs<'a>,
     pub member: Member,
     pub ty: &'a Type,
 }
