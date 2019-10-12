@@ -22,15 +22,17 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let source = match &data.fields {
-        Fields::Named(fields) => source_member(&fields.named, &ty.span())?,
-        Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span())?,
-        Fields::Unit => None,
-    };
-
+    // Because from implies source, from comes first to make sure from-specific errors
+    // get encountered first
     let from = match &data.fields {
         Fields::Named(fields) => from_member_type(&fields.named, &ty.span())?,
         Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span())?,
+        Fields::Unit => None,
+    };
+
+    let source = match &data.fields {
+        Fields::Named(fields) => source_member(&fields.named, &ty.span())?,
+        Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span())?,
         Fields::Unit => None,
     };
 
@@ -110,22 +112,22 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let sources = data
-        .variants
-        .iter()
-        .map(|variant| match &variant.fields {
-            Fields::Named(fields) => source_member(&fields.named, &ty.span()),
-            Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span()),
-            Fields::Unit => Ok(None),
-        })
-        .collect::<Result<Vec<_>>>()?;
-
     let froms = data
         .variants
         .iter()
         .map(|variant| match &variant.fields {
             Fields::Named(fields) => from_member_type(&fields.named, &ty.span()),
             Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span()),
+            Fields::Unit => Ok(None),
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let sources = data
+        .variants
+        .iter()
+        .map(|variant| match &variant.fields {
+            Fields::Named(fields) => source_member(&fields.named, &ty.span()),
+            Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span()),
             Fields::Unit => Ok(None),
         })
         .collect::<Result<Vec<_>>>()?;
@@ -269,7 +271,7 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &
     for (i, field) in fields.into_iter().enumerate() {
         if field_is_source(&field)? {
             if  source_member_count == 1 {
-                return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant"));
+                return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)"));
             }
 
             res = Some(member(i, &field.ident));
@@ -282,7 +284,8 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &
 
 // Needs to check for conditions:
 // - duplicate `from` fields
-// - `from` without `source`
+//
+// `from` implies `source`
 fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &Span) -> Result<Option<(Member, Type)>> {
     let mut from_member_count = 0;
     let mut res = None;
@@ -296,13 +299,11 @@ fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span
             }
         }
 
-        if is_from && field_is_source(&field)? {
+        if is_from {
             res = Some(
                 (member(i, &field.ident), field.ty.clone())
             );
             from_member_count += 1;
-        } else if is_from {
-            return Err(Error::new_spanned(&field.ident, "To derive From on this field, it must have a source (a field `source` or attr #[source])"));
         }
     }
 
@@ -343,5 +344,5 @@ fn ident_is_source(ident: &Option<Ident>) -> bool {
 }
 
 fn field_is_source(field: &Field) -> Result<bool> {
-    Ok(attr::is_source(field)? || ident_is_source(&field.ident))
+    Ok(attr::is_source(field)? || ident_is_source(&field.ident) || attr::is_from(field)?)
 }

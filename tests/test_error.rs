@@ -56,22 +56,20 @@ struct BracedImpliedSource {
 
 #[derive(Error, Debug)]
 struct BracedWithFrom {
-    #[source]
     #[from]
     cause: io::Error,
 }
 
 #[derive(Error, Debug)]
-struct TupleWithFrom( #[source] #[from] io::Error);
+struct TupleWithFrom(#[from] io::Error);
 
 #[derive(Error, Debug)]
 enum EnumWithFrom {
     BracedOne {
-        #[source]
         #[from]
         cause: io::Error,
     },
-    Tuple(#[source] #[from] anyhow::Error),
+    Tuple(#[from] anyhow::Error),
     Unit,
 }
 
