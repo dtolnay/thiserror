@@ -1,17 +1,17 @@
-error: Only one `source` field allowed per struct or struct variant
- --> $DIR/from_source.rs:5:8
-  |
-5 | struct BracedWithSourceDuplicate {
-  |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+error: Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)
+  --> $DIR/from_source.rs:10:5
+   |
+10 |     cause: io::Error,
+   |     ^^^^^
 
 error: Only one `#[from]` field allowed per struct or struct variant
-  --> $DIR/from_source.rs:13:8
+  --> $DIR/from_source.rs:20:5
    |
-13 | struct BracedWithFromDuplicate1 {
-   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+20 |     cause: io::Error,
+   |     ^^^^^
 
-error: To derive From on this field, it must have a source (a field `source` or attr #[source])
-  --> $DIR/from_source.rs:26:5
+error: Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)
+  --> $DIR/from_source.rs:29:5
    |
-26 |     cause: io::Error,
+29 |     cause: io::Error,
    |     ^^^^^

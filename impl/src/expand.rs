@@ -1,5 +1,5 @@
 use crate::attr;
-use proc_macro2::{TokenStream, Span};
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{
@@ -25,14 +25,14 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     // Because from implies source, from comes first to make sure from-specific errors
     // get encountered first
     let from = match &data.fields {
-        Fields::Named(fields) => from_member_type(&fields.named, &ty.span())?,
-        Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span())?,
+        Fields::Named(fields) => from_member_type(&fields.named)?,
+        Fields::Unnamed(fields) => from_member_type(&fields.unnamed)?,
         Fields::Unit => None,
     };
 
     let source = match &data.fields {
-        Fields::Named(fields) => source_member(&fields.named, &ty.span())?,
-        Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span())?,
+        Fields::Named(fields) => source_member(&fields.named)?,
+        Fields::Unnamed(fields) => source_member(&fields.unnamed)?,
         Fields::Unit => None,
     };
 
@@ -116,8 +116,8 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         .variants
         .iter()
         .map(|variant| match &variant.fields {
-            Fields::Named(fields) => from_member_type(&fields.named, &ty.span()),
-            Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span()),
+            Fields::Named(fields) => from_member_type(&fields.named),
+            Fields::Unnamed(fields) => from_member_type(&fields.unnamed),
             Fields::Unit => Ok(None),
         })
         .collect::<Result<Vec<_>>>()?;
@@ -126,8 +126,8 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         .variants
         .iter()
         .map(|variant| match &variant.fields {
-            Fields::Named(fields) => source_member(&fields.named, &ty.span()),
-            Fields::Unnamed(fields) => source_member(&fields.unnamed, &ty.span()),
+            Fields::Named(fields) => source_member(&fields.named),
+            Fields::Unnamed(fields) => source_member(&fields.unnamed),
             Fields::Unit => Ok(None),
         })
         .collect::<Result<Vec<_>>>()?;
@@ -264,14 +264,14 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     })
 }
 
-fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &Span) -> Result<Option<Member>> {
+fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
     let mut source_member_count = 0;
     let mut res = None;
 
     for (i, field) in fields.into_iter().enumerate() {
         if field_is_source(&field)? {
             if  source_member_count == 1 {
-                return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)"));
+                return Err(Error::new_spanned(&field.ident, "Only one `source` field allowed per struct or struct variant (remember that `#[from]` implies `source`)"));
             }
 
             res = Some(member(i, &field.ident));
@@ -286,7 +286,7 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &
 // - duplicate `from` fields
 //
 // `from` implies `source`
-fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &Span) -> Result<Option<(Member, Type)>> {
+fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<(Member, Type)>> {
     let mut from_member_count = 0;
     let mut res = None;
 
@@ -295,7 +295,7 @@ fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span
 
         if is_from {
             if  from_member_count == 1 {
-                return Err(Error::new(*parent_span, "Only one `#[from]` field allowed per struct or struct variant"));
+                return Err(Error::new_spanned(&field.ident, "Only one `#[from]` field allowed per struct or struct variant"));
             }
         }
 
