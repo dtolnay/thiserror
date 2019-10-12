@@ -19,11 +19,11 @@ fn impl_struct(input: Struct) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let source_method = input.source_member().map(|source| {
-        let member = quote_spanned!(source.span()=> self.#source);
+        let dyn_error = quote_spanned!(source.span()=> self.#source.as_dyn_error());
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
                 use thiserror::private::AsDynError;
-                std::option::Option::Some(#member.as_dyn_error())
+                std::option::Option::Some(#dyn_error)
             }
         }
     });
