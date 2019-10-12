@@ -1,0 +1,9 @@
+error[E0599]: no method named `as_dyn_error` found for type `std::string::String` in the current scope
+ --> $DIR/source-not-error.rs:3:10
+  |
+3 | #[derive(Error, Debug)]
+  |          ^^^^^ method not found in `std::string::String`
+  |
+  = note: the method `as_dyn_error` exists but the following trait bounds were not satisfied:
+          `std::string::String : thiserror::aserror::AsDynError`
+          `str : thiserror::aserror::AsDynError`
