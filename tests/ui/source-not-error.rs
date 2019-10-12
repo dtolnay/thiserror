@@ -2,8 +2,16 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 #[error("...")]
-pub struct Error {
+pub struct ErrorStruct {
     source: String,
+}
+
+#[derive(Error, Debug)]
+#[error("...")]
+pub enum ErrorEnum {
+    Broken {
+        source: String,
+    },
 }
 
 fn main() {}

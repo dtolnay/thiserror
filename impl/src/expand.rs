@@ -66,9 +66,13 @@ fn impl_enum(input: Enum) -> TokenStream {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             match variant.source_member() {
-                Some(source) => quote! {
-                    #ty::#ident {#source: source, ..} => std::option::Option::Some(source.as_dyn_error()),
-                },
+                Some(source) => {
+                    let var = quote_spanned!(source.span()=> source);
+                    let dyn_error = quote_spanned!(source.span()=> #var.as_dyn_error());
+                    quote! {
+                        #ty::#ident {#source: #var, ..} => std::option::Option::Some(#dyn_error),
+                    }
+                }
                 None => quote! {
                     #ty::#ident {..} => std::option::Option::None,
                 },
