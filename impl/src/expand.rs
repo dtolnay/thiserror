@@ -3,7 +3,7 @@ use crate::valid;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{DeriveInput, Member, Result};
+use syn::{DeriveInput, Member, PathArguments, Result, Type};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
@@ -18,8 +18,14 @@ fn impl_struct(input: Struct) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let source_method = input.source_member().map(|source| {
-        let dyn_error = quote_spanned!(source.span()=> self.#source.as_dyn_error());
+    let source_method = input.source_field().map(|source_field| {
+        let source = &source_field.member;
+        let asref = if type_is_option(source_field.ty) {
+            Some(quote_spanned!(source.span()=> .as_ref()?))
+        } else {
+            None
+        };
+        let dyn_error = quote_spanned!(source.span()=> self.#source #asref.as_dyn_error());
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
                 use thiserror::private::AsDynError;
@@ -30,11 +36,20 @@ fn impl_struct(input: Struct) -> TokenStream {
 
     let backtrace_method = input.backtrace_field().map(|backtrace| {
         let backtrace = &backtrace.member;
-        let body = if let Some(source) = input.source_member() {
-            let dyn_error = quote_spanned!(source.span()=> self.#source.as_dyn_error());
+        let body = if let Some(source_field) = input.source_field() {
+            let source = &source_field.member;
+            let source_backtrace = if type_is_option(source_field.ty) {
+                quote_spanned! {source.span()=>
+                    self.#source.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                }
+            } else {
+                quote_spanned! {source.span()=>
+                    self.#source.as_dyn_error().backtrace()
+                }
+            };
             quote!({
                 use thiserror::private::AsDynError;
-                #dyn_error.backtrace().unwrap_or(&self.#backtrace)
+                #source_backtrace.unwrap_or(&self.#backtrace)
             })
         } else {
             quote! {
@@ -77,9 +92,15 @@ fn impl_enum(input: Enum) -> TokenStream {
     let source_method = if input.has_source() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            match variant.source_member() {
-                Some(source) => {
-                    let dyn_error = quote_spanned!(source.span()=> source.as_dyn_error());
+            match variant.source_field() {
+                Some(source_field) => {
+                    let source = &source_field.member;
+                    let asref = if type_is_option(source_field.ty) {
+                        Some(quote_spanned!(source.span()=> .as_ref()?))
+                    } else {
+                        None
+                    };
+                    let dyn_error = quote_spanned!(source.span()=> source #asref.as_dyn_error());
                     quote! {
                         #ty::#ident {#source: source, ..} => std::option::Option::Some(#dyn_error),
                     }
@@ -104,10 +125,19 @@ fn impl_enum(input: Enum) -> TokenStream {
     let backtrace_method = if input.has_backtrace() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            match (variant.backtrace_field(), variant.source_member()) {
-                (Some(backtrace), Some(source)) if backtrace.attrs.backtrace.is_none() => {
+            match (variant.backtrace_field(), variant.source_field()) {
+                (Some(backtrace), Some(source_field)) if backtrace.attrs.backtrace.is_none() => {
                     let backtrace = &backtrace.member;
-                    let dyn_error = quote_spanned!(source.span()=> source.as_dyn_error());
+                    let source = &source_field.member;
+                    let source_backtrace = if type_is_option(source_field.ty) {
+                        quote_spanned! {source.span()=>
+                            source.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                        }
+                    } else {
+                        quote_spanned! {source.span()=>
+                            source.as_dyn_error().backtrace()
+                        }
+                    };
                     quote! {
                         #ty::#ident {
                             #backtrace: backtrace,
@@ -115,7 +145,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                             ..
                         } => std::option::Option::Some({
                             use thiserror::private::AsDynError;
-                            #dyn_error.backtrace().unwrap_or(backtrace)
+                            #source_backtrace.unwrap_or(backtrace)
                         }),
                     }
                 }
@@ -190,5 +220,22 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
             quote!((#(#vars),*))
         }
         None => quote!({}),
+    }
+}
+
+fn type_is_option(ty: &Type) -> bool {
+    let path = match ty {
+        Type::Path(ty) => &ty.path,
+        _ => return false,
+    };
+
+    let last = path.segments.last().unwrap();
+    if last.ident != "Option" {
+        return false;
+    }
+
+    match &last.arguments {
+        PathArguments::AngleBracketed(bracketed) => bracketed.args.len() == 1,
+        _ => false,
     }
 }

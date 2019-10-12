@@ -2,8 +2,8 @@ use crate::ast::{Enum, Field, Struct, Variant};
 use syn::{Member, Type};
 
 impl Struct<'_> {
-    pub(crate) fn source_member(&self) -> Option<&Member> {
-        source_member(&self.fields)
+    pub(crate) fn source_field(&self) -> Option<&Field> {
+        source_field(&self.fields)
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
@@ -15,7 +15,7 @@ impl Enum<'_> {
     pub(crate) fn has_source(&self) -> bool {
         self.variants
             .iter()
-            .any(|variant| variant.source_member().is_some())
+            .any(|variant| variant.source_field().is_some())
     }
 
     pub(crate) fn has_backtrace(&self) -> bool {
@@ -34,8 +34,8 @@ impl Enum<'_> {
 }
 
 impl Variant<'_> {
-    pub(crate) fn source_member(&self) -> Option<&Member> {
-        source_member(&self.fields)
+    pub(crate) fn source_field(&self) -> Option<&Field> {
+        source_field(&self.fields)
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
@@ -43,15 +43,15 @@ impl Variant<'_> {
     }
 }
 
-fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
+fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.source.is_some() {
-            return Some(&field.member);
+            return Some(&field);
         }
     }
     for field in fields {
         match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(&field.member),
+            Member::Named(ident) if ident == "source" => return Some(&field),
             _ => {}
         }
     }
