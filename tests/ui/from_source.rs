@@ -1,4 +1,5 @@
 use std::io;
+use std::io::Error as IoError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -57,6 +58,16 @@ enum EnumDuplicateFromType2 {
         cause: io::Error,
     },
     Tuple(#[from] std::io::Error),
+    Unit,
+}
+
+#[derive(Error, Debug)]
+enum EnumDuplicateFromType3 {
+    BracedOne {
+        #[from]
+        cause: io::Error,
+    },
+    Tuple(#[from] IoError),
     Unit,
 }
 
