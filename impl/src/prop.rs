@@ -44,20 +44,24 @@ impl Variant<'_> {
 }
 
 impl Field<'_> {
-    pub(crate) fn is_source(&self) -> bool {
-        self.attrs.source.is_some()
-    }
-
     fn is_backtrace(&self) -> bool {
         type_is_backtrace(self.ty)
     }
 }
 
 fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
-    fields
-        .iter()
-        .find(|field| field.is_source())
-        .map(|field| &field.member)
+    for field in fields {
+        if field.attrs.source.is_some() {
+            return Some(&field.member);
+        }
+    }
+    for field in fields {
+        match &field.member {
+            Member::Named(ident) if ident == "source" => return Some(&field.member),
+            _ => {}
+        }
+    }
+    None
 }
 
 fn backtrace_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {
