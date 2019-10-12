@@ -231,6 +231,22 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         None
     };
 
+    // Best-effort to find when source types for #[from] variants are duplicated.
+    // Does not take into account aliases, but will try to use as much of path as possible.
+    // TODO determine if there's a better way to do the comparison loop
+    for i in 0..froms.len() {
+        for j in (i..froms.len()).skip(1) {
+            if let Some((_, ref ty_1)) = froms[i] {
+                if let Some((_, ref ty_2)) = froms[j] {
+
+                    if ty_paths_eq(ty_1, ty_2) {
+                        return Err(Error::new_spanned(&ty_2, "Cannot derive `From` on enum when two variants have same type for source error"));
+                    }
+                }
+            }
+        }
+    }
+
     let froms_derive = froms
         .iter()
         .zip(data.variants.iter())
@@ -358,4 +374,19 @@ fn ident_is_source(ident: &Option<Ident>) -> bool {
 
 fn field_is_source(field: &Field) -> Result<bool> {
     Ok(attr::is_source(field)? || ident_is_source(&field.ident) || attr::is_from(field)?)
+}
+
+// currently match on as much path is available
+fn ty_paths_eq(ty_1: &Type, ty_2: &Type) -> bool {
+    let path_1 = match ty_1 {
+        Type::Path(ty) => &ty.path,
+        _ => return false,
+    };
+    let path_2 = match ty_2 {
+        Type::Path(ty) => &ty.path,
+        _ => return false,
+    };
+
+    path_1.segments.iter().rev().zip(path_2.segments.iter().rev())
+        .all(|(seg_1, seg_2)| seg_1.ident == seg_2.ident)
 }

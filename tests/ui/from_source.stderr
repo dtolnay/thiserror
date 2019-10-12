@@ -21,3 +21,15 @@ error: When deriving `From`, non-`#[from]` fields are not allowed
    |
 40 |     msg: String,
    |     ^^^
+
+error: Cannot derive `From` on enum when two variants have same type for source error
+  --> $DIR/from_source.rs:49:19
+   |
+49 |     Tuple(#[from] io::Error),
+   |                   ^^^^^^^^^
+
+error: Cannot derive `From` on enum when two variants have same type for source error
+  --> $DIR/from_source.rs:59:19
+   |
+59 |     Tuple(#[from] std::io::Error),
+   |                   ^^^^^^^^^^^^^^

@@ -40,4 +40,24 @@ struct BracedWithFromExtraField1 {
     msg: String,
 }
 
+#[derive(Error, Debug)]
+enum EnumDuplicateFromType1 {
+    BracedOne {
+        #[from]
+        cause: io::Error,
+    },
+    Tuple(#[from] io::Error),
+    Unit,
+}
+
+#[derive(Error, Debug)]
+enum EnumDuplicateFromType2 {
+    BracedOne {
+        #[from]
+        cause: io::Error,
+    },
+    Tuple(#[from] std::io::Error),
+    Unit,
+}
+
 fn main() {}
