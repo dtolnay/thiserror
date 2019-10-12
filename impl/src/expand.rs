@@ -22,18 +22,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let source = match &data.fields {
-        Fields::Named(fields) => source_member(&fields.named)?,
-        Fields::Unnamed(fields) => source_member(&fields.unnamed)?,
-        Fields::Unit => None,
-    };
-
-    let backtrace = match &data.fields {
-        Fields::Named(fields) => backtrace_member(&fields.named)?,
-        Fields::Unnamed(fields) => backtrace_member(&fields.unnamed)?,
-        Fields::Unit => None,
-    };
-
+    let source = source_member(&data.fields)?;
     let source_method = source.map(|source| {
         let member = quote_spanned!(source.span()=> self.#source);
         quote! {
@@ -44,6 +33,7 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         }
     });
 
+    let backtrace = backtrace_member(&data.fields)?;
     let backtrace_method = backtrace.map(|backtrace| {
         quote! {
             fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
@@ -52,7 +42,8 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
         }
     });
 
-    let display = attr::display(&input.attrs)?.map(|display| {
+    let struct_attrs = attr::get(&input.attrs)?;
+    let display = struct_attrs.display.map(|display| {
         let pat = match &data.fields {
             Fields::Named(fields) => {
                 let var = fields.named.iter().map(|field| &field.ident);
@@ -88,25 +79,23 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let sources = data
+    let variant_fields: Vec<&Fields> = data
         .variants
         .iter()
-        .map(|variant| match &variant.fields {
-            Fields::Named(fields) => source_member(&fields.named),
-            Fields::Unnamed(fields) => source_member(&fields.unnamed),
-            Fields::Unit => Ok(None),
-        })
-        .collect::<Result<Vec<_>>>()?;
+        .map(|variant| &variant.fields)
+        .collect();
 
-    let backtraces = data
-        .variants
+    let sources: Vec<Option<Member>> = variant_fields
         .iter()
-        .map(|variant| match &variant.fields {
-            Fields::Named(fields) => backtrace_member(&fields.named),
-            Fields::Unnamed(fields) => backtrace_member(&fields.unnamed),
-            Fields::Unit => Ok(None),
-        })
-        .collect::<Result<Vec<_>>>()?;
+        .cloned()
+        .map(source_member)
+        .collect::<Result<_>>()?;
+
+    let backtraces: Vec<Option<Member>> = variant_fields
+        .iter()
+        .cloned()
+        .map(backtrace_member)
+        .collect::<Result<_>>()?;
 
     let source_method = if sources.iter().any(Option::is_some) {
         let arms = data.variants.iter().zip(sources).map(|(variant, source)| {
@@ -155,18 +144,18 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         None
     };
 
-    let displays = data
+    let variant_attrs = data
         .variants
         .iter()
-        .map(|variant| attr::display(&variant.attrs))
+        .map(|variant| attr::get(&variant.attrs))
         .collect::<Result<Vec<_>>>()?;
-    let display = if displays.iter().any(Option::is_some) {
+    let display = if variant_attrs.iter().any(|attrs| attrs.display.is_some()) {
         let arms = data
             .variants
             .iter()
-            .zip(displays)
-            .map(|(variant, display)| {
-                let display = display.ok_or_else(|| {
+            .zip(variant_attrs)
+            .map(|(variant, attrs)| {
+                let display = attrs.display.ok_or_else(|| {
                     Error::new_spanned(variant, "missing #[error(\"...\")] display attribute")
                 })?;
                 let ident = &variant.ident;
@@ -208,7 +197,8 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
 
 fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
     for (i, field) in fields.into_iter().enumerate() {
-        if attr::is_source(field)? {
+        let attrs = attr::get(&field.attrs)?;
+        if attrs.source {
             return Ok(Some(member(i, &field.ident)));
         }
     }
