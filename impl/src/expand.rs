@@ -34,8 +34,8 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let backtrace_method = input.backtrace_field().map(|backtrace| {
-        let backtrace = &backtrace.member;
+    let backtrace_method = input.backtrace_field().map(|backtrace_field| {
+        let backtrace = &backtrace_field.member;
         let body = if let Some(source_field) = input.source_field() {
             let source = &source_field.member;
             let source_backtrace = if type_is_option(source_field.ty) {
@@ -47,18 +47,31 @@ fn impl_struct(input: Struct) -> TokenStream {
                     self.#source.as_dyn_error().backtrace()
                 }
             };
-            quote!({
+            let combinator = if type_is_option(backtrace_field.ty) {
+                quote! {
+                    #source_backtrace.or(self.#backtrace.as_ref())
+                }
+            } else {
+                quote! {
+                    std::option::Option::Some(#source_backtrace.unwrap_or(&self.#backtrace))
+                }
+            };
+            quote! {
                 use thiserror::private::AsDynError;
-                #source_backtrace.unwrap_or(&self.#backtrace)
-            })
+                #combinator
+            }
+        } else if type_is_option(backtrace_field.ty) {
+            quote! {
+                self.#backtrace.as_ref()
+            }
         } else {
             quote! {
-                &self.#backtrace
+                std::option::Option::Some(&self.#backtrace)
             }
         };
         quote! {
             fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                std::option::Option::Some(#body)
+                #body
             }
         }
     });
@@ -126,8 +139,10 @@ fn impl_enum(input: Enum) -> TokenStream {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             match (variant.backtrace_field(), variant.source_field()) {
-                (Some(backtrace), Some(source_field)) if backtrace.attrs.backtrace.is_none() => {
-                    let backtrace = &backtrace.member;
+                (Some(backtrace_field), Some(source_field))
+                    if backtrace_field.attrs.backtrace.is_none() =>
+                {
+                    let backtrace = &backtrace_field.member;
                     let source = &source_field.member;
                     let source_backtrace = if type_is_option(source_field.ty) {
                         quote_spanned! {source.span()=>
@@ -138,21 +153,35 @@ fn impl_enum(input: Enum) -> TokenStream {
                             source.as_dyn_error().backtrace()
                         }
                     };
+                    let combinator = if type_is_option(backtrace_field.ty) {
+                        quote! {
+                            #source_backtrace.or(backtrace.as_ref())
+                        }
+                    } else {
+                        quote! {
+                            std::option::Option::Some(#source_backtrace.unwrap_or(backtrace))
+                        }
+                    };
                     quote! {
                         #ty::#ident {
                             #backtrace: backtrace,
                             #source: source,
                             ..
-                        } => std::option::Option::Some({
+                        } => {
                             use thiserror::private::AsDynError;
-                            #source_backtrace.unwrap_or(backtrace)
-                        }),
+                            #combinator
+                        }
                     }
                 }
-                (Some(backtrace), _) => {
-                    let backtrace = &backtrace.member;
+                (Some(backtrace_field), _) => {
+                    let backtrace = &backtrace_field.member;
+                    let body = if type_is_option(backtrace_field.ty) {
+                        quote!(backtrace.as_ref())
+                    } else {
+                        quote!(std::option::Option::Some(backtrace))
+                    };
                     quote! {
-                        #ty::#ident {#backtrace: backtrace, ..} => std::option::Option::Some(backtrace),
+                        #ty::#ident {#backtrace: backtrace, ..} => #body,
                     }
                 }
                 (None, _) => quote! {
