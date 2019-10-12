@@ -267,11 +267,11 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &
     let mut res = None;
 
     for (i, field) in fields.into_iter().enumerate() {
-        if  source_member_count == 1 {
-            return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant"));
-        }
-
         if field_is_source(&field)? {
+            if  source_member_count == 1 {
+                return Err(Error::new(*parent_span, "Only one `source` field allowed per struct or struct variant"));
+            }
+
             res = Some(member(i, &field.ident));
             source_member_count += 1;
         }

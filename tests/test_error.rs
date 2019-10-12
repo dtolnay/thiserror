@@ -30,6 +30,7 @@ struct UnitError;
 struct WithSource {
     #[source]
     cause: io::Error,
+    msg: String,
 }
 
 #[derive(Error, Debug)]
