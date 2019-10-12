@@ -47,6 +47,10 @@ struct Arithmetic;
 #[error("!bool = {}", not(.0))]
 struct NestedShorthand(bool);
 
+#[derive(Error, Debug)]
+#[error("...")]
+enum Void {}
+
 fn not(bool: &bool) -> bool {
     !*bool
 }
