@@ -14,6 +14,7 @@ thiserror-impl = { version = "=1.0.0", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0"
+trybuild = "1.0"
 
 [workspace]
 members = ["impl"]

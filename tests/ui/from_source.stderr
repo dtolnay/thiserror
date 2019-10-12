@@ -1,0 +1,5 @@
+error: Only one `source` field allowed per struct or struct variant
+ --> $DIR/from_source.rs:5:8
+  |
+5 | struct BracedWithSourceDuplicate {
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -51,9 +51,6 @@ enum EnumError {
 #[derive(Error, Debug)]
 struct BracedImpliedSource {
     source: io::Error,
-// this should cause compilation error
-//    #[source]
-//    cause: io::Error,
 }
 
 #[derive(Error, Debug)]
