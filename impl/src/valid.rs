@@ -1,4 +1,5 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
+use crate::attr::Attrs;
 use syn::{Error, Result};
 
 pub(crate) const CHECKED: &str = "checked in validation";
@@ -14,13 +15,18 @@ impl Input<'_> {
 
 impl Struct<'_> {
     fn validate(&self) -> Result<()> {
+        check_no_source(&self.attrs)?;
         find_duplicate_source(&self.fields)?;
+        for field in &self.fields {
+            field.validate()?;
+        }
         Ok(())
     }
 }
 
 impl Enum<'_> {
     fn validate(&self) -> Result<()> {
+        check_no_source(&self.attrs)?;
         let has_display = self.has_display();
         for variant in &self.variants {
             variant.validate()?;
@@ -37,9 +43,35 @@ impl Enum<'_> {
 
 impl Variant<'_> {
     fn validate(&self) -> Result<()> {
+        check_no_source(&self.attrs)?;
         find_duplicate_source(&self.fields)?;
+        for field in &self.fields {
+            field.validate()?;
+        }
         Ok(())
     }
+}
+
+impl Field<'_> {
+    fn validate(&self) -> Result<()> {
+        if let Some(display) = &self.attrs.display {
+            return Err(Error::new_spanned(
+                display.original,
+                "not expected here; the #[error(...)] attribute belongs on top of a struct or an enum variant",
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn check_no_source(attrs: &Attrs) -> Result<()> {
+    if let Some(source) = &attrs.source {
+        return Err(Error::new_spanned(
+            source.original,
+            "not expected here; the #[source] attribute belongs on a specific field",
+        ));
+    }
+    Ok(())
 }
 
 fn find_duplicate_source(fields: &[Field]) -> Result<()> {
