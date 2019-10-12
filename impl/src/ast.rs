@@ -63,15 +63,23 @@ impl<'a> Struct<'a> {
 
 impl<'a> Enum<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataEnum) -> Result<Self> {
+        let attrs = attr::get(&node.attrs)?;
+        let variants = data
+            .variants
+            .iter()
+            .map(|node| {
+                let mut variant = Variant::from_syn(node)?;
+                if let display @ None = &mut variant.attrs.display {
+                    *display = attrs.display.clone();
+                }
+                Ok(variant)
+            })
+            .collect::<Result<_>>()?;
         Ok(Enum {
-            attrs: attr::get(&node.attrs)?,
+            attrs,
             ident: node.ident.clone(),
             generics: &node.generics,
-            variants: data
-                .variants
-                .iter()
-                .map(Variant::from_syn)
-                .collect::<Result<_>>()?,
+            variants,
         })
     }
 }

@@ -32,6 +32,14 @@ enum EnumError {
 }
 
 #[derive(Error, Debug)]
+#[error("{0}")]
+enum Inherit {
+    Unit(UnitError),
+    #[error("other error")]
+    Other(UnitError),
+}
+
+#[derive(Error, Debug)]
 #[error("1 + 1 = {}", 1 + 1)]
 struct Arithmetic;
 
@@ -57,6 +65,8 @@ fn test_display() {
     assert("braced error: 0", EnumError::Braced { id: 0 });
     assert("tuple error: 0", EnumError::Tuple(0));
     assert("unit error", EnumError::Unit);
+    assert("unit error", Inherit::Unit(UnitError));
+    assert("other error", Inherit::Other(UnitError));
     assert("1 + 1 = 2", Arithmetic);
     assert("!bool = false", NestedShorthand(true));
 }

@@ -12,6 +12,7 @@ pub struct Attrs<'a> {
     pub source: Option<Source<'a>>,
 }
 
+#[derive(Clone)]
 pub struct Display {
     pub fmt: LitStr,
     pub args: TokenStream,
