@@ -1,11 +1,9 @@
-#![cfg(thiserror_nightly_testing)]
-#![feature(backtrace)]
+#![cfg_attr(thiserror_nightly_testing, feature(backtrace))]
 
-use std::backtrace::Backtrace;
-use thiserror::Error;
-
+#[cfg(thiserror_nightly_testing)]
 pub mod structs {
-    use super::*;
+    use std::backtrace::Backtrace;
+    use thiserror::Error;
 
     #[derive(Error, Debug)]
     #[error("...")]
@@ -47,8 +45,10 @@ pub mod structs {
     }
 }
 
+#[cfg(thiserror_nightly_testing)]
 pub mod enums {
-    use super::*;
+    use std::backtrace::Backtrace;
+    use thiserror::Error;
 
     #[derive(Error, Debug)]
     pub enum OptSourceNoBacktrace {
@@ -99,3 +99,7 @@ pub mod enums {
         },
     }
 }
+
+#[test]
+#[cfg_attr(not(thiserror_nightly_testing), ignore)]
+fn test_option() {}
