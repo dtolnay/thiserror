@@ -29,8 +29,8 @@ fn impl_struct(input: &DeriveInput, data: &DataStruct) -> Result<TokenStream> {
     };
 
     let from = match &data.fields {
-        Fields::Named(fields) => from_member_type(&fields.named)?,
-        Fields::Unnamed(fields) => from_member_type(&fields.unnamed)?,
+        Fields::Named(fields) => from_member_type(&fields.named, &ty.span())?,
+        Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span())?,
         Fields::Unit => None,
     };
 
@@ -124,8 +124,8 @@ fn impl_enum(input: &DeriveInput, data: &DataEnum) -> Result<TokenStream> {
         .variants
         .iter()
         .map(|variant| match &variant.fields {
-            Fields::Named(fields) => from_member_type(&fields.named),
-            Fields::Unnamed(fields) => from_member_type(&fields.unnamed),
+            Fields::Named(fields) => from_member_type(&fields.named, &ty.span()),
+            Fields::Unnamed(fields) => from_member_type(&fields.unnamed, &ty.span()),
             Fields::Unit => Ok(None),
         })
         .collect::<Result<Vec<_>>>()?;
@@ -280,20 +280,33 @@ fn source_member<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &
     Ok(res)
 }
 
-fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<(Member, Type)>> {
+// Needs to check for conditions:
+// - duplicate `from` fields
+// - `from` without `source`
+fn from_member_type<'a>(fields: impl IntoIterator<Item = &'a Field>, parent_span: &Span) -> Result<Option<(Member, Type)>> {
+    let mut from_member_count = 0;
+    let mut res = None;
+
     for (i, field) in fields.into_iter().enumerate() {
         let is_from = attr::is_from(field)?;
 
-        // TODO is_source can also be a field named source in the future.
-        if is_from && attr::is_source(field)? {
-            return Ok(Some(
+        if is_from {
+            if  from_member_count == 1 {
+                return Err(Error::new(*parent_span, "Only one `#[from]` field allowed per struct or struct variant"));
+            }
+        }
+
+        if is_from && field_is_source(&field)? {
+            res = Some(
                 (member(i, &field.ident), field.ty.clone())
-            ));
+            );
+            from_member_count += 1;
         } else if is_from {
-            return Err(Error::new_spanned(field, "To derive From on this field, it must have a source (a field `source` or attr #[source])"));
+            return Err(Error::new_spanned(&field.ident, "To derive From on this field, it must have a source (a field `source` or attr #[source])"));
         }
     }
-    Ok(None)
+
+    Ok(res)
 }
 
 fn backtrace_member<'a>(fields: impl IntoIterator<Item = &'a Field>) -> Result<Option<Member>> {
