@@ -49,7 +49,7 @@ struct NestedShorthand(bool);
 
 #[derive(Error, Debug)]
 #[error("...")]
-enum Void {}
+pub enum Void {}
 
 fn not(bool: &bool) -> bool {
     !*bool
