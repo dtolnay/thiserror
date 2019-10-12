@@ -1,19 +1,20 @@
 use crate::ast::{Enum, Field, Input, Struct};
-use crate::attr::Attrs;
+use crate::valid;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{DeriveInput, Error, Member, Result, Type};
+use syn::{DeriveInput, Member, Result, Type};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
-    match input {
+    input.validate()?;
+    Ok(match input {
         Input::Struct(input) => impl_struct(input),
         Input::Enum(input) => impl_enum(input),
-    }
+    })
 }
 
-fn impl_struct(input: Struct) -> Result<TokenStream> {
+fn impl_struct(input: Struct) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
@@ -50,16 +51,16 @@ fn impl_struct(input: Struct) -> Result<TokenStream> {
         }
     });
 
-    Ok(quote! {
+    quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display
-    })
+    }
 }
 
-fn impl_enum(input: Enum) -> Result<TokenStream> {
+fn impl_enum(input: Enum) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
@@ -122,30 +123,18 @@ fn impl_enum(input: Enum) -> Result<TokenStream> {
         None
     };
 
-    let variant_attrs: Vec<&Attrs> = input
-        .variants
-        .iter()
-        .map(|variant| &variant.attrs)
-        .collect();
-    let display = if variant_attrs.iter().any(|attrs| attrs.display.is_some()) {
+    let display = if input.has_display() {
         let arms = input
             .variants
             .iter()
-            .zip(variant_attrs)
-            .map(|(variant, attrs)| {
-                let display = attrs.display.as_ref().ok_or_else(|| {
-                    Error::new_spanned(
-                        variant.original,
-                        "missing #[error(\"...\")] display attribute",
-                    )
-                })?;
+            .map(|variant| {
+                let display = variant.attrs.display.as_ref().expect(valid::CHECKED);
                 let ident = &variant.ident;
                 let pat = fields_pat(&variant.fields);
-                Ok(quote! {
+                quote! {
                     #ty::#ident #pat => #display
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+                }
+            });
         Some(quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -160,13 +149,13 @@ fn impl_enum(input: Enum) -> Result<TokenStream> {
         None
     };
 
-    Ok(quote! {
+    quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display
-    })
+    }
 }
 
 fn source_member<'a>(fields: &'a [Field]) -> Option<&'a Member> {

@@ -4,6 +4,8 @@ mod ast;
 mod attr;
 mod expand;
 mod fmt;
+mod prop;
+mod valid;
 
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
