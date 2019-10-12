@@ -42,8 +42,8 @@ impl Variant<'_> {
 }
 
 impl Field<'_> {
-    fn is_source(&self) -> bool {
-        self.attrs.source
+    pub(crate) fn is_source(&self) -> bool {
+        self.attrs.source.is_some()
     }
 
     fn is_backtrace(&self) -> bool {
