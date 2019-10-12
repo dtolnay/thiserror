@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::quote_spanned;
 use syn::{Ident, LitStr};
 
-impl Display {
+impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
     pub fn expand_shorthand(&mut self) {
         if !self.args.is_empty() {

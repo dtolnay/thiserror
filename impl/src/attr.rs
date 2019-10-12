@@ -8,12 +8,13 @@ use syn::{
 };
 
 pub struct Attrs<'a> {
-    pub display: Option<Display>,
+    pub display: Option<Display<'a>>,
     pub source: Option<Source<'a>>,
 }
 
 #[derive(Clone)]
-pub struct Display {
+pub struct Display<'a> {
+    pub original: &'a Attribute,
     pub fmt: LitStr,
     pub args: TokenStream,
     pub was_shorthand: bool,
@@ -54,6 +55,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 fn parse_display(attr: &Attribute) -> Result<Display> {
     attr.parse_args_with(|input: ParseStream| {
         let mut display = Display {
+            original: attr,
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
             was_shorthand: false,
@@ -116,7 +118,7 @@ fn parse_source(attr: &Attribute) -> Result<Source> {
     Ok(Source { original: attr })
 }
 
-impl ToTokens for Display {
+impl ToTokens for Display<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let fmt = &self.fmt;
         let args = &self.args;
