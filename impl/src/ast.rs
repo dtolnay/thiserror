@@ -24,12 +24,14 @@ pub struct Enum<'a> {
 }
 
 pub struct Variant<'a> {
+    pub original: &'a syn::Variant,
     pub attrs: Attrs,
     pub ident: Ident,
     pub fields: Vec<Field<'a>>,
 }
 
 pub struct Field<'a> {
+    pub original: &'a syn::Field,
     pub attrs: Attrs,
     pub member: Member,
     pub ty: &'a Type,
@@ -77,6 +79,7 @@ impl<'a> Enum<'a> {
 impl<'a> Variant<'a> {
     fn from_syn(node: &'a syn::Variant) -> Result<Self> {
         Ok(Variant {
+            original: node,
             attrs: attr::get(&node.attrs)?,
             ident: node.ident.clone(),
             fields: Field::multiple_from_syn(&node.fields)?,
@@ -95,6 +98,7 @@ impl<'a> Field<'a> {
 
     fn from_syn(i: usize, node: &'a syn::Field) -> Result<Self> {
         Ok(Field {
+            original: node,
             attrs: attr::get(&node.attrs)?,
             member: node
                 .ident

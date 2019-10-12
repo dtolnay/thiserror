@@ -135,7 +135,7 @@ fn impl_enum(input: Enum) -> Result<TokenStream> {
             .map(|(variant, attrs)| {
                 let display = attrs.display.as_ref().ok_or_else(|| {
                     Error::new_spanned(
-                        &variant.ident,
+                        variant.original,
                         "missing #[error(\"...\")] display attribute",
                     )
                 })?;
