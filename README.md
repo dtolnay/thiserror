@@ -27,7 +27,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum DataStoreError {
     #[error("data store disconnected")]
-    Disconnect(#[source] io::Error),
+    Disconnect(#[from] io::Error),
     #[error("the data for key `{0}` is not available")]
     Redaction(String),
     #[error("invalid header (expected {expected:?}, found {found:?})")]
@@ -78,9 +78,29 @@ pub enum DataStoreError {
   }
   ```
 
+- A `From` impl is generated for each variant containing a `#[from]` attribute.
+
+  Note that the variant must not contain any other fields beyond the source
+  error and possibly a backtrace. A backtrace is captured from within the `From`
+  impl if there is a field for it.
+
+  ```rust
+  #[derive(Error, Debug)]
+  pub enum MyError {
+      Io {
+          #[from]
+          source: io::Error,
+          backtrace: Backtrace,
+      },
+  }
+  ```
+
 - The Error trait's `source()` method is implemented to return whichever field
-  has a `#[source]` attribute, if any. This is for identifying the underlying
-  lower level error that caused your error.
+  has a `#[source]` attribute or is named `source`, if any. This is for
+  identifying the underlying lower level error that caused your error.
+
+  The `#[from]` attribute always implies that the same field is `#[source]`, so
+  you don't ever need to specify both attributes.
 
   Any error type that implements `std::error::Error` or dereferences to `dyn
   std::error::Error` will work as a source.
@@ -89,7 +109,7 @@ pub enum DataStoreError {
   #[derive(Error, Debug)]
   pub struct MyError {
       msg: String,
-      #[source]
+      #[source] // optional if field name is `source`
       source: anyhow::Error,
   }
   ```
