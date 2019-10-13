@@ -90,12 +90,13 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let from_impl = input.from_field().map(|from_field| {
-        let member = &from_field.member;
+        let backtrace_field = input.backtrace_field();
         let from = from_field.ty;
+        let body = from_initializer(from_field, backtrace_field);
         quote! {
             impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
                 fn from(source: #from) -> Self {
-                    #ty { #member: source }
+                    #ty #body
                 }
             }
         }
@@ -243,13 +244,14 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let from_impls = input.variants.iter().filter_map(|variant| {
         let from_field = variant.from_field()?;
+        let backtrace_field = variant.backtrace_field();
         let variant = &variant.ident;
-        let member = &from_field.member;
         let from = from_field.ty;
+        let body = from_initializer(from_field, backtrace_field);
         Some(quote! {
             impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
                 fn from(source: #from) -> Self {
-                    #ty::#variant { #member: source }
+                    #ty::#variant #body
                 }
             }
         })
@@ -278,6 +280,26 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
         }
         None => quote!({}),
     }
+}
+
+fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> TokenStream {
+    let from_member = &from_field.member;
+    let backtrace = backtrace_field.map(|backtrace_field| {
+        let backtrace_member = &backtrace_field.member;
+        if type_is_option(backtrace_field.ty) {
+            quote! {
+                #backtrace_member: std::option::Option::Some(std::backtrace::Backtrace::capture()),
+            }
+        } else {
+            quote! {
+                #backtrace_member: std::backtrace::Backtrace::capture(),
+            }
+        }
+    });
+    quote!({
+        #from_member: source,
+        #backtrace
+    })
 }
 
 fn type_is_option(ty: &Type) -> bool {
