@@ -45,10 +45,10 @@
 //!
 //!   The messages support a shorthand for interpolating fields from the error.
 //!
-//!     - `#[error("{var}")]` ⟶ `write!("{}", self.var)`
-//!     - `#[error("{0}")]` ⟶ `write!("{}", self.0)`
-//!     - `#[error("{var:?}")]` ⟶ `write!("{:?}", self.var)`
-//!     - `#[error("{0:?}")]` ⟶ `write!("{:?}", self.0)`
+//!     - `#[error("{var}")]`&ensp;⟶&ensp;`write!("{}", self.var)`
+//!     - `#[error("{0}")]`&ensp;⟶&ensp;`write!("{}", self.0)`
+//!     - `#[error("{var:?}")]`&ensp;⟶&ensp;`write!("{:?}", self.var)`
+//!     - `#[error("{0:?}")]`&ensp;⟶&ensp;`write!("{:?}", self.0)`
 //!
 //!   You may alternatively write out the full format args yourself, using
 //!   arbitrary expressions.
