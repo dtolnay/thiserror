@@ -1,5 +1,7 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
+use quote::ToTokens;
+use std::collections::BTreeSet as Set;
 use syn::{Error, Member, Result};
 
 pub(crate) const CHECKED: &str = "checked in validation";
@@ -35,6 +37,18 @@ impl Enum<'_> {
                     variant.original,
                     "missing #[error(\"...\")] display attribute",
                 ));
+            }
+        }
+        let mut from_types = Set::new();
+        for variant in &self.variants {
+            if let Some(from_field) = variant.from_field() {
+                let repr = from_field.ty.to_token_stream().to_string();
+                if !from_types.insert(repr) {
+                    return Err(Error::new_spanned(
+                        from_field.original,
+                        "cannot derive From because another variant has the same source type",
+                    ));
+                }
             }
         }
         Ok(())
