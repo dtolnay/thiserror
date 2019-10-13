@@ -89,12 +89,25 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
+    let from_impl = input.from_field().map(|from_field| {
+        let member = &from_field.member;
+        let from = from_field.ty;
+        quote! {
+            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                fn from(source: #from) -> Self {
+                    #ty { #member: source }
+                }
+            }
+        }
+    });
+
     quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display_impl
+        #from_impl
     }
 }
 
