@@ -11,6 +11,7 @@ pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
+    pub from: Option<&'a Attribute>,
 }
 
 #[derive(Clone)]
@@ -26,6 +27,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         display: None,
         source: None,
         backtrace: None,
+        from: None,
     };
 
     for attr in input {
@@ -50,6 +52,15 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 return Err(Error::new_spanned(attr, "duplicate #[backtrace] attribute"));
             }
             attrs.backtrace = Some(attr);
+        } else if attr.path.is_ident("from") {
+            if !attr.tokens.is_empty() {
+                // Assume this is meant for derive_more crate or something.
+                continue;
+            }
+            if attrs.from.is_some() {
+                return Err(Error::new_spanned(attr, "duplicate #[from] attribute"));
+            }
+            attrs.from = Some(attr);
         }
     }
 

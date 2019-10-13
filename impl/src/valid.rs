@@ -1,6 +1,8 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
-use syn::{Error, Result};
+use quote::ToTokens;
+use std::collections::BTreeSet as Set;
+use syn::{Error, Member, Result};
 
 pub(crate) const CHECKED: &str = "checked in validation";
 
@@ -37,6 +39,18 @@ impl Enum<'_> {
                 ));
             }
         }
+        let mut from_types = Set::new();
+        for variant in &self.variants {
+            if let Some(from_field) = variant.from_field() {
+                let repr = from_field.ty.to_token_stream().to_string();
+                if !from_types.insert(repr) {
+                    return Err(Error::new_spanned(
+                        from_field.original,
+                        "cannot derive From because another variant has the same source type",
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -65,6 +79,12 @@ impl Field<'_> {
 }
 
 fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
+    if let Some(from) = &attrs.from {
+        return Err(Error::new_spanned(
+            from,
+            "not expected here; the #[from] attribute belongs on a specific field",
+        ));
+    }
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
             source,
@@ -81,24 +101,55 @@ fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
 }
 
 fn check_field_attrs(fields: &[Field]) -> Result<()> {
-    let mut has_source = false;
-    let mut has_backtrace = false;
+    let mut from_field = None;
+    let mut source_field = None;
+    let mut backtrace_field = None;
     for field in fields {
-        if let Some(source) = &field.attrs.source {
-            if has_source {
+        if let Some(from) = field.attrs.from {
+            if from_field.is_some() {
+                return Err(Error::new_spanned(from, "duplicate #[from] attribute"));
+            }
+            from_field = Some(field);
+        }
+        if let Some(source) = field.attrs.source {
+            if source_field.is_some() {
                 return Err(Error::new_spanned(source, "duplicate #[source] attribute"));
             }
-            has_source = true;
+            source_field = Some(field);
         }
-        if let Some(backtrace) = &field.attrs.backtrace {
-            if has_backtrace {
+        if let Some(backtrace) = field.attrs.backtrace {
+            if backtrace_field.is_some() {
                 return Err(Error::new_spanned(
                     backtrace,
                     "duplicate #[backtrace] attribute",
                 ));
             }
-            has_backtrace = true;
+            backtrace_field = Some(field);
+        }
+    }
+    if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
+        if !same_member(from_field, source_field) {
+            return Err(Error::new_spanned(
+                from_field.attrs.from,
+                "#[from] is only supported on the source field, not any other field",
+            ));
+        }
+    }
+    if let Some(from_field) = from_field {
+        if fields.len() > 1 {
+            return Err(Error::new_spanned(
+                from_field.attrs.from,
+                "deriving From requires no fields other than source",
+            ));
         }
     }
     Ok(())
+}
+
+fn same_member(one: &Field, two: &Field) -> bool {
+    match (&one.member, &two.member) {
+        (Member::Named(one), Member::Named(two)) => one == two,
+        (Member::Unnamed(one), Member::Unnamed(two)) => one.index == two.index,
+        _ => unreachable!(),
+    }
 }
