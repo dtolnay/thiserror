@@ -241,12 +241,27 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
+    let from_impls = input.variants.iter().filter_map(|variant| {
+        let from_field = variant.from_field()?;
+        let variant = &variant.ident;
+        let member = &from_field.member;
+        let from = from_field.ty;
+        Some(quote! {
+            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                fn from(source: #from) -> Self {
+                    #ty::#variant { #member: source }
+                }
+            }
+        })
+    });
+
     quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
         #display_impl
+        #(#from_impls)*
     }
 }
 

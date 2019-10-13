@@ -38,6 +38,10 @@ impl Enum<'_> {
 }
 
 impl Variant<'_> {
+    pub(crate) fn from_field(&self) -> Option<&Field> {
+        from_field(&self.fields)
+    }
+
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
