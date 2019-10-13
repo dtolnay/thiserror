@@ -1,5 +1,7 @@
 #![allow(dead_code)]
+#![feature(backtrace)]
 
+use std::backtrace::Backtrace;
 use std::fmt::{self, Display};
 use std::io;
 use thiserror::Error;
@@ -73,6 +75,14 @@ enum EnumWithFrom {
     Unit,
 }
 
+#[derive(Error, Debug)]
+struct BracedWithFromBacktrace {
+    #[from]
+    cause: io::Error,
+    backtrace: Backtrace,
+}
+
+
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
 unimplemented_display!(UnitError);
@@ -83,3 +93,4 @@ unimplemented_display!(BracedImpliedSource);
 unimplemented_display!(BracedWithFrom);
 unimplemented_display!(TupleWithFrom);
 unimplemented_display!(EnumWithFrom);
+unimplemented_display!(BracedWithFromBacktrace);
