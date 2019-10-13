@@ -135,6 +135,14 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
     }
+    if let Some(from_field) = from_field {
+        if fields.len() > 1 {
+            return Err(Error::new_spanned(
+                from_field.attrs.from,
+                "deriving From requires no fields other than source",
+            ));
+        }
+    }
     Ok(())
 }
 
