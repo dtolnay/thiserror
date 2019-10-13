@@ -104,6 +104,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut from_field = None;
     let mut source_field = None;
     let mut backtrace_field = None;
+    let mut has_backtrace = false;
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
@@ -125,7 +126,9 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
                 ));
             }
             backtrace_field = Some(field);
+            has_backtrace = true;
         }
+        has_backtrace |= field.is_backtrace();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
         if !same_member(from_field, source_field) {
@@ -136,10 +139,10 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     if let Some(from_field) = from_field {
-        if fields.len() > 1 {
+        if fields.len() > 1 + has_backtrace as usize {
             return Err(Error::new_spanned(
                 from_field.attrs.from,
-                "deriving From requires no fields other than source",
+                "deriving From requires no fields other than source and backtrace",
             ));
         }
     }

@@ -51,6 +51,12 @@ impl Variant<'_> {
     }
 }
 
+impl Field<'_> {
+    pub(crate) fn is_backtrace(&self) -> bool {
+        type_is_backtrace(self.ty)
+    }
+}
+
 fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.from.is_some() {
@@ -82,7 +88,7 @@ fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
         }
     }
     for field in fields {
-        if type_is_backtrace(field.ty) {
+        if field.is_backtrace() {
             return Some(&field);
         }
     }
