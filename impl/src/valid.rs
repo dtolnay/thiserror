@@ -15,8 +15,8 @@ impl Input<'_> {
 
 impl Struct<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source_or_backtrace(&self.attrs)?;
-        check_no_duplicate_source_or_backtrace(&self.fields)?;
+        check_non_field_attrs(&self.attrs)?;
+        check_field_attrs(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
         }
@@ -26,7 +26,7 @@ impl Struct<'_> {
 
 impl Enum<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source_or_backtrace(&self.attrs)?;
+        check_non_field_attrs(&self.attrs)?;
         let has_display = self.has_display();
         for variant in &self.variants {
             variant.validate()?;
@@ -43,8 +43,8 @@ impl Enum<'_> {
 
 impl Variant<'_> {
     fn validate(&self) -> Result<()> {
-        check_no_source_or_backtrace(&self.attrs)?;
-        check_no_duplicate_source_or_backtrace(&self.fields)?;
+        check_non_field_attrs(&self.attrs)?;
+        check_field_attrs(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
         }
@@ -64,7 +64,7 @@ impl Field<'_> {
     }
 }
 
-fn check_no_source_or_backtrace(attrs: &Attrs) -> Result<()> {
+fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
             source,
@@ -80,7 +80,7 @@ fn check_no_source_or_backtrace(attrs: &Attrs) -> Result<()> {
     Ok(())
 }
 
-fn check_no_duplicate_source_or_backtrace(fields: &[Field]) -> Result<()> {
+fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut has_source = false;
     let mut has_backtrace = false;
     for field in fields {
