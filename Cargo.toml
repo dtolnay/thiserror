@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "derive(Error)"
 repository = "https://github.com/dtolnay/thiserror"
 documentation = "https://docs.rs/thiserror"
+categories = ["rust-patterns"]
 readme = "README.md"
 
 [dependencies]
