@@ -63,7 +63,7 @@ fn take_ident(read: &mut &str) -> String {
     let mut ident = String::new();
     for (i, ch) in read.char_indices() {
         match ch {
-            'a'..='z' | 'A'..='Z' | '_' => ident.push(ch),
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
             _ => {
                 *read = &read[i..];
                 break;
