@@ -80,7 +80,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let pat = fields_pat(&input.fields);
         quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
-                fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                fn fmt(&self, _thiserror_formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #[allow(unused_variables)]
                     let Self #pat = self;
                     #display
@@ -230,7 +230,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         });
         Some(quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
-                fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                fn fmt(&self, _thiserror_formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #[allow(unused_variables)]
                     match #void_deref self {
                         #(#arms,)*

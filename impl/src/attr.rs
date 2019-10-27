@@ -140,16 +140,16 @@ impl ToTokens for Display<'_> {
         if self.was_shorthand && fmt.value() == "{}" {
             let arg = args.clone().into_iter().nth(1).unwrap();
             tokens.extend(quote! {
-                std::fmt::Display::fmt(#arg, formatter)
+                std::fmt::Display::fmt(#arg, _thiserror_formatter)
             });
         } else if self.was_shorthand && fmt.value() == "{:?}" {
             let arg = args.clone().into_iter().nth(1).unwrap();
             tokens.extend(quote! {
-                std::fmt::Debug::fmt(#arg, formatter)
+                std::fmt::Debug::fmt(#arg, _thiserror_formatter)
             });
         } else {
             tokens.extend(quote! {
-                write!(formatter, #fmt #args)
+                write!(_thiserror_formatter, #fmt #args)
             });
         }
     }

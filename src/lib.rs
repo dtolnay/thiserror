@@ -109,7 +109,7 @@
 //!   }
 //!   #
 //!   # impl Display for MyError {
-//!   #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//!   #     fn fmt(&self, _thiserror_formatter: &mut fmt::Formatter) -> fmt::Result {
 //!   #         unimplemented!()
 //!   #     }
 //!   # }
