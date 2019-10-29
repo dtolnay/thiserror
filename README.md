@@ -134,6 +134,18 @@ pub enum DataStoreError {
 
 <br>
 
+## Comparison to anyhow
+
+Use thiserror if you care about designing your own dedicated error type(s) so
+that the caller receives exactly the information that you choose in the event of
+failure. This most often applies to library-like code. Use [Anyhow] if you don't
+care what error type your functions return, you just want it to be easy. This is
+common in application-like code.
+
+[Anyhow]: https://github.com/dtolnay/anyhow
+
+<br>
+
 #### License
 
 <sup>
