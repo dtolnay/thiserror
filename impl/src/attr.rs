@@ -20,6 +20,7 @@ pub struct Display<'a> {
     pub fmt: LitStr,
     pub args: TokenStream,
     pub was_shorthand: bool,
+    pub has_bonus_display: bool,
 }
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
@@ -74,6 +75,7 @@ fn parse_display(attr: &Attribute) -> Result<Display> {
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
             was_shorthand: false,
+            has_bonus_display: false,
         };
         display.expand_shorthand();
         Ok(display)
