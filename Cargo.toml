@@ -15,6 +15,7 @@ thiserror-impl = { version = "=1.0.4", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0"
+ref-cast = "1.0"
 rustversion = "1.0"
 trybuild = "1.0"
 

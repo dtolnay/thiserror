@@ -136,6 +136,7 @@
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
 mod aserror;
+mod display;
 
 pub use thiserror_impl::*;
 
@@ -143,4 +144,5 @@ pub use thiserror_impl::*;
 #[doc(hidden)]
 pub mod private {
     pub use crate::aserror::AsDynError;
+    pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
 }

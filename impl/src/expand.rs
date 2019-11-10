@@ -77,10 +77,19 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let display_impl = input.attrs.display.as_ref().map(|display| {
+        let use_as_display = if display.has_bonus_display {
+            Some(quote! {
+                #[allow(unused_imports)]
+                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+            })
+        } else {
+            None
+        };
         let pat = fields_pat(&input.fields);
         quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    #use_as_display
                     #[allow(unused_variables)]
                     let Self #pat = self;
                     #display
@@ -215,6 +224,20 @@ fn impl_enum(input: Enum) -> TokenStream {
     };
 
     let display_impl = if input.has_display() {
+        let use_as_display = if input.variants.iter().any(|v| {
+            v.attrs
+                .display
+                .as_ref()
+                .expect(valid::CHECKED)
+                .has_bonus_display
+        }) {
+            Some(quote! {
+                #[allow(unused_imports)]
+                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+            })
+        } else {
+            None
+        };
         let void_deref = if input.variants.is_empty() {
             Some(quote!(*))
         } else {
@@ -231,6 +254,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         Some(quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    #use_as_display
                     #[allow(unused_variables)]
                     match #void_deref self {
                         #(#arms,)*
