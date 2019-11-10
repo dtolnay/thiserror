@@ -5,7 +5,7 @@ rust:
   - stable
   - 1.36.0
 
-script: cargo test
+script: cargo test --all
 
 matrix:
   include:
