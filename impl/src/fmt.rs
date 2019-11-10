@@ -77,11 +77,14 @@ fn take_ident(read: &mut &str) -> String {
 mod tests {
     use super::*;
     use proc_macro2::Span;
+    use syn::parse_quote;
 
     fn assert(input: &str, fmt: &str, args: &str) {
         let mut display = Display {
+            original: &parse_quote!(#[error]),
             fmt: LitStr::new(input, Span::call_site()),
             args: TokenStream::new(),
+            was_shorthand: false,
         };
         display.expand_shorthand();
         assert_eq!(fmt, display.fmt.value());
