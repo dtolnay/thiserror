@@ -1,3 +1,5 @@
+#![allow(clippy::block_in_if_condition_stmt)]
+
 extern crate proc_macro;
 
 mod ast;
