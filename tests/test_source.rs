@@ -1,4 +1,4 @@
-use std::error::Error as _;
+use std::error::Error;
 use std::io;
 use thiserror::Error;
 
@@ -16,6 +16,13 @@ pub struct ExplicitSource {
     io: io::Error,
 }
 
+#[derive(Error, Debug)]
+#[error("boxed source")]
+pub struct BoxedSource {
+    #[source]
+    source: Box<dyn Error + Send + 'static>,
+}
+
 #[test]
 fn test_implicit_source() {
     let io = io::Error::new(io::ErrorKind::Other, "oh no!");
@@ -31,4 +38,12 @@ fn test_explicit_source() {
         io,
     };
     error.source().unwrap().downcast_ref::<io::Error>().unwrap();
+}
+
+#[test]
+fn test_boxed_source() {
+    let io = io::Error::new(io::ErrorKind::Other, "oh no!");
+    let _error = BoxedSource {
+        source: Box::new(io),
+    };
 }
