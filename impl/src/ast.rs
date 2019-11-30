@@ -53,14 +53,15 @@ impl<'a> Input<'a> {
 impl<'a> Struct<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataStruct) -> Result<Self> {
         let mut attrs = attr::get(&node.attrs)?;
+        let fields = Field::multiple_from_syn(&data.fields)?;
         if let Some(display) = &mut attrs.display {
-            display.expand_shorthand();
+            display.expand_shorthand(&fields);
         }
         Ok(Struct {
             attrs,
             ident: node.ident.clone(),
             generics: &node.generics,
-            fields: Field::multiple_from_syn(&data.fields)?,
+            fields,
         })
     }
 }
@@ -77,7 +78,7 @@ impl<'a> Enum<'a> {
                     *display = attrs.display.clone();
                 }
                 if let Some(display) = &mut variant.attrs.display {
-                    display.expand_shorthand();
+                    display.expand_shorthand(&variant.fields);
                 }
                 Ok(variant)
             })

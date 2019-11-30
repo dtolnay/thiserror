@@ -1,3 +1,4 @@
+use crate::ast::Field;
 use crate::attr::Display;
 use proc_macro2::TokenStream;
 use quote::quote_spanned;
@@ -5,7 +6,7 @@ use syn::{Ident, LitStr};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
-    pub fn expand_shorthand(&mut self) {
+    pub fn expand_shorthand(&mut self, _fields: &[Field]) {
         if !self.args.is_empty() {
             return;
         }
