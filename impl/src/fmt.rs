@@ -1,12 +1,13 @@
 use crate::ast::Field;
 use crate::attr::Display;
 use proc_macro2::TokenStream;
-use quote::quote_spanned;
-use syn::{Ident, LitStr};
+use quote::{format_ident, quote_spanned};
+use std::collections::HashSet as Set;
+use syn::{Ident, Index, LitStr, Member};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
-    pub fn expand_shorthand(&mut self, _fields: &[Field]) {
+    pub fn expand_shorthand(&mut self, fields: &[Field]) {
         if !self.args.is_empty() {
             return;
         }
@@ -17,6 +18,7 @@ impl Display<'_> {
         let mut out = String::new();
         let mut args = TokenStream::new();
         let mut has_bonus_display = false;
+        let fields: Set<Member> = fields.iter().map(|f| f.member.clone()).collect();
 
         while let Some(brace) = read.find('{') {
             out += &read[..brace + 1];
@@ -30,14 +32,26 @@ impl Display<'_> {
                 Some(next) => next,
                 None => return,
             };
-            let var = match next {
-                '0'..='9' => take_int(&mut read),
-                'a'..='z' | 'A'..='Z' | '_' => take_ident(&mut read),
+            let member = match next {
+                '0'..='9' => {
+                    let int = take_int(&mut read);
+                    match int.parse::<u32>() {
+                        Ok(index) => Member::Unnamed(Index { index, span }),
+                        Err(_) => return,
+                    }
+                }
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let ident = take_ident(&mut read);
+                    Member::Named(Ident::new(&ident, span))
+                }
                 _ => return,
             };
-            let ident = Ident::new(&var, span);
+            let ident = match &member {
+                Member::Unnamed(member) => format_ident!("_{}", member.index, span = span),
+                Member::Named(member) => member.clone(),
+            };
             args.extend(quote_spanned!(span=> , #ident));
-            if read.starts_with('}') {
+            if read.starts_with('}') && fields.contains(&member) {
                 has_bonus_display = true;
                 args.extend(quote_spanned!(span=> .as_display()));
             }
@@ -53,7 +67,6 @@ impl Display<'_> {
 
 fn take_int(read: &mut &str) -> String {
     let mut int = String::new();
-    int.push('_');
     for (i, ch) in read.char_indices() {
         match ch {
             '0'..='9' => int.push(ch),
