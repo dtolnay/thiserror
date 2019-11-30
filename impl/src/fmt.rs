@@ -18,7 +18,7 @@ impl Display<'_> {
         let mut has_bonus_display = false;
 
         while let Some(brace) = read.find('{') {
-            out += &read[..=brace];
+            out += &read[..brace + 1];
             read = &read[brace + 1..];
             if read.starts_with('{') {
                 out.push('{');
