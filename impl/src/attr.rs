@@ -12,6 +12,7 @@ pub struct Attrs<'a> {
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<&'a Attribute>,
+    pub transparent: Option<&'a Attribute>,
 }
 
 #[derive(Clone)]
@@ -29,18 +30,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         source: None,
         backtrace: None,
         from: None,
+        transparent: None,
     };
 
     for attr in input {
         if attr.path.is_ident("error") {
-            let display = parse_display(attr)?;
-            if attrs.display.is_some() {
-                return Err(Error::new_spanned(
-                    attr,
-                    "only one #[error(...)] attribute is allowed",
-                ));
-            }
-            attrs.display = Some(display);
+            parse_error_attribute(&mut attrs, attr)?;
         } else if attr.path.is_ident("source") {
             require_empty_attribute(attr)?;
             if attrs.source.is_some() {
@@ -68,15 +63,36 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
     Ok(attrs)
 }
 
-fn parse_display(attr: &Attribute) -> Result<Display> {
+fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
+    syn::custom_keyword!(transparent);
+
     attr.parse_args_with(|input: ParseStream| {
-        Ok(Display {
+        if input.parse::<Option<transparent>>()?.is_some() {
+            if attrs.transparent.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(transparent)] attribute",
+                ));
+            }
+            attrs.transparent = Some(attr);
+            return Ok(());
+        }
+
+        let display = Display {
             original: attr,
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
             was_shorthand: false,
             has_bonus_display: false,
-        })
+        };
+        if attrs.display.is_some() {
+            return Err(Error::new_spanned(
+                attr,
+                "only one #[error(...)] attribute is allowed",
+            ));
+        }
+        attrs.display = Some(display);
+        Ok(())
     })
 }
 
