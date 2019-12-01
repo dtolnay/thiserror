@@ -32,6 +32,15 @@ enum EnumError {
 }
 
 #[derive(Error, Debug)]
+#[error("{MSG}: {id:?} (code {CODE:?})")]
+struct WithConstant {
+    id: &'static str,
+}
+
+const MSG: &str = "failed to do";
+const CODE: usize = 9;
+
+#[derive(Error, Debug)]
 #[error("{0}")]
 enum Inherit {
     Unit(UnitError),
@@ -73,6 +82,7 @@ fn test_display() {
     assert("braced error: 0", EnumError::Braced { id: 0 });
     assert("tuple error: 0", EnumError::Tuple(0));
     assert("unit error", EnumError::Unit);
+    assert("failed to do: \"\" (code 9)", WithConstant { id: "" });
     assert("unit error", Inherit::Unit(UnitError));
     assert("other error", Inherit::Other(UnitError));
     assert("fn main() {}", Braces);

@@ -70,15 +70,13 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 
 fn parse_display(attr: &Attribute) -> Result<Display> {
     attr.parse_args_with(|input: ParseStream| {
-        let mut display = Display {
+        Ok(Display {
             original: attr,
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
             was_shorthand: false,
             has_bonus_display: false,
-        };
-        display.expand_shorthand();
-        Ok(display)
+        })
     })
 }
 
