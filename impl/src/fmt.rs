@@ -21,6 +21,13 @@ impl Display<'_> {
         let mut args = self.args.clone();
         let mut has_bonus_display = false;
 
+        let mut has_trailing_comma = false;
+        if let Some(TokenTree::Punct(punct)) = args.clone().into_iter().last() {
+            if punct.as_char() == ',' {
+                has_trailing_comma = true;
+            }
+        }
+
         while let Some(brace) = read.find('{') {
             out += &read[..brace + 1];
             read = &read[brace + 1..];
@@ -67,7 +74,11 @@ impl Display<'_> {
                 // Already specified in the format argument list.
                 continue;
             }
-            args.extend(quote_spanned!(span=> , #formatvar = #local));
+            if !has_trailing_comma {
+                args.extend(quote_spanned!(span=> ,));
+                has_trailing_comma = false;
+            }
+            args.extend(quote_spanned!(span=> #formatvar = #local));
             if read.starts_with('}') && fields.contains(&member) {
                 has_bonus_display = true;
                 args.extend(quote_spanned!(span=> .as_display()));

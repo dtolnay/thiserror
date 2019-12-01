@@ -125,11 +125,6 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
         };
         tokens.push(token);
     }
-    if let Some(TokenTree::Punct(punct)) = tokens.last() {
-        if punct.as_char() == ',' {
-            tokens.pop();
-        }
-    }
     Ok(TokenStream::from_iter(tokens))
 }
 
