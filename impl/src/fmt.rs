@@ -78,34 +78,3 @@ fn take_ident(read: &mut &str) -> String {
     }
     ident
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proc_macro2::Span;
-    use syn::parse_quote;
-
-    fn assert(input: &str, fmt: &str, args: &str) {
-        let mut display = Display {
-            original: &parse_quote!(#[error]),
-            fmt: LitStr::new(input, Span::call_site()),
-            args: TokenStream::new(),
-            was_shorthand: false,
-            has_bonus_display: false,
-        };
-        display.expand_shorthand();
-        assert_eq!(fmt, display.fmt.value());
-        assert_eq!(args, display.args.to_string());
-    }
-
-    #[test]
-    fn test_expand() {
-        assert("error {var}", "error {}", ", var . as_display ( )");
-        assert("fn main() {{ }}", "fn main() {{ }}", "");
-        assert(
-            "{v} {v:?} {0} {0:?}",
-            "{} {:?} {} {:?}",
-            ", v . as_display ( ) , v , _0 . as_display ( ) , _0",
-        );
-    }
-}
