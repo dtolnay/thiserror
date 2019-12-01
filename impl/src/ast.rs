@@ -79,6 +79,8 @@ impl<'a> Enum<'a> {
                 }
                 if let Some(display) = &mut variant.attrs.display {
                     display.expand_shorthand(&variant.fields);
+                } else if variant.attrs.transparent.is_none() {
+                    variant.attrs.transparent = attrs.transparent;
                 }
                 Ok(variant)
             })

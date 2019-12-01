@@ -12,6 +12,7 @@ pub struct Attrs<'a> {
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<&'a Attribute>,
+    pub transparent: Option<&'a Attribute>,
 }
 
 #[derive(Clone)]
@@ -29,6 +30,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         source: None,
         backtrace: None,
         from: None,
+        transparent: None,
     };
 
     for attr in input {
@@ -62,7 +64,20 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 }
 
 fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
+    syn::custom_keyword!(transparent);
+
     attr.parse_args_with(|input: ParseStream| {
+        if input.parse::<Option<transparent>>()?.is_some() {
+            if attrs.transparent.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(transparent)] attribute",
+                ));
+            }
+            attrs.transparent = Some(attr);
+            return Ok(());
+        }
+
         let display = Display {
             original: attr,
             fmt: input.parse()?,
