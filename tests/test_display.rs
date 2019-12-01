@@ -153,3 +153,15 @@ fn test_ints() {
     assert("error 9", Error::Tuple(9, 0));
     assert("error ?", Error::Struct { v: 0 });
 }
+
+#[test]
+fn test_trailing_comma() {
+    #[derive(Error, Debug)]
+    #[error(
+        "error {0}",
+    )]
+    #[rustfmt::skip]
+    struct Error(char);
+
+    assert("error ?", Error('?'));
+}

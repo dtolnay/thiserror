@@ -1,6 +1,6 @@
 use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
-use std::iter::once;
+use std::iter::FromIterator;
 use syn::parse::{Nothing, ParseStream};
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr,
@@ -81,7 +81,7 @@ fn parse_display(attr: &Attribute) -> Result<Display> {
 }
 
 fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<TokenStream> {
-    let mut tokens = TokenStream::new();
+    let mut tokens = Vec::new();
     while !input.is_empty() {
         if last_is_comma && input.peek(Token![.]) {
             if input.peek2(Ident) {
@@ -93,7 +93,7 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
                 input.parse::<Token![.]>()?;
                 let int: Index = input.parse()?;
                 let ident = format_ident!("_{}", int.index, span = int.span);
-                tokens.extend(once(TokenTree::Ident(ident)));
+                tokens.push(TokenTree::Ident(ident));
                 last_is_comma = false;
                 continue;
             }
@@ -123,9 +123,14 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
         } else {
             input.parse()?
         };
-        tokens.extend(once(token));
+        tokens.push(token);
     }
-    Ok(tokens)
+    if let Some(TokenTree::Punct(punct)) = tokens.last() {
+        if punct.as_char() == ',' {
+            tokens.pop();
+        }
+    }
+    Ok(TokenStream::from_iter(tokens))
 }
 
 fn require_empty_attribute(attr: &Attribute) -> Result<()> {
