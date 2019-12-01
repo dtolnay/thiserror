@@ -4,8 +4,6 @@ use quote::ToTokens;
 use std::collections::BTreeSet as Set;
 use syn::{Error, Member, Result};
 
-pub(crate) const CHECKED: &str = "checked in validation";
-
 impl Input<'_> {
     pub(crate) fn validate(&self) -> Result<()> {
         match self {
