@@ -40,6 +40,10 @@ enum Inherit {
 }
 
 #[derive(Error, Debug)]
+#[error("fn main() {{}}")]
+struct Braces;
+
+#[derive(Error, Debug)]
 #[error("1 + 1 = {}", 1 + 1)]
 struct Arithmetic;
 
@@ -71,6 +75,7 @@ fn test_display() {
     assert("unit error", EnumError::Unit);
     assert("unit error", Inherit::Unit(UnitError));
     assert("other error", Inherit::Other(UnitError));
+    assert("fn main() {}", Braces);
     assert("1 + 1 = 2", Arithmetic);
     assert("!bool = false", NestedShorthand(true));
 }
