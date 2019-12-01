@@ -33,14 +33,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 
     for attr in input {
         if attr.path.is_ident("error") {
-            let display = parse_display(attr)?;
-            if attrs.display.is_some() {
-                return Err(Error::new_spanned(
-                    attr,
-                    "only one #[error(...)] attribute is allowed",
-                ));
-            }
-            attrs.display = Some(display);
+            parse_error_attribute(&mut attrs, attr)?;
         } else if attr.path.is_ident("source") {
             require_empty_attribute(attr)?;
             if attrs.source.is_some() {
@@ -68,15 +61,23 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
     Ok(attrs)
 }
 
-fn parse_display(attr: &Attribute) -> Result<Display> {
+fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
     attr.parse_args_with(|input: ParseStream| {
-        Ok(Display {
+        let display = Display {
             original: attr,
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
             was_shorthand: false,
             has_bonus_display: false,
-        })
+        };
+        if attrs.display.is_some() {
+            return Err(Error::new_spanned(
+                attr,
+                "only one #[error(...)] attribute is allowed",
+            ));
+        }
+        attrs.display = Some(display);
+        Ok(())
     })
 }
 
