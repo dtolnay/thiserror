@@ -47,8 +47,8 @@ impl Display<'_> {
                 _ => return,
             };
             let ident = match &member {
-                Member::Unnamed(member) => format_ident!("_{}", member.index, span = span),
-                Member::Named(member) => member.clone(),
+                Member::Unnamed(index) => format_ident!("_{}", index),
+                Member::Named(ident) => ident.clone(),
             };
             args.extend(quote_spanned!(span=> , #ident));
             if read.starts_with('}') && fields.contains(&member) {
