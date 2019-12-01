@@ -139,3 +139,17 @@ fn test_mixed() {
 
     assert("a=0 :: b=1 :: c=2 :: d=3", Error { a: 0, d: 0 });
 }
+
+#[test]
+fn test_ints() {
+    #[derive(Error, Debug)]
+    enum Error {
+        #[error("error {0}")]
+        Tuple(usize, usize),
+        #[error("error {0}", '?')]
+        Struct { v: usize },
+    }
+
+    assert("error 9", Error::Tuple(9, 0));
+    assert("error ?", Error::Struct { v: 0 });
+}

@@ -36,10 +36,15 @@ impl Display<'_> {
             let member = match next {
                 '0'..='9' => {
                     let int = take_int(&mut read);
-                    match int.parse::<u32>() {
+                    let member = match int.parse::<u32>() {
                         Ok(index) => Member::Unnamed(Index { index, span }),
                         Err(_) => return,
+                    };
+                    if !fields.contains(&member) {
+                        out += &int;
+                        continue;
                     }
+                    member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let ident = take_ident(&mut read);
