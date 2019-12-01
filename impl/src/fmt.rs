@@ -1,24 +1,25 @@
 use crate::ast::Field;
 use crate::attr::Display;
-use proc_macro2::TokenStream;
+use proc_macro2::TokenTree;
 use quote::{format_ident, quote_spanned};
 use std::collections::HashSet as Set;
-use syn::{Ident, Index, LitStr, Member};
+use syn::ext::IdentExt;
+use syn::parse::{ParseStream, Parser};
+use syn::{Ident, Index, LitStr, Member, Result, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
     pub fn expand_shorthand(&mut self, fields: &[Field]) {
-        if !self.args.is_empty() {
-            return;
-        }
+        let raw_args = self.args.clone();
+        let mut named_args = explicit_named_args.parse2(raw_args).unwrap();
+        let fields: Set<Member> = fields.iter().map(|f| f.member.clone()).collect();
 
         let span = self.fmt.span();
         let fmt = self.fmt.value();
         let mut read = fmt.as_str();
         let mut out = String::new();
-        let mut args = TokenStream::new();
+        let mut args = self.args.clone();
         let mut has_bonus_display = false;
-        let fields: Set<Member> = fields.iter().map(|f| f.member.clone()).collect();
 
         while let Some(brace) = read.find('{') {
             out += &read[..brace + 1];
@@ -44,13 +45,24 @@ impl Display<'_> {
                     let ident = take_ident(&mut read);
                     Member::Named(Ident::new(&ident, span))
                 }
-                _ => return,
+                _ => continue,
             };
-            let ident = match &member {
+            let local = match &member {
                 Member::Unnamed(index) => format_ident!("_{}", index),
                 Member::Named(ident) => ident.clone(),
             };
-            args.extend(quote_spanned!(span=> , #ident));
+            let mut formatvar = local.clone();
+            if formatvar.to_string().starts_with('_') {
+                // Work around leading underscore being rejected by 1.40 and
+                // older compilers. https://github.com/rust-lang/rust/pull/66847
+                formatvar = format_ident!("field_{}", formatvar);
+            }
+            out += &formatvar.to_string();
+            if !named_args.insert(formatvar.clone()) {
+                // Already specified in the format argument list.
+                continue;
+            }
+            args.extend(quote_spanned!(span=> , #formatvar = #local));
             if read.starts_with('}') && fields.contains(&member) {
                 has_bonus_display = true;
                 args.extend(quote_spanned!(span=> .as_display()));
@@ -63,6 +75,23 @@ impl Display<'_> {
         self.was_shorthand = true;
         self.has_bonus_display = has_bonus_display;
     }
+}
+
+fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+    let mut named_args = Set::new();
+
+    while !input.is_empty() {
+        if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
+            input.parse::<Token![,]>()?;
+            let ident: Ident = input.parse()?;
+            input.parse::<Token![=]>()?;
+            named_args.insert(ident);
+        } else {
+            input.parse::<TokenTree>()?;
+        }
+    }
+
+    Ok(named_args)
 }
 
 fn take_int(read: &mut &str) -> String {

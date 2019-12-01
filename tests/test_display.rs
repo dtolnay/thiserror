@@ -127,3 +127,15 @@ fn test_void() {
     #[error("...")]
     pub enum Error {}
 }
+
+#[test]
+fn test_mixed() {
+    #[derive(Error, Debug)]
+    #[error("a={a} :: b={} :: c={c} :: d={d}", 1, c = 2, d = 3)]
+    struct Error {
+        a: usize,
+        d: usize,
+    }
+
+    assert("a=0 :: b=1 :: c=2 :: d=3", Error { a: 0, d: 0 });
+}
