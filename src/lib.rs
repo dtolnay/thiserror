@@ -50,20 +50,42 @@
 //!     - `#[error("{var:?}")]`&ensp;⟶&ensp;`write!("{:?}", self.var)`
 //!     - `#[error("{0:?}")]`&ensp;⟶&ensp;`write!("{:?}", self.0)`
 //!
-//!   You may alternatively write out the full format args yourself, using
-//!   arbitrary expressions.
-//!
-//!   When providing your own format args, the shorthand does not kick in so you
-//!   need to specify `.var` in the argument list to refer to named fields and
-//!   `.0` to refer to tuple fields.
+//!   These shorthands can be used together with any additional format args,
+//!   which may be arbitrary expressions. For example:
 //!
 //!   ```rust
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
 //!   pub enum Error {
-//!       #[error("invalid rdo_lookahead_frames {} (expected < {})", .0, i32::max_value())]
-//!       InvalidLookahead(i32),
+//!       #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::max_value())]
+//!       InvalidLookahead(u32),
+//!   }
+//!   ```
+//!
+//!   If one of the additional expression arguments needs to refer to a field of
+//!   the struct or enum, then refer to named fields as `.var` and tuple fields
+//!   as `.0`.
+//!
+//!   ```rust
+//!   # use thiserror::Error;
+//!   #
+//!   # fn first_char(s: &String) -> char {
+//!   #     s.chars().next().unwrap()
+//!   # }
+//!   #
+//!   # #[derive(Debug)]
+//!   # struct Limits {
+//!   #     lo: usize,
+//!   #     hi: usize,
+//!   # }
+//!   #
+//!   #[derive(Error, Debug)]
+//!   pub enum Error {
+//!       #[error("first letter must be lowercase but was {:?}", first_char(.0))]
+//!       WrongCase(String),
+//!       #[error("invalid index {idx}, expected at least {} and at most {}", .limits.lo, .limits.hi)]
+//!       OutOfBounds { idx: usize, limits: Limits },
 //!   }
 //!   ```
 //!
