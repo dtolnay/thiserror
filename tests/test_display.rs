@@ -165,3 +165,17 @@ fn test_trailing_comma() {
 
     assert("error ?", Error('?'));
 }
+
+#[test]
+fn test_field() {
+    #[derive(Debug)]
+    struct Inner {
+        data: usize,
+    }
+
+    #[derive(Error, Debug)]
+    #[error("{}", .0.data)]
+    struct Error(Inner);
+
+    assert("0", Error(Inner { data: 0 }));
+}

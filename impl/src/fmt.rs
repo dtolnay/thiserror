@@ -88,7 +88,6 @@ impl Display<'_> {
         out += read;
         self.fmt = LitStr::new(&out, self.fmt.span());
         self.args = args;
-        self.was_shorthand = true;
         self.has_bonus_display = has_bonus_display;
     }
 }

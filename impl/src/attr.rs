@@ -20,7 +20,6 @@ pub struct Display<'a> {
     pub original: &'a Attribute,
     pub fmt: LitStr,
     pub args: TokenStream,
-    pub was_shorthand: bool,
     pub has_bonus_display: bool,
 }
 
@@ -82,7 +81,6 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             original: attr,
             fmt: input.parse()?,
             args: parse_token_expr(input, false)?,
-            was_shorthand: false,
             has_bonus_display: false,
         };
         if attrs.display.is_some() {
@@ -153,20 +151,8 @@ impl ToTokens for Display<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let fmt = &self.fmt;
         let args = &self.args;
-        if self.was_shorthand && fmt.value() == "{}" {
-            let arg = args.clone().into_iter().nth(1).unwrap();
-            tokens.extend(quote! {
-                std::fmt::Display::fmt(#arg, __formatter)
-            });
-        } else if self.was_shorthand && fmt.value() == "{:?}" {
-            let arg = args.clone().into_iter().nth(1).unwrap();
-            tokens.extend(quote! {
-                std::fmt::Debug::fmt(#arg, __formatter)
-            });
-        } else {
-            tokens.extend(quote! {
-                write!(__formatter, #fmt #args)
-            });
-        }
+        tokens.extend(quote! {
+            write!(__formatter, #fmt #args)
+        });
     }
 }
