@@ -20,7 +20,7 @@ thiserror-impl = { version = "=1.0.9", path = "impl" }
 anyhow = "1.0"
 ref-cast = "1.0"
 rustversion = "1.0"
-trybuild = "1.0"
+trybuild = { version = "1.0.19", features = ["diff"] }
 
 [workspace]
 members = ["impl"]
