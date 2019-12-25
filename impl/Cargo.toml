@@ -10,6 +10,9 @@ repository = "https://github.com/dtolnay/thiserror"
 [lib]
 proc-macro = true
 
+[badges]
+travis-ci = { repository = "dtolnay/thiserror" }
+
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"

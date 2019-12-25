@@ -10,6 +10,9 @@ documentation = "https://docs.rs/thiserror"
 categories = ["rust-patterns"]
 readme = "README.md"
 
+[badges]
+travis-ci = { repository = "dtolnay/thiserror" }
+
 [dependencies]
 thiserror-impl = { version = "=1.0.9", path = "impl" }
 
