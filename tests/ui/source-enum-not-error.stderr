@@ -1,4 +1,4 @@
-error[E0599]: no method named `as_dyn_error` found for type `&std::string::String` in the current scope
+error[E0599]: no method named `as_dyn_error` found for reference `&std::string::String` in the current scope
  --> $DIR/source-enum-not-error.rs:7:9
   |
 7 |         source: String,
