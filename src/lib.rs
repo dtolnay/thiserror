@@ -126,7 +126,7 @@
 //!   #[derive(Error, Debug)]
 //!   pub struct MyError {
 //!       msg: String,
-//!       #[source] // optional if field name is `source`
+//!       #[source]  // optional if field name is `source`
 //!       source: anyhow::Error,
 //!   }
 //!   #
@@ -147,7 +147,7 @@
 //!   #[derive(Error, Debug)]
 //!   pub struct MyError {
 //!       msg: String,
-//!       backtrace: Backtrace, // automatically detected
+//!       backtrace: Backtrace,  // automatically detected
 //!   }
 //!   # };
 //!   ```
