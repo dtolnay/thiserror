@@ -158,9 +158,13 @@
 //!   "anything else" variant.
 //!
 //!   ```
+//!   # use thiserror::Error;
+//!   #
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
+//!       # /*
 //!       ...
+//!       # */
 //!
 //!       #[error(transparent)]
 //!       Other(#[from] anyhow::Error),  // source and Display delegate to anyhow::Error
