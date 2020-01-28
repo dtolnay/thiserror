@@ -122,6 +122,19 @@ fn test_nested() {
 }
 
 #[test]
+fn test_match() {
+    #[derive(Error, Debug)]
+    #[error("{}: {0}", match .1 {
+        Some(n) => format!("error occurred with {}", n),
+        None => format!("there was an empty error"),
+    })]
+    struct Error(String, Option<usize>);
+
+    assert("error occurred with 1: ...", Error("...".to_owned(), Some(1)));
+    assert("there was an empty error: ...", Error("...".to_owned(), None));
+}
+
+#[test]
 fn test_void() {
     #[derive(Error, Debug)]
     #[error("...")]
