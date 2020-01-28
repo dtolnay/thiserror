@@ -94,13 +94,13 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
     })
 }
 
-fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<TokenStream> {
+fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStream> {
     let mut tokens = Vec::new();
     while !input.is_empty() {
-        if last_is_comma && input.peek(Token![.]) {
+        if begin_expr && input.peek(Token![.]) {
             if input.peek2(Ident) {
                 input.parse::<Token![.]>()?;
-                last_is_comma = false;
+                begin_expr = false;
                 continue;
             }
             if input.peek2(LitInt) {
@@ -108,11 +108,34 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
                 let int: Index = input.parse()?;
                 let ident = format_ident!("_{}", int.index, span = int.span);
                 tokens.push(TokenTree::Ident(ident));
-                last_is_comma = false;
+                begin_expr = false;
                 continue;
             }
         }
-        last_is_comma = input.peek(Token![,]);
+
+        begin_expr = input.peek(Token![break])
+            || input.peek(Token![continue])
+            || input.peek(Token![if])
+            || input.peek(Token![in])
+            || input.peek(Token![match])
+            || input.peek(Token![mut])
+            || input.peek(Token![return])
+            || input.peek(Token![while])
+            || input.peek(Token![+])
+            || input.peek(Token![&])
+            || input.peek(Token![!])
+            || input.peek(Token![^])
+            || input.peek(Token![,])
+            || input.peek(Token![/])
+            || input.peek(Token![=])
+            || input.peek(Token![>])
+            || input.peek(Token![<])
+            || input.peek(Token![|])
+            || input.peek(Token![%])
+            || input.peek(Token![;])
+            || input.peek(Token![*])
+            || input.peek(Token![-]);
+
         let token: TokenTree = if input.peek(token::Paren) {
             let content;
             let delimiter = parenthesized!(content in input);
