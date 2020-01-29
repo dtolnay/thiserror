@@ -140,7 +140,7 @@ pub enum DataStoreError {
   straight through to an underlying error without adding an additional message.
   This would be appropriate for enums that need an "anything else" variant.
 
-  ```
+  ```rust
   #[derive(Error, Debug)]
   pub enum MyError {
       ...
