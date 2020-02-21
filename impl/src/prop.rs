@@ -1,11 +1,14 @@
 use crate::ast::{Enum, Field, Struct, Variant};
-use syn::{Member, Type};
+#[cfg(feature = "std")]
+use syn::Member;
+use syn::Type;
 
 impl Struct<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
         from_field(&self.fields)
     }
 
+    #[cfg(feature = "std")]
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
@@ -16,12 +19,14 @@ impl Struct<'_> {
 }
 
 impl Enum<'_> {
+    #[cfg(feature = "std")]
     pub(crate) fn has_source(&self) -> bool {
         self.variants
             .iter()
             .any(|variant| variant.source_field().is_some() || variant.attrs.transparent.is_some())
     }
 
+    #[cfg(feature = "std")]
     pub(crate) fn has_backtrace(&self) -> bool {
         self.variants
             .iter()
@@ -47,6 +52,7 @@ impl Variant<'_> {
         from_field(&self.fields)
     }
 
+    #[cfg(feature = "std")]
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
@@ -71,6 +77,7 @@ fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     None
 }
 
+#[cfg(feature = "std")]
 fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.from.is_some() || field.attrs.source.is_some() {

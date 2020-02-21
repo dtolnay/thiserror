@@ -14,13 +14,17 @@ readme = "README.md"
 travis-ci = { repository = "dtolnay/thiserror" }
 
 [dependencies]
-thiserror-impl = { version = "=1.0.11", path = "impl" }
+thiserror-impl = { version = "=1.0.11", path = "impl", default-features = false }
 
 [dev-dependencies]
 anyhow = "1.0"
 ref-cast = "1.0"
 rustversion = "1.0"
 trybuild = { version = "1.0.19", features = ["diff"] }
+
+[features]
+default = ["std"]
+std = ["thiserror-impl/std"]
 
 [workspace]
 members = ["impl"]
