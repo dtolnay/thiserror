@@ -176,8 +176,8 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
-// always enabled to force devs to add imports for things like Vec and String, even when working
-// with std
+// Always enabled to force devs to add use statements for things like Vec and String, even when
+// working with std.
 #![no_std]
 
 #[cfg(not(feature = "std"))]
