@@ -176,6 +176,20 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
+// Always enabled to force devs to add use statements for things like Vec and String, even when
+// working with std.
+#![no_std]
+
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate alloc as std;
+#[cfg(feature = "std")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate std;
+
+#[cfg(feature = "std")]
 mod aserror;
 mod display;
 
@@ -184,6 +198,9 @@ pub use thiserror_impl::*;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    #[cfg(feature = "std")]
     pub use crate::aserror::AsDynError;
-    pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
+    pub use crate::display::DisplayAsDisplay;
+    #[cfg(feature = "std")]
+    pub use crate::display::PathAsDisplay;
 }

@@ -1,6 +1,9 @@
 use crate::ast::{Enum, Field, Input, Struct};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+#[cfg(feature = "std")]
+use quote::quote_spanned;
+use quote::{format_ident, quote, ToTokens};
+#[cfg(feature = "std")]
 use syn::spanned::Spanned;
 use syn::{DeriveInput, Member, PathArguments, Result, Type};
 
@@ -17,6 +20,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
+    #[cfg(feature = "std")]
     let source_body = if input.attrs.transparent.is_some() {
         let only_field = &input.fields[0].member;
         Some(quote! {
@@ -36,6 +40,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     } else {
         None
     };
+    #[cfg(feature = "std")]
     let source_method = source_body.map(|body| {
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
@@ -45,6 +50,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
+    #[cfg(feature = "std")]
     let backtrace_method = input.backtrace_field().map(|backtrace_field| {
         let backtrace = &backtrace_field.member;
         let body = if let Some(source_field) = input.source_field() {
@@ -96,7 +102,10 @@ fn impl_struct(input: Struct) -> TokenStream {
         let use_as_display = if display.has_bonus_display {
             Some(quote! {
                 #[allow(unused_imports)]
-                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+                use thiserror::private::DisplayAsDisplay;
+                #[cfg(feature = "std")]
+                #[allow(unused_imports)]
+                use thiserror::private::PathAsDisplay;
             })
         } else {
             None
@@ -126,7 +135,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let from = from_field.ty;
         let body = from_initializer(from_field, backtrace_field);
         quote! {
-            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+            impl #impl_generics core::convert::From<#from> for #ty #ty_generics #where_clause {
                 fn from(source: #from) -> Self {
                     #ty #body
                 }
@@ -134,11 +143,18 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    quote! {
+    #[cfg(feature = "std")]
+    let error_impl = quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
+    };
+    #[cfg(not(feature = "std"))]
+    let error_impl = quote! {};
+
+    quote! {
+        #error_impl
         #display_impl
         #from_impl
     }
@@ -148,6 +164,7 @@ fn impl_enum(input: Enum) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
+    #[cfg(feature = "std")]
     let source_method = if input.has_source() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
@@ -186,6 +203,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
+    #[cfg(feature = "std")]
     let backtrace_method = if input.has_backtrace() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
@@ -260,7 +278,10 @@ fn impl_enum(input: Enum) -> TokenStream {
         }) {
             Some(quote! {
                 #[allow(unused_imports)]
-                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+                use thiserror::private::DisplayAsDisplay;
+                #[allow(unused_imports)]
+                #[cfg(feature = "std")]
+                use thiserror::private::PathAsDisplay;
             })
         } else {
             None
@@ -309,7 +330,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let from = from_field.ty;
         let body = from_initializer(from_field, backtrace_field);
         Some(quote! {
-            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+            impl #impl_generics core::convert::From<#from> for #ty #ty_generics #where_clause {
                 fn from(source: #from) -> Self {
                     #ty::#variant #body
                 }
@@ -317,11 +338,18 @@ fn impl_enum(input: Enum) -> TokenStream {
         })
     });
 
-    quote! {
+    #[cfg(feature = "std")]
+    let error_impl = quote! {
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {
             #source_method
             #backtrace_method
         }
+    };
+    #[cfg(not(feature = "std"))]
+    let error_impl = quote! {};
+
+    quote! {
+        #error_impl
         #display_impl
         #(#from_impls)*
     }
