@@ -130,8 +130,14 @@ fn test_match() {
     })]
     struct Error(String, Option<usize>);
 
-    assert("error occurred with 1: ...", Error("...".to_owned(), Some(1)));
-    assert("there was an empty error: ...", Error("...".to_owned(), None));
+    assert(
+        "error occurred with 1: ...",
+        Error("...".to_owned(), Some(1)),
+    );
+    assert(
+        "there was an empty error: ...",
+        Error("...".to_owned(), None),
+    );
 }
 
 #[test]
