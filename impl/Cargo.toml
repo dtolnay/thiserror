@@ -17,3 +17,6 @@ travis-ci = { repository = "dtolnay/thiserror" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0.11"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

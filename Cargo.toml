@@ -24,3 +24,6 @@ trybuild = { version = "1.0.19", features = ["diff"] }
 
 [workspace]
 members = ["impl"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
