@@ -2,7 +2,7 @@ use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
 use quote::ToTokens;
 use std::collections::BTreeSet as Set;
-use syn::{Error, Member, Result};
+use syn::{Error, GenericArgument, Member, PathArguments, Result, Type};
 
 impl Input<'_> {
     pub(crate) fn validate(&self) -> Result<()> {
@@ -181,6 +181,14 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
     }
+    if let Some(source_field) = source_field.or(from_field) {
+        if contains_non_static_lifetime(source_field) {
+            return Err(Error::new_spanned(
+                source_field.original,
+                "non-static lifetimes are not allowed in the source of an error",
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -190,4 +198,23 @@ fn same_member(one: &Field, two: &Field) -> bool {
         (Member::Unnamed(one), Member::Unnamed(two)) => one.index == two.index,
         _ => unreachable!(),
     }
+}
+
+fn contains_non_static_lifetime(field: &Field) -> bool {
+    let ty = match field.ty {
+        Type::Path(ty) => ty,
+        _ => return false, // maybe implement later if there are common other cases
+    };
+    let bracketed = match &ty.path.segments.last().unwrap().arguments {
+        PathArguments::AngleBracketed(bracketed) => bracketed,
+        _ => return false,
+    };
+    for arg in &bracketed.args {
+        if let GenericArgument::Lifetime(lifetime) = arg {
+            if lifetime.ident != "static" {
+                return true;
+            }
+        }
+    }
+    false
 }
