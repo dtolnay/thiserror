@@ -76,13 +76,13 @@ impl Display<'_> {
             }
             if !has_trailing_comma {
                 args.extend(quote_spanned!(span=> ,));
-                has_trailing_comma = false;
             }
             args.extend(quote_spanned!(span=> #formatvar = #local));
             if read.starts_with('}') && fields.contains(&member) {
                 has_bonus_display = true;
                 args.extend(quote_spanned!(span=> .as_display()));
             }
+            has_trailing_comma = false;
         }
 
         out += read;
