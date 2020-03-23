@@ -1,6 +1,6 @@
 [package]
 name = "thiserror"
-version = "1.0.12"
+version = "1.0.13"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -14,7 +14,7 @@ readme = "README.md"
 travis-ci = { repository = "dtolnay/thiserror" }
 
 [dependencies]
-thiserror-impl = { version = "=1.0.12", path = "impl" }
+thiserror-impl = { version = "=1.0.13", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0"
