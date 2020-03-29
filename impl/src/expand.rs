@@ -104,7 +104,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let pat = fields_pat(&input.fields);
         Some(quote! {
             #use_as_display
-            #[allow(unused_variables)]
+            #[allow(unused_variables, deprecated)]
             let Self #pat = self;
             #display
         })
@@ -127,6 +127,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let body = from_initializer(from_field, backtrace_field);
         quote! {
             impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                #[allow(deprecated)]
                 fn from(source: #from) -> Self {
                     #ty #body
                 }
@@ -177,6 +178,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         Some(quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
                 use thiserror::private::AsDynError;
+                #[allow(deprecated)]
                 match self {
                     #(#arms)*
                 }
@@ -242,6 +244,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         });
         Some(quote! {
             fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
+                #[allow(deprecated)]
                 match self {
                     #(#arms)*
                 }
@@ -291,7 +294,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
-                    #[allow(unused_variables)]
+                    #[allow(unused_variables, deprecated)]
                     match #void_deref self {
                         #(#arms,)*
                     }
@@ -310,6 +313,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let body = from_initializer(from_field, backtrace_field);
         Some(quote! {
             impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                #[allow(deprecated)]
                 fn from(source: #from) -> Self {
                     #ty::#variant #body
                 }
