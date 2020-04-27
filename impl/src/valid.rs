@@ -163,6 +163,12 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             backtrace_field = Some(field);
             has_backtrace = true;
         }
+        if let Some(transparent) = field.attrs.transparent {
+            return Err(Error::new_spanned(
+                transparent,
+                "#[error(transparent)] needs to go outside the enum or struct, not on an individual field",
+            ));
+        }
         has_backtrace |= field.is_backtrace();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
