@@ -198,3 +198,29 @@ fn test_field() {
 
     assert("0", Error(Inner { data: 0 }));
 }
+
+#[test]
+fn test_macro_rules() {
+    // Regression test for https://github.com/dtolnay/thiserror/issues/86
+
+    macro_rules! decl_error {
+        ($variant:ident($value:ident)) => {
+            #[derive(Debug, Error)]
+            pub enum Error0 {
+                #[error("{0:?}")]
+                $variant($value),
+            }
+
+            #[derive(Debug, Error)]
+            #[error("{0:?}")]
+            pub enum Error1 {
+                $variant($value),
+            }
+        };
+    }
+
+    decl_error!(Repro(u8));
+
+    assert("0", Error0::Repro(0));
+    assert("0", Error1::Repro(0));
+}

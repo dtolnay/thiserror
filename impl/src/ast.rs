@@ -1,4 +1,5 @@
 use crate::attr::{self, Attrs};
+use proc_macro2::Span;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Ident, Index, Member, Result,
     Type,
@@ -55,7 +56,8 @@ impl<'a> Input<'a> {
 impl<'a> Struct<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataStruct) -> Result<Self> {
         let mut attrs = attr::get(&node.attrs)?;
-        let fields = Field::multiple_from_syn(&data.fields)?;
+        let span = attrs.span().unwrap_or_else(Span::call_site);
+        let fields = Field::multiple_from_syn(&data.fields, span)?;
         if let Some(display) = &mut attrs.display {
             display.expand_shorthand(&fields);
         }
@@ -72,11 +74,12 @@ impl<'a> Struct<'a> {
 impl<'a> Enum<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataEnum) -> Result<Self> {
         let attrs = attr::get(&node.attrs)?;
+        let span = attrs.span().unwrap_or_else(Span::call_site);
         let variants = data
             .variants
             .iter()
             .map(|node| {
-                let mut variant = Variant::from_syn(node)?;
+                let mut variant = Variant::from_syn(node, span)?;
                 if let display @ None = &mut variant.attrs.display {
                     *display = attrs.display.clone();
                 }
@@ -99,35 +102,50 @@ impl<'a> Enum<'a> {
 }
 
 impl<'a> Variant<'a> {
-    fn from_syn(node: &'a syn::Variant) -> Result<Self> {
+    fn from_syn(node: &'a syn::Variant, span: Span) -> Result<Self> {
+        let attrs = attr::get(&node.attrs)?;
+        let span = attrs.span().unwrap_or(span);
         Ok(Variant {
             original: node,
-            attrs: attr::get(&node.attrs)?,
+            attrs,
             ident: node.ident.clone(),
-            fields: Field::multiple_from_syn(&node.fields)?,
+            fields: Field::multiple_from_syn(&node.fields, span)?,
         })
     }
 }
 
 impl<'a> Field<'a> {
-    fn multiple_from_syn(fields: &'a Fields) -> Result<Vec<Self>> {
+    fn multiple_from_syn(fields: &'a Fields, span: Span) -> Result<Vec<Self>> {
         fields
             .iter()
             .enumerate()
-            .map(|(i, field)| Field::from_syn(i, field))
+            .map(|(i, field)| Field::from_syn(i, field, span))
             .collect()
     }
 
-    fn from_syn(i: usize, node: &'a syn::Field) -> Result<Self> {
+    fn from_syn(i: usize, node: &'a syn::Field, span: Span) -> Result<Self> {
         Ok(Field {
             original: node,
             attrs: attr::get(&node.attrs)?,
-            member: node
-                .ident
-                .clone()
-                .map(Member::Named)
-                .unwrap_or_else(|| Member::Unnamed(Index::from(i))),
+            member: node.ident.clone().map(Member::Named).unwrap_or_else(|| {
+                Member::Unnamed(Index {
+                    index: i as u32,
+                    span,
+                })
+            }),
             ty: &node.ty,
         })
+    }
+}
+
+impl Attrs<'_> {
+    pub fn span(&self) -> Option<Span> {
+        if let Some(display) = &self.display {
+            Some(display.fmt.span())
+        } else if let Some(transparent) = &self.transparent {
+            Some(transparent.span)
+        } else {
+            None
+        }
     }
 }

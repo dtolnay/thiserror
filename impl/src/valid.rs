@@ -19,7 +19,7 @@ impl Struct<'_> {
         if let Some(transparent) = self.attrs.transparent {
             if self.fields.len() != 1 {
                 return Err(Error::new_spanned(
-                    transparent,
+                    transparent.original,
                     "#[error(transparent)] requires exactly one field",
                 ));
             }
@@ -165,7 +165,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
-                transparent,
+                transparent.original,
                 "#[error(transparent)] needs to go outside the enum or struct, not on an individual field",
             ));
         }
