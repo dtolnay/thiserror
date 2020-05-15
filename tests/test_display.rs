@@ -206,8 +206,14 @@ fn test_macro_rules() {
     macro_rules! decl_error {
         ($variant:ident($value:ident)) => {
             #[derive(Debug, Error)]
-            pub enum Error {
+            pub enum Error0 {
                 #[error("{0:?}")]
+                $variant($value),
+            }
+
+            #[derive(Debug, Error)]
+            #[error("{0:?}")]
+            pub enum Error1 {
                 $variant($value),
             }
         };
@@ -215,5 +221,6 @@ fn test_macro_rules() {
 
     decl_error!(Repro(u8));
 
-    assert("0", Error::Repro(0));
+    assert("0", Error0::Repro(0));
+    assert("0", Error1::Repro(0));
 }
