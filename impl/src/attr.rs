@@ -188,15 +188,3 @@ impl ToTokens for Display<'_> {
         });
     }
 }
-
-impl Attrs<'_> {
-    pub fn span(&self) -> Span {
-        if let Some(display) = &self.display {
-            display.fmt.span()
-        } else if let Some(transparent) = &self.transparent {
-            transparent.span
-        } else {
-            Span::call_site()
-        }
-    }
-}

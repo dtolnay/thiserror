@@ -56,7 +56,7 @@ impl<'a> Input<'a> {
 impl<'a> Struct<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataStruct) -> Result<Self> {
         let mut attrs = attr::get(&node.attrs)?;
-        let span = attrs.span();
+        let span = attrs.span().unwrap_or_else(Span::call_site);
         let fields = Field::multiple_from_syn(&data.fields, span)?;
         if let Some(display) = &mut attrs.display {
             display.expand_shorthand(&fields);
@@ -74,11 +74,12 @@ impl<'a> Struct<'a> {
 impl<'a> Enum<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataEnum) -> Result<Self> {
         let attrs = attr::get(&node.attrs)?;
+        let span = attrs.span().unwrap_or_else(Span::call_site);
         let variants = data
             .variants
             .iter()
             .map(|node| {
-                let mut variant = Variant::from_syn(node)?;
+                let mut variant = Variant::from_syn(node, span)?;
                 if let display @ None = &mut variant.attrs.display {
                     *display = attrs.display.clone();
                 }
@@ -101,9 +102,9 @@ impl<'a> Enum<'a> {
 }
 
 impl<'a> Variant<'a> {
-    fn from_syn(node: &'a syn::Variant) -> Result<Self> {
+    fn from_syn(node: &'a syn::Variant, span: Span) -> Result<Self> {
         let attrs = attr::get(&node.attrs)?;
-        let span = attrs.span();
+        let span = attrs.span().unwrap_or(span);
         Ok(Variant {
             original: node,
             attrs,
@@ -134,5 +135,17 @@ impl<'a> Field<'a> {
             }),
             ty: &node.ty,
         })
+    }
+}
+
+impl Attrs<'_> {
+    pub fn span(&self) -> Option<Span> {
+        if let Some(display) = &self.display {
+            Some(display.fmt.span())
+        } else if let Some(transparent) = &self.transparent {
+            Some(transparent.span)
+        } else {
+            None
+        }
     }
 }
