@@ -129,7 +129,7 @@ fn test_match() {
     #[derive(Error, Debug)]
     #[error("{}: {0}", match .1 {
         Some(n) => format!("error occurred with {}", n),
-        None => format!("there was an empty error"),
+        None => "there was an empty error".to_owned(),
     })]
     struct Error(String, Option<usize>);
 
