@@ -116,6 +116,7 @@ fn test_nested() {
     #[error("!bool = {}", not(.0))]
     struct Error(bool);
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn not(bool: &bool) -> bool {
         !*bool
     }
