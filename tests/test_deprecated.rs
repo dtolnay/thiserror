@@ -1,4 +1,4 @@
-#![deny(deprecated)]
+#![deny(deprecated, clippy::all, clippy::pedantic)]
 
 use thiserror::Error;
 
