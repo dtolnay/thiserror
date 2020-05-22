@@ -114,6 +114,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let display_impl = display_body.map(|body| {
         quote! {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+                #[allow(clippy::used_underscore_binding)]
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #body
                 }
@@ -296,7 +297,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
-                    #[allow(unused_variables, deprecated)]
+                    #[allow(unused_variables, deprecated, clippy::used_underscore_binding)]
                     match #void_deref self {
                         #(#arms,)*
                     }

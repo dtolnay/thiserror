@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic)]
+
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -114,6 +116,7 @@ fn test_nested() {
     #[error("!bool = {}", not(.0))]
     struct Error(bool);
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn not(bool: &bool) -> bool {
         !*bool
     }
@@ -126,7 +129,7 @@ fn test_match() {
     #[derive(Error, Debug)]
     #[error("{}: {0}", match .1 {
         Some(n) => format!("error occurred with {}", n),
-        None => format!("there was an empty error"),
+        None => "there was an empty error".to_owned(),
     })]
     struct Error(String, Option<usize>);
 
@@ -142,6 +145,7 @@ fn test_match() {
 
 #[test]
 fn test_void() {
+    #[allow(clippy::empty_enum)]
     #[derive(Error, Debug)]
     #[error("...")]
     pub enum Error {}
