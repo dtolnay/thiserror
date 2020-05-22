@@ -145,6 +145,7 @@ fn test_match() {
 
 #[test]
 fn test_void() {
+    #[allow(clippy::empty_enum)]
     #[derive(Error, Debug)]
     #[error("...")]
     pub enum Error {}
