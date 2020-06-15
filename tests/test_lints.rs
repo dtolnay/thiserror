@@ -13,4 +13,6 @@ fn test_unused_qualifications() {
     #[derive(Debug, Error)]
     #[error("...")]
     pub struct MyError;
+
+    let _: MyError;
 }

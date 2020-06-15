@@ -149,6 +149,8 @@ fn test_void() {
     #[derive(Error, Debug)]
     #[error("...")]
     pub enum Error {}
+
+    let _: Error;
 }
 
 #[test]
