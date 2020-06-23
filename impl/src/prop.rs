@@ -25,7 +25,7 @@ impl Enum<'_> {
     pub(crate) fn has_backtrace(&self) -> bool {
         self.variants
             .iter()
-            .any(|variant| variant.backtrace_field().is_some())
+            .any(|variant| variant.backtrace_field().is_some() || variant.source_field().is_some())
     }
 
     pub(crate) fn has_display(&self) -> bool {

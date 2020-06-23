@@ -243,6 +243,24 @@ fn impl_enum(input: Enum) -> TokenStream {
                         #ty::#ident {#backtrace: backtrace, ..} => #body,
                     }
                 }
+                (_, Some(source_field)) => {
+                    let source = &source_field.member;
+                    let source_backtrace = if type_is_option(source_field.ty) {
+                        quote_spanned! {source.span()=>
+                            source.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                        }
+                    } else {
+                        quote_spanned! {source.span()=>
+                            source.as_dyn_error().backtrace()
+                        }
+                    };
+                    quote! {
+                        #ty::#ident {#source: source, ..} => {
+                            use thiserror::private::AsDynError;
+                            #source_backtrace
+                        }
+                    }
+                }
                 (None, _) => quote! {
                     #ty::#ident {..} => std::option::Option::None,
                 },
