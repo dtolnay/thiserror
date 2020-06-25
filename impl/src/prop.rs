@@ -8,6 +8,8 @@ impl Struct<'_> {
 
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
+            // If it is transparent, it has only one fields and is considered as the source
+            .or_else(|| self.attrs.transparent.map(|_| &self.fields[0]))
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
@@ -49,6 +51,8 @@ impl Variant<'_> {
 
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
+            // If it is transparent, it has only one fields and is considered as the source
+            .or_else(|| self.attrs.transparent.map(|_| &self.fields[0]))
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
