@@ -6,4 +6,4 @@ error[E0599]: no method named `as_display` found for reference `&std::thread::Th
      |
      = note: the method `as_display` exists but the following trait bounds were not satisfied:
              `std::thread::Thread: std::fmt::Display`
-             which is required by `&std::thread::Thread: thiserror::display::DisplayAsDisplay`
+             which is required by `&std::thread::Thread: thiserror::private::DisplayAsDisplay`
