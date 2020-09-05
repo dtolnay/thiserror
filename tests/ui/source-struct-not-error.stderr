@@ -1,13 +1,13 @@
-error[E0599]: no method named `as_dyn_error` found for struct `std::string::String` in the current scope
+error[E0599]: no method named `as_dyn_error` found for struct `String` in the current scope
    --> $DIR/source-struct-not-error.rs:6:5
     |
 6   |       source: String,
-    |       ^^^^^^ method not found in `std::string::String`
+    |       ^^^^^^ method not found in `String`
     |
     = note: the method `as_dyn_error` exists but the following trait bounds were not satisfied:
-            `std::string::String: std::error::Error`
-            which is required by `std::string::String: thiserror::private::AsDynError`
-            `str: std::marker::Sized`
-            which is required by `str: thiserror::private::AsDynError`
+            `String: std::error::Error`
+            which is required by `String: AsDynError`
+            `str: Sized`
+            which is required by `str: AsDynError`
             `str: std::error::Error`
-            which is required by `str: thiserror::private::AsDynError`
+            which is required by `str: AsDynError`
