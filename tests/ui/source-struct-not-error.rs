@@ -1,9 +1,12 @@
 use thiserror::Error;
 
+#[derive(Debug)]
+struct NotError;
+
 #[derive(Error, Debug)]
 #[error("...")]
 pub struct ErrorStruct {
-    source: String,
+    source: NotError,
 }
 
 fn main() {}
