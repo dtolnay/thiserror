@@ -1,7 +1,14 @@
 #![cfg_attr(thiserror_nightly_testing, feature(backtrace))]
 
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+#[error("...")]
+pub struct Inner;
+
 #[cfg(thiserror_nightly_testing)]
 pub mod structs {
+    use super::Inner;
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -34,6 +41,24 @@ pub mod structs {
         backtrace: Arc<Backtrace>,
     }
 
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct BacktraceFrom {
+        #[from]
+        source: Inner,
+        #[backtrace]
+        backtrace: Backtrace,
+    }
+
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct OptBacktraceFrom {
+        #[from]
+        source: Inner,
+        #[backtrace]
+        backtrace: Option<Backtrace>,
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace {
@@ -55,11 +80,18 @@ pub mod structs {
             backtrace: Arc::new(Backtrace::capture()),
         };
         assert!(error.backtrace().is_some());
+
+        let error = BacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = OptBacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
     }
 }
 
 #[cfg(thiserror_nightly_testing)]
 pub mod enums {
+    use super::Inner;
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -98,6 +130,28 @@ pub mod enums {
         },
     }
 
+    #[derive(Error, Debug)]
+    pub enum BacktraceFrom {
+        #[error("...")]
+        Test {
+            #[from]
+            source: Inner,
+            #[backtrace]
+            backtrace: Backtrace,
+        },
+    }
+
+    #[derive(Error, Debug)]
+    pub enum OptBacktraceFrom {
+        #[error("...")]
+        Test {
+            #[from]
+            source: Inner,
+            #[backtrace]
+            backtrace: Option<Backtrace>,
+        },
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace::Test {
@@ -118,6 +172,12 @@ pub mod enums {
         let error = ArcBacktrace::Test {
             backtrace: Arc::new(Backtrace::capture()),
         };
+        assert!(error.backtrace().is_some());
+
+        let error = BacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = OptBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
     }
 }
