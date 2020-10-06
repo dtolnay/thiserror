@@ -59,6 +59,15 @@ pub mod structs {
         backtrace: Option<Backtrace>,
     }
 
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct ArcBacktraceFrom {
+        #[from]
+        source: Inner,
+        #[backtrace]
+        backtrace: Arc<Backtrace>,
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace {
@@ -85,6 +94,9 @@ pub mod structs {
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = ArcBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
     }
 }
@@ -152,6 +164,17 @@ pub mod enums {
         },
     }
 
+    #[derive(Error, Debug)]
+    pub enum ArcBacktraceFrom {
+        #[error("...")]
+        Test {
+            #[from]
+            source: Inner,
+            #[backtrace]
+            backtrace: Arc<Backtrace>,
+        },
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace::Test {
@@ -178,6 +201,9 @@ pub mod enums {
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = ArcBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
     }
 }

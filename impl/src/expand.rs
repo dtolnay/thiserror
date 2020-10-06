@@ -367,7 +367,7 @@ fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> Toke
             }
         } else {
             quote! {
-                #backtrace_member: std::backtrace::Backtrace::capture(),
+                #backtrace_member: std::convert::From::from(std::backtrace::Backtrace::capture()),
             }
         }
     });
