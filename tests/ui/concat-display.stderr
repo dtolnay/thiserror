@@ -1,10 +1,10 @@
 error: expected string literal
-  --> $DIR/concat-display.rs:6:17
+  --> $DIR/concat-display.rs:8:17
    |
-6  |         #[error(concat!("invalid ", $what))]
+8  |         #[error(concat!("invalid ", $what))]
    |                 ^^^^^^
 ...
-11 | error_type!(Error, "foo");
+13 | error_type!(Error, "foo");
    | -------------------------- in this macro invocation
    |
    = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
