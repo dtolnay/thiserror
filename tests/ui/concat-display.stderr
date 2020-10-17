@@ -1,4 +1,4 @@
-error: expected literal
+error: expected string literal
   --> $DIR/concat-display.rs:6:17
    |
 6  |         #[error(concat!("invalid ", $what))]
