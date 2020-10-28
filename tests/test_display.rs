@@ -206,6 +206,20 @@ fn test_field() {
 }
 
 #[test]
+fn test_generic() {
+    #[derive(Error, Debug)]
+    enum Error<T> {
+        #[error("variant")]
+        Variant,
+        #[error("{0}")]
+        Generic(T),
+    }
+
+    assert("variant", Error::<&str>::Variant);
+    assert("err", Error::Generic("err"));
+}
+
+#[test]
 fn test_macro_rules() {
     // Regression test for https://github.com/dtolnay/thiserror/issues/86
 

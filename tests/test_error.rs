@@ -49,6 +49,18 @@ enum EnumError {
     Unit,
 }
 
+#[derive(Error, Debug)]
+enum WithGeneric<T> {
+    Variant,
+    Generic(T),
+}
+
+impl<T: Display> Display for WithGeneric<T> {
+    fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
 unimplemented_display!(UnitError);

@@ -296,9 +296,16 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#ident #pat => #display
             }
         });
+        let display_impl_generics = {
+            let type_params = input.generics.type_params();
+
+            quote! {
+                <#(#type_params: std::fmt::Display),*>
+            }
+        };
         Some(quote! {
             #[allow(unused_qualifications)]
-            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+            impl #display_impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
                     #[allow(unused_variables, deprecated, clippy::used_underscore_binding)]
@@ -331,6 +338,14 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
 
+    let impl_generics = {
+        let type_params = input.generics.type_params();
+
+        quote! {
+            <#(#type_params: std::fmt::Debug + std::fmt::Display),*>
+        }
+    };
+    
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
