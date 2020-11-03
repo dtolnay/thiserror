@@ -230,3 +230,35 @@ fn test_macro_rules() {
     assert("0", Error0::Repro(0));
     assert("0", Error1::Repro(0));
 }
+
+#[test]
+fn test_raw() {
+    #[derive(Error, Debug)]
+    #[error("braced raw error: {r#fn}")]
+    struct Error {
+        r#fn: String,
+    }
+
+    assert(
+        "braced raw error: T",
+        Error {
+            r#fn: "T".to_owned(),
+        },
+    );
+}
+
+#[test]
+fn test_raw_enum() {
+    #[derive(Error, Debug)]
+    enum Error {
+        #[error("braced raw error: {r#fn}")]
+        Braced { r#fn: String },
+    }
+
+    assert(
+        "braced raw error: T",
+        Error::Braced {
+            r#fn: "T".to_owned(),
+        },
+    );
+}
