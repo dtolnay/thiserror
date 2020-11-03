@@ -67,8 +67,8 @@ impl Display<'_> {
             };
             let mut formatvar = local.clone();
             if formatvar.to_string().starts_with("r#") {
-                // Strip away the "r#" prefix.
-                formatvar = format_ident!("{}", formatvar);
+                // Replace the "r#" prefix.
+                formatvar = format_ident!("raw_field_{}", formatvar);
             }
             if formatvar.to_string().starts_with('_') {
                 // Work around leading underscore being rejected by 1.40 and
