@@ -262,3 +262,19 @@ fn test_raw_enum() {
         },
     );
 }
+
+#[test]
+fn test_raw_conflict() {
+    #[derive(Error, Debug)]
+    enum Error {
+        #[error("braced raw error: {r#func}, {func}", func = "U")]
+        Braced { r#func: String },
+    }
+
+    assert(
+        "braced raw error: T, U",
+        Error::Braced {
+            r#func: "T".to_owned(),
+        },
+    );
+}
