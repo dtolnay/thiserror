@@ -5,7 +5,7 @@ use quote::{format_ident, quote_spanned};
 use std::collections::HashSet as Set;
 use syn::ext::IdentExt;
 use syn::parse::{ParseStream, Parser};
-use syn::{parse_str, Ident, Index, LitStr, Member, Result, Token};
+use syn::{Ident, Index, LitStr, Member, Result, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
@@ -54,8 +54,7 @@ impl Display<'_> {
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    let ident = take_ident(&mut read);
-                    let mut ident = parse_str::<Ident>(&ident).unwrap();
+                    let mut ident = take_ident(&mut read);
                     ident.set_span(span);
                     Member::Named(ident)
                 }
@@ -129,9 +128,10 @@ fn take_int(read: &mut &str) -> String {
     int
 }
 
-fn take_ident(read: &mut &str) -> String {
+fn take_ident(read: &mut &str) -> Ident {
     let mut ident = String::new();
-    if read.starts_with("r#") {
+    let raw = read.starts_with("r#");
+    if raw {
         ident.push_str("r#");
         *read = &read[2..];
     }
@@ -144,5 +144,5 @@ fn take_ident(read: &mut &str) -> String {
             }
         }
     }
-    ident
+    syn::parse_str(&ident).unwrap()
 }
