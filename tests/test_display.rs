@@ -236,15 +236,10 @@ fn test_raw() {
     #[derive(Error, Debug)]
     #[error("braced raw error: {r#fn}")]
     struct Error {
-        r#fn: String,
+        r#fn: &'static str,
     }
 
-    assert(
-        "braced raw error: T",
-        Error {
-            r#fn: "T".to_owned(),
-        },
-    );
+    assert("braced raw error: T", Error { r#fn: "T" });
 }
 
 #[test]
@@ -252,15 +247,10 @@ fn test_raw_enum() {
     #[derive(Error, Debug)]
     enum Error {
         #[error("braced raw error: {r#fn}")]
-        Braced { r#fn: String },
+        Braced { r#fn: &'static str },
     }
 
-    assert(
-        "braced raw error: T",
-        Error::Braced {
-            r#fn: "T".to_owned(),
-        },
-    );
+    assert("braced raw error: T", Error::Braced { r#fn: "T" });
 }
 
 #[test]
@@ -268,13 +258,8 @@ fn test_raw_conflict() {
     #[derive(Error, Debug)]
     enum Error {
         #[error("braced raw error: {r#func}, {func}", func = "U")]
-        Braced { r#func: String },
+        Braced { r#func: &'static str },
     }
 
-    assert(
-        "braced raw error: T, U",
-        Error::Braced {
-            r#func: "T".to_owned(),
-        },
-    );
+    assert("braced raw error: T, U", Error::Braced { r#func: "T" });
 }
