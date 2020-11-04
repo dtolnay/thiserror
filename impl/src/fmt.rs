@@ -131,9 +131,9 @@ fn take_int(read: &mut &str) -> String {
 
 fn take_ident(read: &mut &str) -> String {
     let mut ident = String::new();
-    if let Some(rest) = read.strip_prefix("r#") {
+    if read.starts_with("r#") {
         ident.push_str("r#");
-        *read = rest;
+        *read = &read[2..];
     }
     for (i, ch) in read.char_indices() {
         match ch {
