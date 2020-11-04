@@ -102,7 +102,7 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
     while !input.is_empty() {
         if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
             input.parse::<Token![,]>()?;
-            let ident: Ident = input.parse()?;
+            let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
             named_args.insert(ident);
         } else {
