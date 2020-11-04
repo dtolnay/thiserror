@@ -143,5 +143,5 @@ fn take_ident(read: &mut &str) -> Ident {
             }
         }
     }
-    syn::parse_str(&ident).unwrap()
+    Ident::parse_any.parse_str(&ident).unwrap()
 }
