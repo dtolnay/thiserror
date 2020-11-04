@@ -5,7 +5,7 @@ use quote::{format_ident, quote_spanned};
 use std::collections::HashSet as Set;
 use syn::ext::IdentExt;
 use syn::parse::{ParseStream, Parser};
-use syn::{Ident, Index, LitStr, Member, Result, Token};
+use syn::{parse_str, Ident, Index, LitStr, Member, Result, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
@@ -55,7 +55,9 @@ impl Display<'_> {
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let ident = take_ident(&mut read);
-                    Member::Named(Ident::new(&ident, span))
+                    let mut ident = parse_str::<Ident>(&ident).unwrap();
+                    ident.set_span(span);
+                    Member::Named(ident)
                 }
                 _ => continue,
             };
@@ -64,6 +66,10 @@ impl Display<'_> {
                 Member::Named(ident) => ident.clone(),
             };
             let mut formatvar = local.clone();
+            if formatvar.to_string().starts_with("r#") {
+                // Replace the "r#" prefix.
+                formatvar = format_ident!("raw_field_{}", formatvar);
+            }
             if formatvar.to_string().starts_with('_') {
                 // Work around leading underscore being rejected by 1.40 and
                 // older compilers. https://github.com/rust-lang/rust/pull/66847
@@ -125,6 +131,10 @@ fn take_int(read: &mut &str) -> String {
 
 fn take_ident(read: &mut &str) -> String {
     let mut ident = String::new();
+    if let Some(rest) = read.strip_prefix("r#") {
+        ident.push_str("r#");
+        *read = rest;
+    }
     for (i, ch) in read.char_indices() {
         match ch {
             'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
