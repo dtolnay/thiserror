@@ -263,3 +263,12 @@ fn test_raw_conflict() {
 
     assert("braced raw error: T, U", Error::Braced { r#func: "T" });
 }
+
+#[test]
+fn test_keyword() {
+    #[derive(Error, Debug)]
+    #[error("error: {type}", type = 1)]
+    struct Error;
+
+    assert("error: 1", Error);
+}
