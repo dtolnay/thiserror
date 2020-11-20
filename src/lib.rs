@@ -62,6 +62,7 @@
 //!   which may be arbitrary expressions. For example:
 //!
 //!   ```rust
+//!   # use std::i32;
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
