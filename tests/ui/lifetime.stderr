@@ -1,4 +1,4 @@
-error: non-static lifetimes are not allowed in the source of an error
+error: non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static
  --> $DIR/lifetime.rs:5:26
   |
 5 | struct Error<'a>(#[from] Inner<'a>);
