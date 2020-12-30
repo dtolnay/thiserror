@@ -185,6 +185,8 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
+#![allow(clippy::module_name_repetitions)]
+
 mod aserror;
 mod display;
 
