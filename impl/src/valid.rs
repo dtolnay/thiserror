@@ -23,7 +23,7 @@ impl Struct<'_> {
                     "#[error(transparent)] requires exactly one field",
                 ));
             }
-            if let Some(source) = self.fields.iter().filter_map(|f| f.attrs.source).next() {
+            if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
                     source,
                     "transparent error struct can't contain #[source]",
@@ -78,7 +78,7 @@ impl Variant<'_> {
                     "#[error(transparent)] requires exactly one field",
                 ));
             }
-            if let Some(source) = self.fields.iter().filter_map(|f| f.attrs.source).next() {
+            if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
                     source,
                     "transparent variant can't contain #[source]",

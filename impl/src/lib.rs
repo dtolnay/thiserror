@@ -1,7 +1,6 @@
 #![allow(
     clippy::blocks_in_if_conditions,
     clippy::cast_possible_truncation,
-    clippy::filter_map_next,
     clippy::map_unwrap_or,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
