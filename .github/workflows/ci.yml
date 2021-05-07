@@ -15,7 +15,7 @@ jobs:
         rust: [beta, stable, 1.36.0]
         include:
           - rust: nightly
-            rustflags: --cfg thiserror_nightly_testing
+            rustflags: --cfg 'featue="stdbacktrace"'
     steps:
       - uses: actions/checkout@v2
       - uses: dtolnay/rust-toolchain@master

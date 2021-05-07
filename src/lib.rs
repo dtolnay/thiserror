@@ -186,11 +186,17 @@
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
 #![allow(clippy::module_name_repetitions)]
+#![cfg_attr(feature = "stdbacktrace", feature(backtrace))]
 
 mod aserror;
+#[cfg(not(feature = "stdbacktrace"))]
+mod backtrace;
 mod display;
 
 pub use thiserror_impl::*;
+
+#[cfg(not(feature = "stdbacktrace"))]
+pub use crate::backtrace::Backtrace;
 
 // Not public API.
 #[doc(hidden)]

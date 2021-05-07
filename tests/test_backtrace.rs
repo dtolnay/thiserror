@@ -1,4 +1,4 @@
-#![cfg_attr(thiserror_nightly_testing, feature(backtrace))]
+#![cfg_attr(feature = "stdbacktrace", feature(backtrace))]
 
 use thiserror::Error;
 
@@ -6,10 +6,23 @@ use thiserror::Error;
 #[error("...")]
 pub struct Inner;
 
-#[cfg(thiserror_nightly_testing)]
+#[cfg(feature = "stdbacktrace")]
+fn backtrace() -> std::backtrace::Backtrace {
+    std::backtrace::Backtrace::capture()
+}
+
+#[cfg(not(feature = "stdbacktrace"))]
+fn backtrace() -> backtrace::Backtrace {
+    backtrace::Backtrace::new()
+}
+
 pub mod structs {
-    use super::Inner;
+    use super::{backtrace, Inner};
+    #[cfg(not(feature = "stdbacktrace"))]
+    use backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::error::Error;
     use std::sync::Arc;
     use thiserror::Error;
@@ -69,24 +82,28 @@ pub mod structs {
     }
 
     #[test]
+    #[cfg_attr(not(feature = "stdbacktrace"), allow(unstable_name_collisions))]
     fn test_backtrace() {
+        #[cfg(not(feature = "stdbacktrace"))]
+        use thiserror::Backtrace as _;
+
         let error = PlainBacktrace {
-            backtrace: Backtrace::capture(),
+            backtrace: backtrace(),
         };
         assert!(error.backtrace().is_some());
 
         let error = ExplicitBacktrace {
-            backtrace: Backtrace::capture(),
+            backtrace: backtrace(),
         };
         assert!(error.backtrace().is_some());
 
         let error = OptBacktrace {
-            backtrace: Some(Backtrace::capture()),
+            backtrace: Some(backtrace()),
         };
         assert!(error.backtrace().is_some());
 
         let error = ArcBacktrace {
-            backtrace: Arc::new(Backtrace::capture()),
+            backtrace: Arc::new(backtrace()),
         };
         assert!(error.backtrace().is_some());
 
@@ -101,10 +118,13 @@ pub mod structs {
     }
 }
 
-#[cfg(thiserror_nightly_testing)]
 pub mod enums {
-    use super::Inner;
+    use super::{backtrace, Inner};
+    #[cfg(not(feature = "stdbacktrace"))]
+    use backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::error::Error;
     use std::sync::Arc;
     use thiserror::Error;
@@ -176,24 +196,28 @@ pub mod enums {
     }
 
     #[test]
+    #[cfg_attr(not(feature = "stdbacktrace"), allow(unstable_name_collisions))]
     fn test_backtrace() {
+        #[cfg(not(feature = "stdbacktrace"))]
+        use thiserror::Backtrace as _;
+
         let error = PlainBacktrace::Test {
-            backtrace: Backtrace::capture(),
+            backtrace: backtrace(),
         };
         assert!(error.backtrace().is_some());
 
         let error = ExplicitBacktrace::Test {
-            backtrace: Backtrace::capture(),
+            backtrace: backtrace(),
         };
         assert!(error.backtrace().is_some());
 
         let error = OptBacktrace::Test {
-            backtrace: Some(Backtrace::capture()),
+            backtrace: Some(backtrace()),
         };
         assert!(error.backtrace().is_some());
 
         let error = ArcBacktrace::Test {
-            backtrace: Arc::new(Backtrace::capture()),
+            backtrace: Arc::new(backtrace()),
         };
         assert!(error.backtrace().is_some());
 
@@ -207,7 +231,3 @@ pub mod enums {
         assert!(error.backtrace().is_some());
     }
 }
-
-#[test]
-#[cfg_attr(not(thiserror_nightly_testing), ignore)]
-fn test_backtrace() {}

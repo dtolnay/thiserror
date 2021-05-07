@@ -9,6 +9,7 @@
     clippy::single_match_else,
     clippy::too_many_lines
 )]
+#![cfg_attr(feature = "stdbacktrace", feature(backtrace))]
 
 extern crate proc_macro;
 

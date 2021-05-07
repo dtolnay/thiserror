@@ -50,12 +50,24 @@ fn impl_struct(input: Struct) -> TokenStream {
         let body = if let Some(source_field) = input.source_field() {
             let source = &source_field.member;
             let source_backtrace = if type_is_option(source_field.ty) {
+                if cfg!(feature = "stdbacktrace") {
+                    quote_spanned! {source.span()=>
+                        self.#source.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                    }
+                } else {
+                    quote_spanned! {source.span()=>
+                        self.#source.as_ref().and_then(|source|
+                            source.as_dyn_error().downcast_ref::<&(dyn thiserror::Backtrace)>().and_then(|source| thiserror::Backtrace::backtrace(source))
+                        )
+                    }
+                }
+            } else if cfg!(feature = "stdbacktrace") {
                 quote_spanned! {source.span()=>
-                    self.#source.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                    self.#source.as_dyn_error().backtrace()
                 }
             } else {
                 quote_spanned! {source.span()=>
-                    self.#source.as_dyn_error().backtrace()
+                    self.#source.as_dyn_error().downcast_ref::<&(dyn thiserror::Backtrace)>().and_then(|source| thiserror::Backtrace::backtrace(source))
                 }
             };
             let combinator = if type_is_option(backtrace_field.ty) {
@@ -80,9 +92,19 @@ fn impl_struct(input: Struct) -> TokenStream {
                 std::option::Option::Some(&self.#backtrace)
             }
         };
-        quote! {
-            fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                #body
+
+        if cfg!(feature = "stdbacktrace") {
+            quote! {
+                fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
+                    #body
+                }
+            }
+        } else {
+            quote! {
+                #[allow(unstable_name_collisions)]
+                fn backtrace(&self) -> std::option::Option<&::backtrace::Backtrace> {
+                    #body
+                }
             }
         }
     });
@@ -140,14 +162,36 @@ fn impl_struct(input: Struct) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
 
-    quote! {
-        #[allow(unused_qualifications)]
-        impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
-            #source_method
-            #backtrace_method
+    if cfg!(feature = "stdbacktrace") {
+        quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
+                #source_method
+                #backtrace_method
+            }
+            #display_impl
+            #from_impl
         }
-        #display_impl
-        #from_impl
+    } else {
+        let mut gen = quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
+                #source_method
+            }
+            #display_impl
+            #from_impl
+        };
+
+        if backtrace_method.is_some() {
+            gen = quote! {
+                #gen
+                impl #impl_generics thiserror::Backtrace for #ty #ty_generics #where_clause {
+                    #backtrace_method
+                }
+            }
+        }
+
+        gen
     }
 }
 
@@ -206,12 +250,22 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let source = &source_field.member;
                     let varsource = quote!(source);
                     let source_backtrace = if type_is_option(source_field.ty) {
+                        if cfg!(feature = "stdbacktrace") {
+                            quote_spanned! {source.span()=>
+                                #varsource.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                            }
+                        } else {
+                            quote_spanned! {source.span()=>
+                                #varsource.as_ref().and_then(|source| source.as_dyn_error().downcast_ref::<&(dyn thiserror::Backtrace)>().and_then(|source| thiserror::Backtrace::backtrace(source)))
+                            }
+                        }
+                    } else if cfg!(feature = "stdbacktrace"){
                         quote_spanned! {source.span()=>
-                            #varsource.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                            #varsource.as_dyn_error().backtrace()
                         }
                     } else {
                         quote_spanned! {source.span()=>
-                            #varsource.as_dyn_error().backtrace()
+                            #varsource.as_dyn_error().downcast_ref::<&(dyn thiserror::Backtrace)>().and_then(|source| thiserror::Backtrace::backtrace(source))
                         }
                     };
                     let combinator = if type_is_option(backtrace_field.ty) {
@@ -250,11 +304,22 @@ fn impl_enum(input: Enum) -> TokenStream {
                 },
             }
         });
-        Some(quote! {
-            fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                #[allow(deprecated)]
-                match self {
-                    #(#arms)*
+        Some(if cfg!(feature = "stdbacktrace") {
+            quote! {
+                fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
+                    #[allow(deprecated)]
+                    match self {
+                        #(#arms)*
+                    }
+                }
+            }
+        } else {
+            quote! {
+                fn backtrace(&self) -> std::option::Option<&::backtrace::Backtrace> {
+                    #[allow(deprecated)]
+                    match self {
+                        #(#arms)*
+                    }
                 }
             }
         })
@@ -333,14 +398,36 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
 
-    quote! {
-        #[allow(unused_qualifications)]
-        impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
-            #source_method
-            #backtrace_method
+    if cfg!(feature = "stdbacktrace") {
+        quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
+                #source_method
+                #backtrace_method
+            }
+            #display_impl
+            #(#from_impls)*
         }
-        #display_impl
-        #(#from_impls)*
+    } else {
+        let mut gen = quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
+                #source_method
+            }
+            #display_impl
+            #(#from_impls)*
+        };
+
+        if backtrace_method.is_some() {
+            gen = quote! {
+                #gen
+                impl #impl_generics thiserror::Backtrace for #ty #ty_generics #where_clause {
+                    #backtrace_method
+                }
+            };
+        }
+
+        gen
     }
 }
 
@@ -364,12 +451,22 @@ fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> Toke
     let backtrace = backtrace_field.map(|backtrace_field| {
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
+            if cfg!(feature = "stdbacktrace") {
+                quote! {
+                    #backtrace_member: std::option::Option::Some(std::backtrace::Backtrace::capture()),
+                }
+            } else {
+                quote! {
+                    #backtrace_member: std::option::Option::Some(::backtrace::Backtrace::new()),
+                }
+            }
+        } else if cfg!(feature = "stdbacktrace") {
             quote! {
-                #backtrace_member: std::option::Option::Some(std::backtrace::Backtrace::capture()),
+                #backtrace_member: std::convert::From::from(std::backtrace::Backtrace::capture()),
             }
         } else {
             quote! {
-                #backtrace_member: std::convert::From::from(std::backtrace::Backtrace::capture()),
+                #backtrace_member: std::convert::From::from(::backtrace::Backtrace::new()),
             }
         }
     });

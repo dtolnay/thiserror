@@ -1,8 +1,10 @@
-#![cfg_attr(thiserror_nightly_testing, feature(backtrace))]
+#![cfg_attr(feature = "stdbacktrace", feature(backtrace))]
 #![deny(clippy::all, clippy::pedantic)]
 
-#[cfg(thiserror_nightly_testing)]
 pub mod structs {
+    #[cfg(not(feature = "stdbacktrace"))]
+    use backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::backtrace::Backtrace;
     use thiserror::Error;
 
@@ -46,8 +48,10 @@ pub mod structs {
     }
 }
 
-#[cfg(thiserror_nightly_testing)]
 pub mod enums {
+    #[cfg(not(feature = "stdbacktrace"))]
+    use backtrace::Backtrace;
+    #[cfg(feature = "stdbacktrace")]
     use std::backtrace::Backtrace;
     use thiserror::Error;
 
@@ -102,5 +106,4 @@ pub mod enums {
 }
 
 #[test]
-#[cfg_attr(not(thiserror_nightly_testing), ignore)]
 fn test_option() {}

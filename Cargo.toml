@@ -12,12 +12,16 @@ readme = "README.md"
 
 [dependencies]
 thiserror-impl = { version = "=1.0.24", path = "impl" }
+backtrace = "^0.3"
 
 [dev-dependencies]
 anyhow = "1.0"
 ref-cast = "1.0"
 rustversion = "1.0"
 trybuild = { version = "1.0.19", features = ["diff"] }
+
+[features]
+stdbacktrace = ["thiserror-impl/stdbacktrace"]
 
 [workspace]
 members = ["impl"]
