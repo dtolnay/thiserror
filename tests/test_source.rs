@@ -60,4 +60,8 @@ macro_rules! error_from_macro {
 }
 
 // Test that we generate impls with the proper hygiene
-error_from_macro!(#[error("Something")] Variant(#[from] io::Error));
+#[rustfmt::skip]
+error_from_macro! {
+    #[error("Something")]
+    Variant(#[from] io::Error)
+}
