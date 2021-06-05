@@ -65,7 +65,7 @@ impl Field<'_> {
 fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.from.is_some() {
-            return Some(&field);
+            return Some(field);
         }
     }
     None
@@ -74,12 +74,12 @@ fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
 fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.from.is_some() || field.attrs.source.is_some() {
-            return Some(&field);
+            return Some(field);
         }
     }
     for field in fields {
         match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(&field),
+            Member::Named(ident) if ident == "source" => return Some(field),
             _ => {}
         }
     }
@@ -89,12 +89,12 @@ fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
 fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     for field in fields {
         if field.attrs.backtrace.is_some() {
-            return Some(&field);
+            return Some(field);
         }
     }
     for field in fields {
         if field.is_backtrace() {
-            return Some(&field);
+            return Some(field);
         }
     }
     None
