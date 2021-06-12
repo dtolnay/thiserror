@@ -161,6 +161,22 @@
 //!   # };
 //!   ```
 //!
+//! - If a field is `#[from]` and `#[backtrace]`, the Error trait's `backtrace()`
+//! method is forwarded to the field.
+//!
+//!   ```rust
+//!   # const IGNORE: &str = stringify! {
+//!   #[derive(Error, Debug)]
+//!   pub enum MyError {
+//!       Io {
+//!           #[from]
+//!           #[backtrace]
+//!           source: io::Error,
+//!       },
+//!   }
+//!   # };
+//!   ```
+//!
 //! - Errors may use `error(transparent)` to forward the source and Display
 //!   methods straight through to an underlying error without adding an
 //!   additional message. This would be appropriate for enums that need an
