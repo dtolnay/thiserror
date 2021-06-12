@@ -52,6 +52,14 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    pub struct CombinedBacktraceFrom {
+        #[from]
+        #[backtrace]
+        source: Inner,
+    }
+
+    #[derive(Error, Debug)]
+    #[error("...")]
     pub struct OptBacktraceFrom {
         #[from]
         source: Inner,
@@ -91,6 +99,9 @@ pub mod structs {
         assert!(error.backtrace().is_some());
 
         let error = BacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = CombinedBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
@@ -154,6 +165,16 @@ pub mod enums {
     }
 
     #[derive(Error, Debug)]
+    pub enum CombinedBacktraceFrom {
+        #[error("...")]
+        Test {
+            #[from]
+            #[backtrace]
+            source: Inner,
+        },
+    }
+
+    #[derive(Error, Debug)]
     pub enum OptBacktraceFrom {
         #[error("...")]
         Test {
@@ -198,6 +219,9 @@ pub mod enums {
         assert!(error.backtrace().is_some());
 
         let error = BacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = CombinedBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
