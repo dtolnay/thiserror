@@ -7,8 +7,15 @@ use thiserror::Error;
 pub struct Inner;
 
 #[cfg(thiserror_nightly_testing)]
+#[derive(Error, Debug)]
+#[error("...")]
+pub struct InnerBacktrace {
+    backtrace: std::backtrace::Backtrace,
+}
+
+#[cfg(thiserror_nightly_testing)]
 pub mod structs {
-    use super::Inner;
+    use super::{Inner, InnerBacktrace};
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -55,7 +62,7 @@ pub mod structs {
     pub struct CombinedBacktraceFrom {
         #[from]
         #[backtrace]
-        source: Inner,
+        source: InnerBacktrace,
     }
 
     #[derive(Error, Debug)]
@@ -101,7 +108,9 @@ pub mod structs {
         let error = BacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
-        let error = CombinedBacktraceFrom::from(Inner);
+        let error = CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
@@ -114,7 +123,7 @@ pub mod structs {
 
 #[cfg(thiserror_nightly_testing)]
 pub mod enums {
-    use super::Inner;
+    use super::{Inner, InnerBacktrace};
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -170,7 +179,7 @@ pub mod enums {
         Test {
             #[from]
             #[backtrace]
-            source: Inner,
+            source: InnerBacktrace,
         },
     }
 
@@ -221,7 +230,9 @@ pub mod enums {
         let error = BacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
-        let error = CombinedBacktraceFrom::from(Inner);
+        let error = CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
