@@ -185,7 +185,11 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
-#![allow(clippy::module_name_repetitions)]
+#![allow(
+    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7421
+    clippy::doc_markdown,
+    clippy::module_name_repetitions,
+)]
 
 mod aserror;
 mod display;
