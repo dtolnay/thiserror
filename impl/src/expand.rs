@@ -115,7 +115,11 @@ fn impl_struct(input: Struct) -> TokenStream {
         quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
-                #[allow(clippy::used_underscore_binding)]
+                #[allow(
+                    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
+                    clippy::nonstandard_macro_braces,
+                    clippy::used_underscore_binding,
+                )]
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #body
                 }
@@ -303,7 +307,13 @@ fn impl_enum(input: Enum) -> TokenStream {
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
-                    #[allow(unused_variables, deprecated, clippy::used_underscore_binding)]
+                    #[allow(
+                        unused_variables,
+                        deprecated,
+                        // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
+                        clippy::nonstandard_macro_braces,
+                        clippy::used_underscore_binding,
+                    )]
                     match #void_deref self {
                         #(#arms,)*
                     }
