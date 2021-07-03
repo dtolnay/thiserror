@@ -1,4 +1,8 @@
 #![cfg_attr(thiserror_nightly_testing, feature(backtrace))]
+#![allow(
+    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
+    clippy::nonstandard_macro_braces,
+)]
 
 use thiserror::Error;
 

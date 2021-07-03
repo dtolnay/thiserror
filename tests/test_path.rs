@@ -1,4 +1,8 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(
+    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
+    clippy::nonstandard_macro_braces,
+)]
 
 use ref_cast::RefCast;
 use std::fmt::Display;
