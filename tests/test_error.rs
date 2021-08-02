@@ -101,7 +101,16 @@ struct WithGenericStructRef<'a, T> {
 
 #[derive(Error, Debug)]
 #[error(bound = std::error::Error + 'a)]
-struct WithGenericStructRefNonStatic<'a, T> {
+struct WithGenericStructRefNonStaticInline<'a, T: 'a> {
+    inner: &'a WithGenericStruct<T>,
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::error::Error + 'a)]
+struct WithGenericStructRefNonStaticWhere<'a, T>
+where
+    T: 'a,
+{
     inner: &'a WithGenericStruct<T>,
 }
 
@@ -123,4 +132,5 @@ unimplemented_display!(T; WithGeneric<T>);
 unimplemented_display!(T; WithGenericFrom<T>);
 unimplemented_display!(T; WithGenericStruct<T>);
 unimplemented_display!('a; T; WithGenericStructRef<'a, T>);
-unimplemented_display!('a; T; WithGenericStructRefNonStatic<'a, T>);
+unimplemented_display!('a; T; WithGenericStructRefNonStaticInline<'a, T>);
+unimplemented_display!('a; T; WithGenericStructRefNonStaticWhere<'a, T>);

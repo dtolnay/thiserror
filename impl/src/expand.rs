@@ -487,8 +487,8 @@ fn apply_type_bounds<'a, TTypeParams: std::iter::Iterator<Item = &'a syn::TypePa
         return Vec::new();
     }
     type_params
-        .map(move |p| {
-            let predicate = quote! { #p: #bounds };
+        .map(move |syn::TypeParam { ident: tparam, .. }| {
+            let predicate = quote! { #tparam: #bounds };
             syn::parse2::<syn::WherePredicate>(predicate)
                 .expect("quasiquote must create predicate bounds")
         })
