@@ -6,7 +6,14 @@ use std::io;
 use thiserror::Error;
 
 macro_rules! unimplemented_display {
-    (($tp:tt), $ty:ty) => {
+    ($($tl:lifetime),*; $tp:tt; $ty:ty) => {
+        impl<$($tl),*, $tp> Display for $ty {
+            fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+                unimplemented!()
+            }
+        }
+    };
+    ($tp:tt; $ty:ty) => {
         impl<$tp> Display for $ty {
             fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
                 unimplemented!()
@@ -87,6 +94,18 @@ struct WithGenericStruct<T> {
 }
 
 #[derive(Error, Debug)]
+#[error(bound = std::error::Error + 'static)]
+struct WithGenericStructRef<'a, T> {
+    inner: &'a WithGenericStruct<T>,
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::error::Error + 'a)]
+struct WithGenericStructRefNonStatic<'a, T> {
+    inner: &'a WithGenericStruct<T>,
+}
+
+#[derive(Error, Debug)]
 #[error(bound = std::fmt::Display + std::error::Error + 'static)]
 #[error(transparent)]
 struct WithGenericStructTransparent<T> {
@@ -100,6 +119,8 @@ unimplemented_display!(UnitError);
 unimplemented_display!(WithSource);
 unimplemented_display!(WithAnyhow);
 unimplemented_display!(EnumError);
-unimplemented_display!((T), WithGeneric<T>);
-unimplemented_display!((T), WithGenericFrom<T>);
-unimplemented_display!((T), WithGenericStruct<T>);
+unimplemented_display!(T; WithGeneric<T>);
+unimplemented_display!(T; WithGenericFrom<T>);
+unimplemented_display!(T; WithGenericStruct<T>);
+unimplemented_display!('a; T; WithGenericStructRef<'a, T>);
+unimplemented_display!('a; T; WithGenericStructRefNonStatic<'a, T>);
