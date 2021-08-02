@@ -30,6 +30,18 @@ impl Struct<'_> {
                 ));
             }
         }
+        if let Some(crate::attr::Bound {
+            original: bound_span,
+            ..
+        }) = self.attrs.bound
+        {
+            if self.generics.params.is_empty() {
+                return Err(Error::new_spanned(
+                    bound_span,
+                    "#[error(bound = ...)] requires generics to apply bounds against",
+                ));
+            }
+        }
         check_field_attrs(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
@@ -49,6 +61,18 @@ impl Enum<'_> {
                 return Err(Error::new_spanned(
                     variant.original,
                     "missing #[error(\"...\")] display attribute",
+                ));
+            }
+        }
+        if let Some(crate::attr::Bound {
+            original: bound_span,
+            ..
+        }) = self.attrs.bound
+        {
+            if self.generics.params.is_empty() {
+                return Err(Error::new_spanned(
+                    bound_span,
+                    "#[error(bound = ...)] requires at least one generic type parameter",
                 ));
             }
         }

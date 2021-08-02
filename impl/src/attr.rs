@@ -2,9 +2,10 @@ use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::iter::FromIterator;
 use syn::parse::{Nothing, ParseStream};
+use syn::punctuated::Punctuated;
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr,
-    Result, Token,
+    Result, Token, TypeParamBound,
 };
 
 pub struct Attrs<'a> {
@@ -13,6 +14,7 @@ pub struct Attrs<'a> {
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<&'a Attribute>,
     pub transparent: Option<Transparent<'a>>,
+    pub bound: Option<Bound<'a>>,
 }
 
 #[derive(Clone)]
@@ -29,6 +31,12 @@ pub struct Transparent<'a> {
     pub span: Span,
 }
 
+#[derive(Clone)]
+pub struct Bound<'a> {
+    pub original: &'a Attribute,
+    pub bounds: Punctuated<TypeParamBound, token::Add>,
+}
+
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
     let mut attrs = Attrs {
         display: None,
@@ -36,6 +44,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         backtrace: None,
         from: None,
         transparent: None,
+        bound: None,
     };
 
     for attr in input {
@@ -70,6 +79,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 
 fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
     syn::custom_keyword!(transparent);
+    syn::custom_keyword!(bound);
 
     attr.parse_args_with(|input: ParseStream| {
         if let Some(kw) = input.parse::<Option<transparent>>()? {
@@ -83,6 +93,22 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
                 original: attr,
                 span: kw.span,
             });
+            return Ok(());
+        } else if input.parse::<Option<bound>>()?.is_some() {
+            if attrs.bound.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(bound)] attribute",
+                ));
+            }
+            input.parse::<token::Eq>().map_err(|_| {
+                Error::new_spanned(attr, "\"bound\" keyword must be followed by '='")
+            })?;
+            let bound = Bound {
+                original: attr,
+                bounds: Punctuated::<TypeParamBound, token::Add>::parse_separated_nonempty(input)?,
+            };
+            attrs.bound = Some(bound);
             return Ok(());
         }
 

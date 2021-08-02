@@ -2,7 +2,9 @@ use crate::ast::{Enum, Field, Input, Struct};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
-use syn::{Data, DeriveInput, Member, PathArguments, Result, Type, Visibility};
+use syn::{
+    token, Data, DeriveInput, Member, PathArguments, Result, Type, Visibility, WherePredicate,
+};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
@@ -112,9 +114,27 @@ fn impl_struct(input: Struct) -> TokenStream {
         None
     };
     let display_impl = display_body.map(|body| {
+        let display_impl_generics = {
+            let mut lifetime_params = input.generics.lifetimes().peekable();
+            let mut type_params = input.generics.type_params().peekable();
+            if let Some(bounds) = &input.attrs.bound {
+                let bounds = std::iter::repeat(bounds).map(|x| &x.bounds);
+                quote! {
+                    <#(#type_params: #bounds),*>
+                }
+            } else if lifetime_params.peek().is_none() || type_params.peek().is_none() {
+                quote! {
+                    <#(#lifetime_params),* #(#type_params),*>
+                }
+            } else {
+                quote! {
+                    <#(#lifetime_params),* , #(#type_params),*>
+                }
+            }
+        };
         quote! {
             #[allow(unused_qualifications)]
-            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+            impl #display_impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 #[allow(
                     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
                     clippy::nonstandard_macro_braces,
@@ -143,6 +163,17 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let error_trait = spanned_error_trait(input.original);
+    let bounded_where_predicates: Vec<syn::WherePredicate> = input
+        .attrs
+        .bound
+        .as_ref()
+        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
+        .unwrap_or_default();
+    let where_clause = extend_where_clause(
+        where_clause.cloned(),
+        input.original.span(),
+        bounded_where_predicates.into_iter(),
+    );
 
     quote! {
         #[allow(unused_qualifications)]
@@ -302,9 +333,27 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#ident #pat => #display
             }
         });
+        let display_impl_generics = {
+            let mut lifetime_params = input.generics.lifetimes().peekable();
+            let mut type_params = input.generics.type_params().peekable();
+            if let Some(bounds) = &input.attrs.bound {
+                let bounds = std::iter::repeat(bounds).map(|x| &x.bounds);
+                quote! {
+                    <#(#type_params: #bounds),*>
+                }
+            } else if lifetime_params.peek().is_none() || type_params.peek().is_none() {
+                quote! {
+                    <#(#lifetime_params),* #(#type_params),*>
+                }
+            } else {
+                quote! {
+                    <#(#lifetime_params),* , #(#type_params),*>
+                }
+            }
+        };
         Some(quote! {
             #[allow(unused_qualifications)]
-            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+            impl #display_impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
                     #[allow(
@@ -342,7 +391,17 @@ fn impl_enum(input: Enum) -> TokenStream {
     });
 
     let error_trait = spanned_error_trait(input.original);
-
+    let bounded_where_predicates: Vec<syn::WherePredicate> = input
+        .attrs
+        .bound
+        .as_ref()
+        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
+        .unwrap_or_default();
+    let where_clause = extend_where_clause(
+        where_clause.cloned(),
+        input.original.span(),
+        bounded_where_predicates.into_iter(),
+    );
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
@@ -423,4 +482,49 @@ fn spanned_error_trait(input: &DeriveInput) -> TokenStream {
     let path = quote_spanned!(first_span=> std::error::);
     let error = quote_spanned!(last_span=> Error);
     quote!(#path #error)
+}
+
+/// Enhance a where clause with the given predicates, or create one with them if needed.
+/// When no new predicates are provided, return without alteration.
+fn extend_where_clause<TPredicates: std::iter::ExactSizeIterator<Item = syn::WherePredicate>>(
+    // Clause to be enhanced; created if absent when predicates are provided
+    where_clause: Option<syn::WhereClause>,
+    // Used to create span for new where clause if populating
+    where_span: proc_macro2::Span,
+    predicates: TPredicates,
+) -> Option<syn::WhereClause> {
+    // If we don't have any predicates to add, it doesn't matter if we
+    // have a where clause to extend or not; return whatever was given
+    if predicates.len() == 0 {
+        return where_clause;
+    }
+    Some(match where_clause {
+        // Extend the existing clause with the new predicates
+        Some(mut where_clause) => {
+            where_clause.predicates.extend(predicates);
+            where_clause
+        }
+        // No where clause provided; create a new one with the provided span
+        None => syn::WhereClause {
+            where_token: token::Where(where_span),
+            predicates: predicates.collect(),
+        },
+    })
+}
+
+fn apply_type_bounds<'a, TTypeParams: std::iter::Iterator<Item = &'a syn::TypeParam>>(
+    type_params: TTypeParams,
+    bound_attr: &'a crate::attr::Bound<'_>,
+) -> Vec<WherePredicate> {
+    let bounds = &bound_attr.bounds;
+    if bounds.is_empty() {
+        return Vec::new();
+    }
+    type_params
+        .map(move |p| {
+            let predicate = quote! { #p: #bounds };
+            syn::parse2::<syn::WherePredicate>(predicate)
+                .expect("quasiquote must create predicate bounds")
+        })
+        .collect()
 }

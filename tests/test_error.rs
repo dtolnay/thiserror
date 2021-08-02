@@ -6,6 +6,13 @@ use std::io;
 use thiserror::Error;
 
 macro_rules! unimplemented_display {
+    (($tp:tt), $ty:ty) => {
+        impl<$tp> Display for $ty {
+            fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+                unimplemented!()
+            }
+        }
+    };
     ($ty:ty) => {
         impl Display for $ty {
             fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -49,9 +56,50 @@ enum EnumError {
     Unit,
 }
 
+#[derive(Error, Debug)]
+#[error(bound = std::fmt::Display + std::error::Error + 'static)]
+enum WithGeneric<T> {
+    Variant,
+    Generic(T),
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::fmt::Debug + std::error::Error + 'static)]
+enum WithGenericFrom<T> {
+    Variant,
+    Generic(#[from] T),
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::fmt::Display + std::fmt::Debug + std::error::Error + 'static)]
+enum WithGenericTransparent<T> {
+    #[error("variant")]
+    Variant,
+    #[error(transparent)]
+    Generic(#[from] T),
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::error::Error + 'static)]
+struct WithGenericStruct<T> {
+    #[from]
+    inner: T,
+}
+
+#[derive(Error, Debug)]
+#[error(bound = std::fmt::Display + std::error::Error + 'static)]
+#[error(transparent)]
+struct WithGenericStructTransparent<T> {
+    #[from]
+    inner: T,
+}
+
 unimplemented_display!(BracedError);
 unimplemented_display!(TupleError);
 unimplemented_display!(UnitError);
 unimplemented_display!(WithSource);
 unimplemented_display!(WithAnyhow);
 unimplemented_display!(EnumError);
+unimplemented_display!((T), WithGeneric<T>);
+unimplemented_display!((T), WithGenericFrom<T>);
+unimplemented_display!((T), WithGenericStruct<T>);

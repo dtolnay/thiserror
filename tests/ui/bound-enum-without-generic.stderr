@@ -1,0 +1,5 @@
+error: #[error(bound = ...)] requires at least one generic type parameter
+ --> $DIR/bound-enum-without-generic.rs:4:1
+  |
+4 | #[error(bound = std::error::Error + 'static)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
