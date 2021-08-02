@@ -113,28 +113,23 @@ fn impl_struct(input: Struct) -> TokenStream {
     } else {
         None
     };
+
+    let bounded_where_predicates: Vec<syn::WherePredicate> = input
+        .attrs
+        .bound
+        .as_ref()
+        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
+        .unwrap_or_default();
+    let where_clause = extend_where_clause(
+        where_clause.cloned(),
+        input.original.span(),
+        bounded_where_predicates.into_iter(),
+    );
+
     let display_impl = display_body.map(|body| {
-        let display_impl_generics = {
-            let mut lifetime_params = input.generics.lifetimes().peekable();
-            let mut type_params = input.generics.type_params().peekable();
-            if let Some(bounds) = &input.attrs.bound {
-                let bounds = std::iter::repeat(bounds).map(|x| &x.bounds);
-                quote! {
-                    <#(#type_params: #bounds),*>
-                }
-            } else if lifetime_params.peek().is_none() || type_params.peek().is_none() {
-                quote! {
-                    <#(#lifetime_params),* #(#type_params),*>
-                }
-            } else {
-                quote! {
-                    <#(#lifetime_params),* , #(#type_params),*>
-                }
-            }
-        };
         quote! {
             #[allow(unused_qualifications)]
-            impl #display_impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 #[allow(
                     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
                     clippy::nonstandard_macro_braces,
@@ -163,18 +158,6 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let error_trait = spanned_error_trait(input.original);
-    let bounded_where_predicates: Vec<syn::WherePredicate> = input
-        .attrs
-        .bound
-        .as_ref()
-        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
-        .unwrap_or_default();
-    let where_clause = extend_where_clause(
-        where_clause.cloned(),
-        input.original.span(),
-        bounded_where_predicates.into_iter(),
-    );
-
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
@@ -297,6 +280,18 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
+    let bounded_where_predicates: Vec<syn::WherePredicate> = input
+        .attrs
+        .bound
+        .as_ref()
+        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
+        .unwrap_or_default();
+    let where_clause = extend_where_clause(
+        where_clause.cloned(),
+        input.original.span(),
+        bounded_where_predicates.into_iter(),
+    );
+
     let display_impl = if input.has_display() {
         let use_as_display = if input.variants.iter().any(|v| {
             v.attrs
@@ -333,27 +328,9 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#ident #pat => #display
             }
         });
-        let display_impl_generics = {
-            let mut lifetime_params = input.generics.lifetimes().peekable();
-            let mut type_params = input.generics.type_params().peekable();
-            if let Some(bounds) = &input.attrs.bound {
-                let bounds = std::iter::repeat(bounds).map(|x| &x.bounds);
-                quote! {
-                    <#(#type_params: #bounds),*>
-                }
-            } else if lifetime_params.peek().is_none() || type_params.peek().is_none() {
-                quote! {
-                    <#(#lifetime_params),* #(#type_params),*>
-                }
-            } else {
-                quote! {
-                    <#(#lifetime_params),* , #(#type_params),*>
-                }
-            }
-        };
         Some(quote! {
             #[allow(unused_qualifications)]
-            impl #display_impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
+            impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
                 fn fmt(&self, __formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     #use_as_display
                     #[allow(
@@ -391,17 +368,6 @@ fn impl_enum(input: Enum) -> TokenStream {
     });
 
     let error_trait = spanned_error_trait(input.original);
-    let bounded_where_predicates: Vec<syn::WherePredicate> = input
-        .attrs
-        .bound
-        .as_ref()
-        .map(|bound| apply_type_bounds(input.generics.type_params(), bound))
-        .unwrap_or_default();
-    let where_clause = extend_where_clause(
-        where_clause.cloned(),
-        input.original.span(),
-        bounded_where_predicates.into_iter(),
-    );
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
