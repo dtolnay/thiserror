@@ -1,4 +1,4 @@
-error: #[error(bound = ...)] requires generics to apply bounds against
+error: #[error(bound = ...)] requires at least one generic type parameter
  --> $DIR/bound-struct-without-generic.rs:4:1
   |
 4 | #[error(bound = std::error::Error + 'static)]

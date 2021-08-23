@@ -38,7 +38,7 @@ impl Struct<'_> {
             if self.generics.params.is_empty() {
                 return Err(Error::new_spanned(
                     bound_span,
-                    "#[error(bound = ...)] requires generics to apply bounds against",
+                    "#[error(bound = ...)] requires at least one generic type parameter",
                 ));
             }
         }
