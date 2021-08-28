@@ -6,6 +6,20 @@ impl Struct<'_> {
         from_field(&self.fields)
     }
 
+    pub(crate) fn from_and_distinct_backtrace_fields(&self) -> Option<(&Field, Option<&Field>)> {
+        self.from_field().map(|from_field| {
+            if let Some(backtrace_field) = self.backtrace_field() {
+                if backtrace_field.member == from_field.member {
+                    (from_field, None)
+                } else {
+                    (from_field, Some(backtrace_field))
+                }
+            } else {
+                (from_field, None)
+            }
+        })
+    }
+
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
@@ -45,6 +59,20 @@ impl Enum<'_> {
 impl Variant<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
         from_field(&self.fields)
+    }
+
+    pub(crate) fn from_and_distinct_backtrace_fields(&self) -> Option<(&Field, Option<&Field>)> {
+        self.from_field().map(|from_field| {
+            if let Some(backtrace_field) = self.backtrace_field() {
+                if backtrace_field.member == from_field.member {
+                    (from_field, None)
+                } else {
+                    (from_field, Some(backtrace_field))
+                }
+            } else {
+                (from_field, None)
+            }
+        })
     }
 
     pub(crate) fn source_field(&self) -> Option<&Field> {

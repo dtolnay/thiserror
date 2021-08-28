@@ -58,18 +58,25 @@ fn impl_struct(input: Struct) -> TokenStream {
                     self.#source.as_dyn_error().backtrace()
                 }
             };
-            let combinator = if type_is_option(backtrace_field.ty) {
+            if &source_field.member == backtrace {
                 quote! {
-                    #source_backtrace.or(self.#backtrace.as_ref())
+                    use thiserror::private::AsDynError;
+                    #source_backtrace
                 }
             } else {
+                let combinator = if type_is_option(backtrace_field.ty) {
+                    quote! {
+                        #source_backtrace.or(self.#backtrace.as_ref())
+                    }
+                } else {
+                    quote! {
+                        std::option::Option::Some(#source_backtrace.unwrap_or(&self.#backtrace))
+                    }
+                };
                 quote! {
-                    std::option::Option::Some(#source_backtrace.unwrap_or(&self.#backtrace))
+                    use thiserror::private::AsDynError;
+                    #combinator
                 }
-            };
-            quote! {
-                use thiserror::private::AsDynError;
-                #combinator
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
@@ -127,20 +134,21 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let from_impl = input.from_field().map(|from_field| {
-        let backtrace_field = input.backtrace_field();
-        let from = from_field.ty;
-        let body = from_initializer(from_field, backtrace_field);
-        quote! {
-            #[allow(unused_qualifications)]
-            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
-                #[allow(deprecated)]
-                fn from(source: #from) -> Self {
-                    #ty #body
+    let from_impl = input.from_and_distinct_backtrace_fields().map(
+        |(from_field, backtrace_field)| {
+            let from = from_field.ty;
+            let body = from_initializer(from_field, backtrace_field);
+            quote! {
+                #[allow(unused_qualifications)]
+                impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                    #[allow(deprecated)]
+                    fn from(source: #from) -> Self {
+                        #ty #body
+                    }
                 }
             }
-        }
-    });
+        },
+    );
 
     let error_trait = spanned_error_trait(input.original);
 
@@ -239,14 +247,32 @@ fn impl_enum(input: Enum) -> TokenStream {
                     }
                 }
                 (Some(backtrace_field), _) => {
+                    let source = variant.from_field().map(|f| &f.member);
                     let backtrace = &backtrace_field.member;
-                    let body = if type_is_option(backtrace_field.ty) {
-                        quote!(backtrace.as_ref())
+                    if source == Some(backtrace) {
+                        let varsource = quote!(source);
+                        let source_backtrace = quote_spanned! {source.span()=>
+                            #varsource.as_dyn_error().backtrace()
+                        };
+
+                        quote! {
+                            #ty::#ident {
+                                #source: #varsource,
+                                ..
+                            } => {
+                                use thiserror::private::AsDynError;
+                                #source_backtrace
+                            }
+                        }
                     } else {
-                        quote!(std::option::Option::Some(backtrace))
-                    };
-                    quote! {
-                        #ty::#ident {#backtrace: backtrace, ..} => #body,
+                        let body = if type_is_option(backtrace_field.ty) {
+                            quote!(backtrace.as_ref())
+                        } else {
+                            quote!(std::option::Option::Some(backtrace))
+                        };
+                        quote! {
+                            #ty::#ident {#backtrace: backtrace, ..} => #body,
+                        }
                     }
                 }
                 (None, _) => quote! {
@@ -325,8 +351,7 @@ fn impl_enum(input: Enum) -> TokenStream {
     };
 
     let from_impls = input.variants.iter().filter_map(|variant| {
-        let from_field = variant.from_field()?;
-        let backtrace_field = variant.backtrace_field();
+        let (from_field, backtrace_field) = variant.from_and_distinct_backtrace_fields()?;
         let variant = &variant.ident;
         let from = from_field.ty;
         let body = from_initializer(from_field, backtrace_field);

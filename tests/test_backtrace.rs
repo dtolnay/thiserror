@@ -11,8 +11,15 @@ use thiserror::Error;
 pub struct Inner;
 
 #[cfg(thiserror_nightly_testing)]
+#[derive(Error, Debug)]
+#[error("...")]
+pub struct InnerBacktrace {
+    backtrace: std::backtrace::Backtrace,
+}
+
+#[cfg(thiserror_nightly_testing)]
 pub mod structs {
-    use super::Inner;
+    use super::{Inner, InnerBacktrace};
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -52,6 +59,14 @@ pub mod structs {
         source: Inner,
         #[backtrace]
         backtrace: Backtrace,
+    }
+
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct CombinedBacktraceFrom {
+        #[from]
+        #[backtrace]
+        source: InnerBacktrace,
     }
 
     #[derive(Error, Debug)]
@@ -97,6 +112,11 @@ pub mod structs {
         let error = BacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
+        let error = CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
+        assert!(error.backtrace().is_some());
+
         let error = OptBacktraceFrom::from(Inner);
         assert!(error.backtrace().is_some());
 
@@ -107,7 +127,7 @@ pub mod structs {
 
 #[cfg(thiserror_nightly_testing)]
 pub mod enums {
-    use super::Inner;
+    use super::{Inner, InnerBacktrace};
     use std::backtrace::Backtrace;
     use std::error::Error;
     use std::sync::Arc;
@@ -158,6 +178,16 @@ pub mod enums {
     }
 
     #[derive(Error, Debug)]
+    pub enum CombinedBacktraceFrom {
+        #[error("...")]
+        Test {
+            #[from]
+            #[backtrace]
+            source: InnerBacktrace,
+        },
+    }
+
+    #[derive(Error, Debug)]
     pub enum OptBacktraceFrom {
         #[error("...")]
         Test {
@@ -202,6 +232,11 @@ pub mod enums {
         assert!(error.backtrace().is_some());
 
         let error = BacktraceFrom::from(Inner);
+        assert!(error.backtrace().is_some());
+
+        let error = CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
         assert!(error.backtrace().is_some());
 
         let error = OptBacktraceFrom::from(Inner);
