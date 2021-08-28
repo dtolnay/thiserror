@@ -2,7 +2,7 @@ use crate::ast::{Enum, Field, Input, Struct};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
-use syn::{Data, DeriveInput, Member, PathArguments, Result, Type, Visibility};
+use syn::{parse_quote, Data, DeriveInput, Member, PathArguments, Result, Type, Visibility};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
@@ -285,6 +285,50 @@ fn impl_enum(input: Enum) -> TokenStream {
         } else {
             None
         };
+
+        let mut extra_predicates = Vec::new();
+        for (fields, display) in input
+            .variants
+            .iter()
+            .filter_map(|v| v.attrs.display.as_ref().map(|d| (v.fields.as_slice(), d)))
+        {
+            for field in display.iter_fmt_types(fields) {
+                use crate::attr::DisplayFormatMarking;
+                let (ty, bound): (
+                    &syn::Type,
+                    syn::punctuated::Punctuated<syn::TypeParamBound, _>,
+                );
+                match field {
+                    DisplayFormatMarking::Debug(f) => {
+                        ty = &f.ty;
+                        bound = parse_quote! { ::std::fmt::Debug };
+                    }
+                    DisplayFormatMarking::Display(f) => {
+                        ty = &f.ty;
+                        bound = parse_quote! { ::std::fmt::Display };
+                    }
+                }
+                let matcher = |param: &&syn::TypeParam| match ty {
+                    syn::Type::Path(syn::TypePath { path, .. }) => {
+                        path.get_ident() == Some(&param.ident)
+                    }
+                    syn::Type::Reference(syn::TypeReference { elem, .. }) if matches!(Box::as_ref(&elem), &syn::Type::Path(syn::TypePath { ref path, .. }) if path.get_ident() == Some(&param.ident)) => {
+                        true
+                    }
+                    _ => false,
+                };
+                if input.generics.type_params().find(|x| matcher(x)).is_none() {
+                    continue;
+                }
+                extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
+                    bounded_ty: ty.clone(),
+                    colon_token: syn::token::Colon::default(),
+                    bounds: bound,
+                    lifetimes: None,
+                }));
+            }
+        }
+
         let arms = input.variants.iter().map(|variant| {
             let display = match &variant.attrs.display {
                 Some(display) => display.to_token_stream(),
@@ -302,6 +346,9 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#ident #pat => #display
             }
         });
+
+        let where_clause = augment_where_clause(where_clause, extra_predicates);
+
         Some(quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
@@ -343,6 +390,10 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
 
+    let where_clause = augment_where_clause(
+        where_clause,
+        [parse_quote! { Self: ::std::fmt::Display + ::std::fmt::Debug }],
+    );
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
@@ -352,6 +403,35 @@ fn impl_enum(input: Enum) -> TokenStream {
         #display_impl
         #(#from_impls)*
     }
+}
+
+fn augment_where_clause<TPredicates>(
+    where_clause: Option<&syn::WhereClause>,
+    extra_predicates: TPredicates,
+) -> Option<syn::WhereClause>
+where
+    TPredicates: IntoIterator<Item = syn::WherePredicate>,
+    TPredicates::IntoIter: std::iter::ExactSizeIterator,
+{
+    let extra_predicates = extra_predicates.into_iter();
+    if extra_predicates.len() == 0 {
+        return where_clause.cloned();
+    }
+    Some(match where_clause {
+        Some(w) => syn::WhereClause {
+            where_token: w.where_token.clone(),
+            predicates: w
+                .predicates
+                .iter()
+                .cloned()
+                .chain(extra_predicates)
+                .collect(),
+        },
+        None => syn::WhereClause {
+            where_token: syn::token::Where::default(),
+            predicates: extra_predicates.into_iter().collect(),
+        },
+    })
 }
 
 fn fields_pat(fields: &[Field]) -> TokenStream {
