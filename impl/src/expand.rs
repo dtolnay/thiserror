@@ -243,7 +243,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
                 (Some(backtrace_field), _) => {
                     let backtrace = &backtrace_field.member;
-                    if variant.from_field().map_or(false, |f| f.member == *backtrace) {
+                    if variant.source_field().map_or(false, |f| f.member == *backtrace) {
                         let varsource = quote!(source);
                         let source_backtrace = quote_spanned! {backtrace.span()=>
                             #varsource.as_dyn_error().backtrace()
