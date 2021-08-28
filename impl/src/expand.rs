@@ -306,6 +306,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     DisplayFormatMarking::Display(f) => {
                         ty = &f.ty;
                         bound = parse_quote! { ::std::fmt::Display };
+                        // f.original.
                     }
                 }
                 let matcher = |param: &&syn::TypeParam| match ty {
@@ -402,6 +403,73 @@ fn impl_enum(input: Enum) -> TokenStream {
         }
         #display_impl
         #(#from_impls)*
+    }
+}
+
+#[cfg_attr(test, derive(Debug))]
+struct GenericUsageVisitor {
+    generics: std::collections::HashMap<syn::Ident, bool>,
+}
+
+impl GenericUsageVisitor {
+    pub fn new<TPairs>(generics: TPairs) -> Self
+    where
+        TPairs: IntoIterator<Item = (syn::Ident, bool)>,
+    {
+        Self {
+            generics: generics.into_iter().collect(),
+        }
+    }
+}
+
+impl<'ast> syn::visit::Visit<'ast> for GenericUsageVisitor {
+    fn visit_type_path(&mut self, i: &'ast syn::TypePath) {
+        if let Some(ident) = i.path.get_ident() {
+            if let Some(entry) = self.generics.get_mut(ident) {
+                *entry = true;
+            }
+        }
+        syn::visit::visit_type_path(self, i)
+    }
+
+    fn visit_type_param(&mut self, i: &'ast syn::TypeParam) {
+        if let Some(entry) = self.generics.get_mut(&i.ident) {
+            *entry = true;
+        }
+        syn::visit::visit_type_param(self, i)
+    }
+}
+
+#[cfg(test)]
+mod test_visitors {
+    use proc_macro2::Span;
+
+    use crate::expand::GenericUsageVisitor;
+
+    #[test]
+    fn test_generic_usage_visitor() {
+        fn ident_for<'a>(ident_str: &'a str) -> syn::Ident {
+            syn::Ident::new(ident_str, Span::call_site())
+        }
+
+        let field: syn::Variant = syn::parse_quote! { X(Foo<Bar>) };
+
+        let mut visitor = GenericUsageVisitor::new(
+            vec!["Bar", "Baz"]
+                .into_iter()
+                .map(|ident_str| (ident_for(ident_str), false)),
+        );
+        syn::visit::visit_variant(&mut visitor, &field);
+        assert_eq!(
+            visitor.generics.get(&ident_for("Bar")),
+            Some(&true),
+            "Bar must be marked"
+        );
+        assert_eq!(
+            visitor.generics.get(&ident_for("Baz")),
+            Some(&false),
+            "Baz must be present but not marked"
+        );
     }
 }
 
