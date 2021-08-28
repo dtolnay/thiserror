@@ -161,15 +161,15 @@
 //!   # };
 //!   ```
 //!
-//! - If a field is `#[from]` and `#[backtrace]`, the Error trait's
-//!   `backtrace()` method is forwarded to the field.
+//! - If a field is both a source (named `source`, or has `#[source]` or
+//!   `#[from]` attribute) *and* is marked `#[backtrace]`, then the Error
+//!   trait's `backtrace()` method is forwarded to the source's backtrace.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
 //!       Io {
-//!           #[from]
 //!           #[backtrace]
 //!           source: io::Error,
 //!       },
