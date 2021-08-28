@@ -6,26 +6,24 @@ impl Struct<'_> {
         from_field(&self.fields)
     }
 
-    pub(crate) fn from_and_distinct_backtrace_fields(&self) -> Option<(&Field, Option<&Field>)> {
-        self.from_field().map(|from_field| {
-            if let Some(backtrace_field) = self.backtrace_field() {
-                if backtrace_field.member == from_field.member {
-                    (from_field, None)
-                } else {
-                    (from_field, Some(backtrace_field))
-                }
-            } else {
-                (from_field, None)
-            }
-        })
-    }
-
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
         backtrace_field(&self.fields)
+    }
+
+    // The #[backtrace] field, if it is not the same as the #[from] field.
+    pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
+        let backtrace_field = self.backtrace_field()?;
+        if self.from_field().map_or(false, |from_field| {
+            from_field.member == backtrace_field.member
+        }) {
+            None
+        } else {
+            Some(backtrace_field)
+        }
     }
 }
 
@@ -61,26 +59,23 @@ impl Variant<'_> {
         from_field(&self.fields)
     }
 
-    pub(crate) fn from_and_distinct_backtrace_fields(&self) -> Option<(&Field, Option<&Field>)> {
-        self.from_field().map(|from_field| {
-            if let Some(backtrace_field) = self.backtrace_field() {
-                if backtrace_field.member == from_field.member {
-                    (from_field, None)
-                } else {
-                    (from_field, Some(backtrace_field))
-                }
-            } else {
-                (from_field, None)
-            }
-        })
-    }
-
     pub(crate) fn source_field(&self) -> Option<&Field> {
         source_field(&self.fields)
     }
 
     pub(crate) fn backtrace_field(&self) -> Option<&Field> {
         backtrace_field(&self.fields)
+    }
+
+    pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
+        let backtrace_field = self.backtrace_field()?;
+        if self.from_field().map_or(false, |from_field| {
+            from_field.member == backtrace_field.member
+        }) {
+            None
+        } else {
+            Some(backtrace_field)
+        }
     }
 }
 

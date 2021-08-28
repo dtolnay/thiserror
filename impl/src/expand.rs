@@ -129,21 +129,20 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let from_impl = input.from_and_distinct_backtrace_fields().map(
-        |(from_field, backtrace_field)| {
-            let from = from_field.ty;
-            let body = from_initializer(from_field, backtrace_field);
-            quote! {
-                #[allow(unused_qualifications)]
-                impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
-                    #[allow(deprecated)]
-                    fn from(source: #from) -> Self {
-                        #ty #body
-                    }
+    let from_impl = input.from_field().map(|from_field| {
+        let backtrace_field = input.distinct_backtrace_field();
+        let from = from_field.ty;
+        let body = from_initializer(from_field, backtrace_field);
+        quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics std::convert::From<#from> for #ty #ty_generics #where_clause {
+                #[allow(deprecated)]
+                fn from(source: #from) -> Self {
+                    #ty #body
                 }
             }
-        },
-    );
+        }
+    });
 
     let error_trait = spanned_error_trait(input.original);
 
@@ -342,7 +341,8 @@ fn impl_enum(input: Enum) -> TokenStream {
     };
 
     let from_impls = input.variants.iter().filter_map(|variant| {
-        let (from_field, backtrace_field) = variant.from_and_distinct_backtrace_fields()?;
+        let from_field = variant.from_field()?;
+        let backtrace_field = variant.distinct_backtrace_field();
         let variant = &variant.ident;
         let from = from_field.ty;
         let body = from_initializer(from_field, backtrace_field);
