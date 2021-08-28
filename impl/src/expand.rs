@@ -58,25 +58,20 @@ fn impl_struct(input: Struct) -> TokenStream {
                     self.#source.as_dyn_error().backtrace()
                 }
             };
-            if &source_field.member == backtrace {
+            let combinator = if source == backtrace {
+                source_backtrace
+            } else if type_is_option(backtrace_field.ty) {
                 quote! {
-                    use thiserror::private::AsDynError;
-                    #source_backtrace
+                    #source_backtrace.or(self.#backtrace.as_ref())
                 }
             } else {
-                let combinator = if type_is_option(backtrace_field.ty) {
-                    quote! {
-                        #source_backtrace.or(self.#backtrace.as_ref())
-                    }
-                } else {
-                    quote! {
-                        std::option::Option::Some(#source_backtrace.unwrap_or(&self.#backtrace))
-                    }
-                };
                 quote! {
-                    use thiserror::private::AsDynError;
-                    #combinator
+                    std::option::Option::Some(#source_backtrace.unwrap_or(&self.#backtrace))
                 }
+            };
+            quote! {
+                use thiserror::private::AsDynError;
+                #combinator
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
@@ -207,8 +202,9 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
-    let backtrace_method = if input.has_backtrace() {
-        let arms = input.variants.iter().map(|variant| {
+    let backtrace_method =
+        if input.has_backtrace() {
+            let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             match (variant.backtrace_field(), variant.source_field()) {
                 (Some(backtrace_field), Some(source_field))
@@ -247,19 +243,14 @@ fn impl_enum(input: Enum) -> TokenStream {
                     }
                 }
                 (Some(backtrace_field), _) => {
-                    let source = variant.from_field().map(|f| &f.member);
                     let backtrace = &backtrace_field.member;
-                    if source == Some(backtrace) {
+                    if variant.from_field().map_or(false, |f| f.member == *backtrace) {
                         let varsource = quote!(source);
-                        let source_backtrace = quote_spanned! {source.span()=>
+                        let source_backtrace = quote_spanned! {backtrace.span()=>
                             #varsource.as_dyn_error().backtrace()
                         };
-
                         quote! {
-                            #ty::#ident {
-                                #source: #varsource,
-                                ..
-                            } => {
+                            #ty::#ident {#backtrace: #varsource, ..} => {
                                 use thiserror::private::AsDynError;
                                 #source_backtrace
                             }
@@ -280,17 +271,17 @@ fn impl_enum(input: Enum) -> TokenStream {
                 },
             }
         });
-        Some(quote! {
-            fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                #[allow(deprecated)]
-                match self {
-                    #(#arms)*
+            Some(quote! {
+                fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
+                    #[allow(deprecated)]
+                    match self {
+                        #(#arms)*
+                    }
                 }
-            }
-        })
-    } else {
-        None
-    };
+            })
+        } else {
+            None
+        };
 
     let display_impl = if input.has_display() {
         let use_as_display = if input.variants.iter().any(|v| {

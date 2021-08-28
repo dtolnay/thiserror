@@ -161,8 +161,8 @@
 //!   # };
 //!   ```
 //!
-//! - If a field is `#[from]` and `#[backtrace]`, the Error trait's `backtrace()`
-//! method is forwarded to the field.
+//! - If a field is `#[from]` and `#[backtrace]`, the Error trait's
+//!   `backtrace()` method is forwarded to the field.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
