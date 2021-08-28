@@ -201,9 +201,8 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
-    let backtrace_method =
-        if input.has_backtrace() {
-            let arms = input.variants.iter().map(|variant| {
+    let backtrace_method = if input.has_backtrace() {
+        let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             match (variant.backtrace_field(), variant.source_field()) {
                 (Some(backtrace_field), Some(source_field))
@@ -245,8 +244,14 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let backtrace = &backtrace_field.member;
                     if variant.source_field().map_or(false, |f| f.member == *backtrace) {
                         let varsource = quote!(source);
-                        let source_backtrace = quote_spanned! {backtrace.span()=>
-                            #varsource.as_dyn_error().backtrace()
+                        let source_backtrace = if type_is_option(backtrace_field.ty) {
+                            quote_spanned! {backtrace.span()=>
+                                #varsource.as_ref().and_then(|source| source.as_dyn_error().backtrace())
+                            }
+                        } else {
+                            quote_spanned! {backtrace.span()=>
+                                #varsource.as_dyn_error().backtrace()
+                            }
                         };
                         quote! {
                             #ty::#ident {#backtrace: #varsource, ..} => {
@@ -270,17 +275,17 @@ fn impl_enum(input: Enum) -> TokenStream {
                 },
             }
         });
-            Some(quote! {
-                fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
-                    #[allow(deprecated)]
-                    match self {
-                        #(#arms)*
-                    }
+        Some(quote! {
+            fn backtrace(&self) -> std::option::Option<&std::backtrace::Backtrace> {
+                #[allow(deprecated)]
+                match self {
+                    #(#arms)*
                 }
-            })
-        } else {
-            None
-        };
+            }
+        })
+    } else {
+        None
+    };
 
     let display_impl = if input.has_display() {
         let use_as_display = if input.variants.iter().any(|v| {
