@@ -294,39 +294,37 @@ fn impl_enum(input: Enum) -> TokenStream {
         {
             for field in display.iter_fmt_types(fields) {
                 use crate::attr::DisplayFormatMarking;
-                let (ty, bound): (
+                let (ty, bound, ast): (
                     &syn::Type,
                     syn::punctuated::Punctuated<syn::TypeParamBound, _>,
+                    &syn::Field,
                 );
                 match field {
                     DisplayFormatMarking::Debug(f) => {
-                        ty = &f.ty;
+                        ty = f.ty;
                         bound = parse_quote! { ::std::fmt::Debug };
+                        ast = f.original;
                     }
                     DisplayFormatMarking::Display(f) => {
-                        ty = &f.ty;
+                        ty = f.ty;
                         bound = parse_quote! { ::std::fmt::Display };
-                        // f.original.
+                        ast = f.original;
                     }
                 }
-                let matcher = |param: &&syn::TypeParam| match ty {
-                    syn::Type::Path(syn::TypePath { path, .. }) => {
-                        path.get_ident() == Some(&param.ident)
-                    }
-                    syn::Type::Reference(syn::TypeReference { elem, .. }) if matches!(Box::as_ref(&elem), &syn::Type::Path(syn::TypePath { ref path, .. }) if path.get_ident() == Some(&param.ident)) => {
-                        true
-                    }
-                    _ => false,
-                };
-                if input.generics.type_params().find(|x| matcher(x)).is_none() {
-                    continue;
+                // If a generic is at all present, a constraint will be applied to the field type
+                // This may create redundant `AlwaysDebug<T>: Debug` scenarios, but covers T: Debug and &T: Debug cleanly
+                let mut usages = GenericUsageVisitor::new_unmarked(
+                    input.generics.type_params().map(|p| p.ident.clone()),
+                );
+                syn::visit::visit_field(&mut usages, ast);
+                if usages.iter_marked().next().is_some() {
+                    extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
+                        bounded_ty: ty.clone(),
+                        colon_token: syn::token::Colon::default(),
+                        bounds: bound,
+                        lifetimes: None,
+                    }));
                 }
-                extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
-                    bounded_ty: ty.clone(),
-                    colon_token: syn::token::Colon::default(),
-                    bounds: bound,
-                    lifetimes: None,
-                }));
             }
         }
 
@@ -389,12 +387,46 @@ fn impl_enum(input: Enum) -> TokenStream {
         })
     });
 
+    let (generic_field_types, generics_in_from_types): (Vec<&syn::Type>, Vec<proc_macro2::Ident>) = {
+        let mut generics_in_from_types = GenericUsageVisitor::new_unmarked(
+            input.generics.type_params().map(|p| p.ident.clone()),
+        );
+        let mut generic_field_types = Vec::new();
+        for from_field in input
+            .variants
+            .iter()
+            .filter_map(|variant| variant.from_field())
+        {
+            let mut generics_in_this_field = GenericUsageVisitor::new_unmarked(
+                input.generics.type_params().map(|p| p.ident.clone()),
+            );
+            syn::visit::visit_type(&mut generics_in_this_field, &from_field.original.ty);
+            if generics_in_from_types.mark_from(generics_in_this_field.iter_marked()) {
+                generic_field_types.push(from_field.ty);
+            }
+        }
+        (
+            generic_field_types,
+            generics_in_from_types.generics.into_keys().collect(),
+        )
+    };
+
     let error_trait = spanned_error_trait(input.original);
 
-    let where_clause = augment_where_clause(
-        where_clause,
-        [parse_quote! { Self: ::std::fmt::Display + ::std::fmt::Debug }],
-    );
+    let extra_predicates =
+        std::iter::once(parse_quote! { Self: ::std::fmt::Display + ::std::fmt::Debug })
+            .chain(
+                generics_in_from_types
+                    .into_iter()
+                    .map(|generic| parse_quote! { #generic: 'static }),
+            )
+            .chain(
+                generic_field_types
+                    .into_iter()
+                    .map(|ty| parse_quote! { #ty: ::std::error::Error }),
+            );
+
+    let where_clause = augment_where_clause(where_clause, extra_predicates);
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
@@ -407,8 +439,9 @@ fn impl_enum(input: Enum) -> TokenStream {
 }
 
 #[cfg_attr(test, derive(Debug))]
+#[derive(Clone)]
 struct GenericUsageVisitor {
-    generics: std::collections::HashMap<syn::Ident, bool>,
+    generics: std::collections::HashMap<proc_macro2::Ident, bool>,
 }
 
 impl GenericUsageVisitor {
@@ -420,6 +453,36 @@ impl GenericUsageVisitor {
             generics: generics.into_iter().collect(),
         }
     }
+
+    pub fn new_unmarked<TIdents>(generics: TIdents) -> Self
+    where
+        TIdents: IntoIterator<Item = syn::Ident>,
+    {
+        Self::new(generics.into_iter().map(|ident| (ident, false)))
+    }
+
+    pub fn iter_marked(&self) -> impl Iterator<Item = &proc_macro2::Ident> {
+        self.generics.iter().filter(|(_k, v)| **v).map(|(k, _v)| k)
+    }
+
+    #[allow(dead_code)]
+    pub fn is_marked<'a, T: PartialEq<&'a proc_macro2::Ident> + 'a>(&'a self, item: T) -> bool {
+        self.iter_marked().any(|ident| item == ident)
+    }
+
+    pub fn mark_from<'a, TMarkedSource: IntoIterator<Item = &'a proc_macro2::Ident> + 'a>(
+        &'a mut self,
+        source: TMarkedSource,
+    ) -> bool {
+        let mut any_marked = false;
+        for other_marked in source {
+            if let Some(is_marked) = self.generics.get_mut(other_marked) {
+                *is_marked = true;
+                any_marked = true;
+            }
+        }
+        any_marked
+    }
 }
 
 impl<'ast> syn::visit::Visit<'ast> for GenericUsageVisitor {
@@ -429,14 +492,14 @@ impl<'ast> syn::visit::Visit<'ast> for GenericUsageVisitor {
                 *entry = true;
             }
         }
-        syn::visit::visit_type_path(self, i)
+        syn::visit::visit_type_path(self, i);
     }
 
     fn visit_type_param(&mut self, i: &'ast syn::TypeParam) {
         if let Some(entry) = self.generics.get_mut(&i.ident) {
             *entry = true;
         }
-        syn::visit::visit_type_param(self, i)
+        syn::visit::visit_type_param(self, i);
     }
 }
 
@@ -479,15 +542,14 @@ fn augment_where_clause<TPredicates>(
 ) -> Option<syn::WhereClause>
 where
     TPredicates: IntoIterator<Item = syn::WherePredicate>,
-    TPredicates::IntoIter: std::iter::ExactSizeIterator,
 {
-    let extra_predicates = extra_predicates.into_iter();
-    if extra_predicates.len() == 0 {
+    let mut extra_predicates = extra_predicates.into_iter().peekable();
+    if extra_predicates.peek().is_none() {
         return where_clause.cloned();
     }
     Some(match where_clause {
         Some(w) => syn::WhereClause {
-            where_token: w.where_token.clone(),
+            where_token: w.where_token,
             predicates: w
                 .predicates
                 .iter()

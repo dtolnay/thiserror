@@ -61,16 +61,15 @@ enum DirectEmbedding<Embedded> {
 ///
 /// impl<Indirect> Error for FromGenericError<Indirect>
 /// where
-///     SourceGenericError<Indirect>: Error,
+///     DirectEmbedding<Indirect>: Error,
 ///     Indirect: 'static,
 ///     Self: Debug + Display;
 /// ```
-// TODO: Parse generic parameters contained in #[from] usages and add them to Error impl
-// #[derive(Error, Debug)]
-// enum FromGenericError<Indirect> {
-//     #[error("Tadah")]
-//     SourceEmbedded(#[from] DirectEmbedding<Indirect>),
-// }
+#[derive(Error, Debug)]
+enum FromGenericError<Indirect> {
+    #[error("Tadah")]
+    SourceEmbedded(#[from] DirectEmbedding<Indirect>),
+}
 
 /// Direct embedding of a generic in a field
 ///
