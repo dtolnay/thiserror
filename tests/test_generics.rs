@@ -99,7 +99,7 @@ impl<HasDisplay, HasDebug, HasNeither> Debug
     for HybridDisplayType<HasDisplay, HasDebug, HasNeither>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "HybridDisplayType")
+        write!(f, stringify!(HybridDisplayType))
     }
 }
 
@@ -108,4 +108,23 @@ fn display_hybrid_display_type(
     f: &mut std::fmt::Formatter<'_>,
 ) -> std::fmt::Result {
     Debug::fmt(&instance, f)
+}
+
+#[derive(Error, Debug)]
+#[error("{0:?}")]
+struct DirectEmbeddingStructTuple<Embedded>(Embedded);
+
+#[derive(Error, Debug)]
+#[error("{direct:?}")]
+struct DirectEmbeddingStructNominal<Embedded> {
+    direct: Embedded,
+}
+
+#[derive(Error, Debug)]
+struct FromGenericErrorStructTuple<Indirect>(#[from] DirectEmbedding<Indirect>);
+
+#[derive(Error, Debug)]
+struct FromGenericErrorStructNominal<Indirect> {
+    #[from]
+    indirect: DirectEmbedding<Indirect>,
 }

@@ -112,6 +112,49 @@ fn impl_struct(input: Struct) -> TokenStream {
         None
     };
     let display_impl = display_body.map(|body| {
+        let mut extra_predicates = Vec::new();
+        for field in input
+            .attrs
+            .display
+            .iter()
+            .flat_map(|d| d.iter_fmt_types(input.fields.as_slice()))
+        {
+            use crate::attr::DisplayFormatMarking;
+            let (ty, bound, ast): (
+                &syn::Type,
+                syn::punctuated::Punctuated<syn::TypeParamBound, _>,
+                &syn::Field,
+            );
+            match field {
+                DisplayFormatMarking::Debug(f) => {
+                    ty = f.ty;
+                    bound = parse_quote! { ::std::fmt::Debug };
+                    ast = f.original;
+                }
+                DisplayFormatMarking::Display(f) => {
+                    ty = f.ty;
+                    bound = parse_quote! { ::std::fmt::Display };
+                    ast = f.original;
+                }
+            }
+            // If a generic is at all present, a constraint will be applied to the field type
+            // This may create redundant `AlwaysDebug<T>: Debug` scenarios, but covers T: Debug and &T: Debug cleanly
+            let mut usages = GenericUsageVisitor::new_unmarked(
+                input.generics.type_params().map(|p| p.ident.clone()),
+            );
+            syn::visit::visit_field(&mut usages, ast);
+            if usages.iter_marked().next().is_some() {
+                extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
+                    bounded_ty: ty.clone(),
+                    colon_token: syn::token::Colon::default(),
+                    bounds: bound,
+                    lifetimes: None,
+                }));
+            }
+        }
+
+        let where_clause = augment_where_clause(where_clause, extra_predicates);
+
         quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics std::fmt::Display for #ty #ty_generics #where_clause {
@@ -142,8 +185,42 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let error_trait = spanned_error_trait(input.original);
+    let (generic_field_types, generics_in_from_types): (Vec<&syn::Type>, Vec<proc_macro2::Ident>) = {
+        let mut generics_in_from_types = GenericUsageVisitor::new_unmarked(
+            input.generics.type_params().map(|p| p.ident.clone()),
+        );
+        let mut generic_field_types = Vec::new();
+        if let Some(from_field) = input.from_field() {
+            let mut generics_in_this_field = GenericUsageVisitor::new_unmarked(
+                input.generics.type_params().map(|p| p.ident.clone()),
+            );
+            syn::visit::visit_type(&mut generics_in_this_field, &from_field.original.ty);
+            if generics_in_from_types.mark_from(generics_in_this_field.iter_marked()) {
+                generic_field_types.push(from_field.ty);
+            }
+        }
+        (
+            generic_field_types,
+            generics_in_from_types.generics.into_keys().collect(),
+        )
+    };
 
+    let extra_predicates =
+        std::iter::once(parse_quote! { Self: ::std::fmt::Display + ::std::fmt::Debug })
+            .chain(
+                generics_in_from_types
+                    .into_iter()
+                    .map(|generic| parse_quote! { #generic: 'static }),
+            )
+            .chain(
+                generic_field_types
+                    .into_iter()
+                    .map(|ty| parse_quote! { #ty: ::std::error::Error }),
+            );
+
+    let where_clause = augment_where_clause(where_clause, extra_predicates);
+
+    let error_trait = spanned_error_trait(input.original);
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
@@ -287,44 +364,43 @@ fn impl_enum(input: Enum) -> TokenStream {
         };
 
         let mut extra_predicates = Vec::new();
-        for (fields, display) in input
-            .variants
-            .iter()
-            .filter_map(|v| v.attrs.display.as_ref().map(|d| (v.fields.as_slice(), d)))
-        {
-            for field in display.iter_fmt_types(fields) {
-                use crate::attr::DisplayFormatMarking;
-                let (ty, bound, ast): (
-                    &syn::Type,
-                    syn::punctuated::Punctuated<syn::TypeParamBound, _>,
-                    &syn::Field,
-                );
-                match field {
-                    DisplayFormatMarking::Debug(f) => {
-                        ty = f.ty;
-                        bound = parse_quote! { ::std::fmt::Debug };
-                        ast = f.original;
-                    }
-                    DisplayFormatMarking::Display(f) => {
-                        ty = f.ty;
-                        bound = parse_quote! { ::std::fmt::Display };
-                        ast = f.original;
-                    }
+        for field in input.variants.iter().flat_map(|v| {
+            v.attrs
+                .display
+                .iter()
+                .flat_map(move |d| d.iter_fmt_types(&v.fields))
+        }) {
+            use crate::attr::DisplayFormatMarking;
+            let (ty, bound, ast): (
+                &syn::Type,
+                syn::punctuated::Punctuated<syn::TypeParamBound, _>,
+                &syn::Field,
+            );
+            match field {
+                DisplayFormatMarking::Debug(f) => {
+                    ty = f.ty;
+                    bound = parse_quote! { ::std::fmt::Debug };
+                    ast = f.original;
                 }
-                // If a generic is at all present, a constraint will be applied to the field type
-                // This may create redundant `AlwaysDebug<T>: Debug` scenarios, but covers T: Debug and &T: Debug cleanly
-                let mut usages = GenericUsageVisitor::new_unmarked(
-                    input.generics.type_params().map(|p| p.ident.clone()),
-                );
-                syn::visit::visit_field(&mut usages, ast);
-                if usages.iter_marked().next().is_some() {
-                    extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
-                        bounded_ty: ty.clone(),
-                        colon_token: syn::token::Colon::default(),
-                        bounds: bound,
-                        lifetimes: None,
-                    }));
+                DisplayFormatMarking::Display(f) => {
+                    ty = f.ty;
+                    bound = parse_quote! { ::std::fmt::Display };
+                    ast = f.original;
                 }
+            }
+            // If a generic is at all present, a constraint will be applied to the field type
+            // This may create redundant `AlwaysDebug<T>: Debug` scenarios, but covers T: Debug and &T: Debug cleanly
+            let mut usages = GenericUsageVisitor::new_unmarked(
+                input.generics.type_params().map(|p| p.ident.clone()),
+            );
+            syn::visit::visit_field(&mut usages, ast);
+            if usages.iter_marked().next().is_some() {
+                extra_predicates.push(syn::WherePredicate::Type(syn::PredicateType {
+                    bounded_ty: ty.clone(),
+                    colon_token: syn::token::Colon::default(),
+                    bounds: bound,
+                    lifetimes: None,
+                }));
             }
         }
 
@@ -411,8 +487,6 @@ fn impl_enum(input: Enum) -> TokenStream {
         )
     };
 
-    let error_trait = spanned_error_trait(input.original);
-
     let extra_predicates =
         std::iter::once(parse_quote! { Self: ::std::fmt::Display + ::std::fmt::Debug })
             .chain(
@@ -427,6 +501,8 @@ fn impl_enum(input: Enum) -> TokenStream {
             );
 
     let where_clause = augment_where_clause(where_clause, extra_predicates);
+
+    let error_trait = spanned_error_trait(input.original);
     quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics #error_trait for #ty #ty_generics #where_clause {
