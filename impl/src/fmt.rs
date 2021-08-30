@@ -280,21 +280,33 @@ mod tests {
     fn parse_and_emit_format_strings() {
         let test_str = "\"hello world {{{:} {x:#?} {1} {2:}\"";
         let template_groups = parse_fmt_template(test_str);
-        assert!(matches!(
-            &template_groups[0],
+        assert!(match &template_groups[0] {
             FormatInterpolation {
                 target: None,
-                format: None
-            }
-        ));
-        assert!(
-            matches!(&template_groups[1], FormatInterpolation { target: Some(Member::Named(x)), format: Some(fmt) } if x.to_token_stream().to_string() == "x" && fmt == "#?")
-        );
-        assert!(
-            matches!(&template_groups[2], FormatInterpolation { target: Some(Member::Unnamed(idx)), format: None } if idx.index == 1)
-        );
-        assert!(
-            matches!(&template_groups[3], FormatInterpolation { target: Some(Member::Unnamed(idx)), format: None } if idx.index == 2)
-        );
+                format: None,
+            } => true,
+            _ => false,
+        });
+        assert!(match &template_groups[1] {
+            FormatInterpolation {
+                target: Some(Member::Named(x)),
+                format: Some(fmt),
+            } if x.to_token_stream().to_string() == "x" && fmt == "#?" => true,
+            _ => false,
+        });
+        assert!(match &template_groups[2] {
+            FormatInterpolation {
+                target: Some(Member::Unnamed(idx)),
+                format: None,
+            } if idx.index == 1 => true,
+            _ => false,
+        });
+        assert!(match &template_groups[3] {
+            FormatInterpolation {
+                target: Some(Member::Unnamed(idx)),
+                format: None,
+            } if idx.index == 2 => true,
+            _ => false,
+        });
     }
 }
