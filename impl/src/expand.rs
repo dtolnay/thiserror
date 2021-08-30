@@ -3,7 +3,10 @@ use crate::fmt::DisplayFormatMarking;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_quote, Data, DeriveInput, GenericArgument, Member, PathArguments, Result, Type, Visibility};
+use syn::{
+    parse_quote, Data, DeriveInput, GenericArgument, Member, PathArguments, Result, Type,
+    Visibility,
+};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
@@ -203,7 +206,11 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
         (
             generic_field_types,
-            generics_in_from_types.generics.into_keys().collect(),
+            generics_in_from_types
+                .generics
+                .into_iter()
+                .map(|(k, _v)| k)
+                .collect(),
         )
     };
 
@@ -505,7 +512,11 @@ fn impl_enum(input: Enum) -> TokenStream {
         }
         (
             generic_field_types,
-            generics_in_from_types.generics.into_keys().collect(),
+            generics_in_from_types
+                .generics
+                .into_iter()
+                .map(|(k, _v)| k)
+                .collect(),
         )
     };
 

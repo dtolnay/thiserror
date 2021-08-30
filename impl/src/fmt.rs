@@ -1,7 +1,7 @@
 use crate::{ast::Field, attr::Display};
 use proc_macro2::{Span, TokenTree};
 use quote::{format_ident, quote_spanned};
-use std::{collections::HashSet as Set, convert::TryInto};
+use std::collections::HashSet as Set;
 use syn::{
     ext::IdentExt,
     parse::{ParseStream, Parser},
@@ -154,9 +154,9 @@ impl From<(Option<&str>, Option<&str>)> for FormatInterpolation {
     fn from((target, style): (Option<&str>, Option<&str>)) -> Self {
         let target = match target {
             None => None,
-            Some(s) => Some(if let std::result::Result::<usize, _>::Ok(i) = s.parse() {
+            Some(s) => Some(if let Ok(i) = s.parse::<usize>() {
                 Member::Unnamed(syn::Index {
-                    index: i.try_into().unwrap(),
+                    index: i as u32,
                     span: Span::call_site(),
                 })
             } else {
