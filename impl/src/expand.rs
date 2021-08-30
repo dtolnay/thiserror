@@ -1,4 +1,5 @@
 use crate::ast::{Enum, Field, Input, Struct};
+use crate::fmt::DisplayFormatMarking;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
@@ -119,7 +120,6 @@ fn impl_struct(input: Struct) -> TokenStream {
             .iter()
             .flat_map(|d| d.iter_fmt_types(input.fields.as_slice()))
         {
-            use crate::attr::DisplayFormatMarking;
             let (ty, bound, ast): (
                 &syn::Type,
                 syn::punctuated::Punctuated<syn::TypeParamBound, _>,
@@ -370,7 +370,6 @@ fn impl_enum(input: Enum) -> TokenStream {
                 .iter()
                 .flat_map(move |d| d.iter_fmt_types(&v.fields))
         }) {
-            use crate::attr::DisplayFormatMarking;
             let (ty, bound, ast): (
                 &syn::Type,
                 syn::punctuated::Punctuated<syn::TypeParamBound, _>,

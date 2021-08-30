@@ -15,32 +15,12 @@ pub struct Attrs<'a> {
     pub transparent: Option<Transparent<'a>>,
 }
 
-#[derive(Clone, Copy)]
-pub enum DisplayFormatMarking<'a> {
-    Debug(&'a crate::ast::Field<'a>),
-    Display(&'a crate::ast::Field<'a>),
-}
-
 #[derive(Clone)]
 pub struct Display<'a> {
     pub original: &'a Attribute,
     pub fmt: LitStr,
     pub args: TokenStream,
     pub has_bonus_display: bool,
-}
-
-impl<'a> Display<'a> {
-    pub fn iter_fmt_types(
-        &'a self,
-        fields: &'a [crate::ast::Field],
-    ) -> impl Iterator<Item = DisplayFormatMarking> + 'a {
-        // TODO: Parse format string literal, return only fields at offsets which are Display or Debug referenced by each format reference
-        //       If a field position is referenced multiple times for the same format class, deduplicate
-        fields
-            .iter()
-            .map(DisplayFormatMarking::Display)
-            .chain(fields.iter().map(DisplayFormatMarking::Debug))
-    }
 }
 
 #[derive(Copy, Clone)]

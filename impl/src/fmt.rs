@@ -1,13 +1,20 @@
-use crate::ast::Field;
-use crate::attr::Display;
-use proc_macro2::TokenTree;
+use crate::{ast::Field, attr::Display};
+use proc_macro2::{Span, TokenTree};
 use quote::{format_ident, quote_spanned};
-use std::collections::HashSet as Set;
-use syn::ext::IdentExt;
-use syn::parse::{ParseStream, Parser};
-use syn::{Ident, Index, LitStr, Member, Result, Token};
+use std::{collections::HashSet as Set, convert::TryInto};
+use syn::{
+    ext::IdentExt,
+    parse::{ParseStream, Parser},
+    Ident, Index, LitStr, Member, Result, Token,
+};
 
-impl Display<'_> {
+#[derive(Clone, Copy)]
+pub enum DisplayFormatMarking<'a> {
+    Debug(&'a crate::ast::Field<'a>),
+    Display(&'a crate::ast::Field<'a>),
+}
+
+impl<'a> Display<'a> {
     // Transform `"error {var}"` to `"error {}", var`.
     pub fn expand_shorthand(&mut self, fields: &[Field]) {
         let raw_args = self.args.clone();
@@ -94,6 +101,122 @@ impl Display<'_> {
         self.args = args;
         self.has_bonus_display = has_bonus_display;
     }
+
+    pub fn iter_fmt_types(&'a self, fields: &'a [Field]) -> Vec<DisplayFormatMarking<'a>> {
+        let members: Set<Member> = fields.iter().map(|f| f.member.clone()).collect();
+        let fmt = self.fmt.value();
+        let read = fmt.as_str();
+
+        let mut member_refs: Vec<(&Member, &Field, bool)> = Vec::new();
+
+        for template in parse_fmt_template(read) {
+            if let Some(target) = &template.target {
+                if members.contains(target) {
+                    if let Some(matching) = fields.iter().find(|f| &f.member == target) {
+                        member_refs.push((&matching.member, matching, template.is_display()));
+                    }
+                }
+            }
+        }
+
+        member_refs
+            .iter()
+            .map(|(_m, f, is_display)| {
+                if *is_display {
+                    DisplayFormatMarking::Display(*f)
+                } else {
+                    DisplayFormatMarking::Debug(*f)
+                }
+            })
+            .collect()
+    }
+}
+
+struct FormatInterpolation {
+    pub target: Option<Member>,
+    pub format: Option<String>,
+}
+
+impl FormatInterpolation {
+    pub fn is_debug(&self) -> bool {
+        self.format
+            .as_ref()
+            .map(|x| x.contains('?'))
+            .unwrap_or(false)
+    }
+
+    pub fn is_display(&self) -> bool {
+        !self.is_debug()
+    }
+}
+
+impl From<(Option<&str>, Option<&str>)> for FormatInterpolation {
+    fn from((target, style): (Option<&str>, Option<&str>)) -> Self {
+        let target = match target {
+            None => None,
+            Some(s) => Some(if let std::result::Result::<usize, _>::Ok(i) = s.parse() {
+                Member::Unnamed(syn::Index {
+                    index: i.try_into().unwrap(),
+                    span: Span::call_site(),
+                })
+            } else {
+                let mut s = s;
+                let ident = take_ident(&mut s);
+                Member::Named(ident)
+            }),
+        };
+        let format = style.map(String::from);
+        FormatInterpolation { target, format }
+    }
+}
+
+fn read_format_template(mut read: &str) -> Option<(FormatInterpolation, &str)> {
+    // If we aren't in a bracketed area, or we are in an escaped bracket, return None
+    if !read.starts_with('{') || read.starts_with("{{") {
+        return None;
+    }
+    // Read past the starting bracket
+    read = &read[1..];
+    // If there is no end bracket, bail
+    let end_bracket = read.find('}')?;
+    let contents = &read[..end_bracket];
+    let (name, style) = if let Some(colon) = contents.find(':') {
+        (&contents[..colon], &contents[colon + 1..])
+    } else {
+        (contents, "")
+    };
+
+    // Strip expanded identifier-prefixes since we just want the non-shorthand version
+    let name = if name.starts_with("field_") {
+        &name["field_".len()..]
+    } else if name.starts_with("r_") {
+        &name["r_".len()..]
+    } else {
+        name
+    };
+    let name = if name.starts_with('_') {
+        &name["_".len()..]
+    } else {
+        name
+    };
+
+    let name = if name.is_empty() { None } else { Some(name) };
+    let style = if style.is_empty() { None } else { Some(style) };
+    Some(((name, style).into(), &read[end_bracket + 1..]))
+}
+
+fn parse_fmt_template(mut read: &str) -> Vec<FormatInterpolation> {
+    let mut output = Vec::new();
+    // From each "{", try reading a template; double-bracket escape handling is done by the template reader
+    while let Some(opening_bracket) = read.find('{') {
+        read = &read[opening_bracket..];
+        if let Some((template, next)) = read_format_template(read) {
+            read = next;
+            output.push(template);
+        }
+        read = &read[read.char_indices().nth(1).map(|(x, _)| x).unwrap_or(0)..];
+    }
+    output
 }
 
 fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
@@ -144,4 +267,34 @@ fn take_ident(read: &mut &str) -> Ident {
         }
     }
     Ident::parse_any.parse_str(&ident).unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use quote::ToTokens;
+    use syn::Member;
+
+    use super::{parse_fmt_template, FormatInterpolation};
+
+    #[test]
+    fn parse_and_emit_format_strings() {
+        let test_str = "\"hello world {{{:} {x:#?} {1} {2:}\"";
+        let template_groups = parse_fmt_template(test_str);
+        assert!(matches!(
+            &template_groups[0],
+            FormatInterpolation {
+                target: None,
+                format: None
+            }
+        ));
+        assert!(
+            matches!(&template_groups[1], FormatInterpolation { target: Some(Member::Named(x)), format: Some(fmt) } if x.to_token_stream().to_string() == "x" && fmt == "#?")
+        );
+        assert!(
+            matches!(&template_groups[2], FormatInterpolation { target: Some(Member::Unnamed(idx)), format: None } if idx.index == 1)
+        );
+        assert!(
+            matches!(&template_groups[3], FormatInterpolation { target: Some(Member::Unnamed(idx)), format: None } if idx.index == 2)
+        );
+    }
 }

@@ -88,11 +88,11 @@ enum FromGenericError<Indirect> {
 #[derive(Error)]
 enum HybridDisplayType<HasDisplay, HasDebug, HasNeither> {
     #[error("{0} : {1:?}")]
-    HybridDisplayCase(HasDisplay, HasDebug),
+    HybridDisplay(HasDisplay, HasDebug),
     #[error("{0}")]
-    DisplayCase(HasDisplay, HasNeither),
+    Display(HasDisplay, HasNeither),
     #[error("{1:?}")]
-    DebugCase(HasNeither, HasDebug),
+    Debug(HasNeither, HasDebug),
 }
 
 impl<HasDisplay, HasDebug, HasNeither> Debug
@@ -104,7 +104,7 @@ impl<HasDisplay, HasDebug, HasNeither> Debug
 }
 
 fn display_hybrid_display_type(
-    instance: HybridDisplayType<DisplayType, DebugType, NoFormattingType>,
+    instance: &HybridDisplayType<DisplayType, DebugType, NoFormattingType>,
     f: &mut std::fmt::Formatter<'_>,
 ) -> std::fmt::Result {
     Debug::fmt(&instance, f)
