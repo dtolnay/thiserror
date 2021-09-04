@@ -25,7 +25,6 @@ impl Display for DebugAndDisplay {
     }
 }
 
-/*
 // Should expand to:
 //
 //     impl<E> Display for EnumDebugField<E>
@@ -99,7 +98,6 @@ fn test_display_enum_compound() {
     instance = EnumCompound::Debug(NoFormat, DebugOnly);
     assert_eq!(format!("{}", instance), "DebugOnly");
 }
-*/
 
 // Should expand to:
 //
@@ -117,7 +115,6 @@ pub struct StructDebugGeneric<E> {
     pub underlying: E,
 }
 
-/*
 // Should expand to:
 //
 //     impl<E> Error for StructFromGeneric<E>
@@ -130,4 +127,3 @@ pub struct StructFromGeneric<E> {
     #[from]
     pub source: StructDebugGeneric<E>,
 }
-*/
