@@ -1,9 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
-#![allow(
-    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
-    clippy::nonstandard_macro_braces,
-    clippy::option_if_let_else,
-)]
+#![allow(clippy::option_if_let_else)]
 
 use std::fmt::Display;
 use thiserror::Error;
