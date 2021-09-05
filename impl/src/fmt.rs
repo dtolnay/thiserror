@@ -14,7 +14,7 @@ impl Display<'_> {
         let mut named_args = explicit_named_args.parse2(raw_args).unwrap();
         let mut member_index = Map::new();
         for (i, field) in fields.iter().enumerate() {
-            member_index.insert(field.member.clone(), i);
+            member_index.insert(&field.member, i);
         }
 
         let span = self.fmt.span();
