@@ -31,10 +31,17 @@ pub struct Transparent<'a> {
     pub span: Span,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Trait {
     Debug,
     Display,
+    Octal,
+    LowerHex,
+    UpperHex,
+    Pointer,
+    Binary,
+    LowerExp,
+    UpperExp,
 }
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
@@ -200,9 +207,7 @@ impl ToTokens for Display<'_> {
 
 impl ToTokens for Trait {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(match self {
-            Trait::Debug => quote!(std::fmt::Debug),
-            Trait::Display => quote!(std::fmt::Display),
-        });
+        let trait_name = format_ident!("{}", format!("{:?}", self));
+        tokens.extend(quote!(std::fmt::#trait_name));
     }
 }

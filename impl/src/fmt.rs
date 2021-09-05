@@ -93,6 +93,13 @@ impl Display<'_> {
                 };
                 let bound = match read[..end_spec].chars().next_back() {
                     Some('?') => Trait::Debug,
+                    Some('o') => Trait::Octal,
+                    Some('x') => Trait::LowerHex,
+                    Some('X') => Trait::UpperHex,
+                    Some('p') => Trait::Pointer,
+                    Some('b') => Trait::Binary,
+                    Some('e') => Trait::LowerExp,
+                    Some('E') => Trait::UpperExp,
                     Some(_) => Trait::Display,
                     None => {
                         has_bonus_display = true;
