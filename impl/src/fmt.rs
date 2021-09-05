@@ -64,6 +64,24 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
+            if let Some(&field) = member_index.get(&member) {
+                let end_spec = match read.find('}') {
+                    Some(end_spec) => end_spec,
+                    None => return,
+                };
+                let bound = match read[..end_spec].chars().next_back() {
+                    Some('?') => Trait::Debug,
+                    Some('o') => Trait::Octal,
+                    Some('x') => Trait::LowerHex,
+                    Some('X') => Trait::UpperHex,
+                    Some('p') => Trait::Pointer,
+                    Some('b') => Trait::Binary,
+                    Some('e') => Trait::LowerExp,
+                    Some('E') => Trait::UpperExp,
+                    Some(_) | None => Trait::Display,
+                };
+                implied_bounds.insert((field, bound));
+            }
             let local = match &member {
                 Member::Unnamed(index) => format_ident!("_{}", index),
                 Member::Named(ident) => ident.clone(),
@@ -86,28 +104,9 @@ impl Display<'_> {
                 args.extend(quote_spanned!(span=> ,));
             }
             args.extend(quote_spanned!(span=> #formatvar = #local));
-            if let Some(&field) = member_index.get(&member) {
-                let end_spec = match read.find('}') {
-                    Some(end_spec) => end_spec,
-                    None => return,
-                };
-                let bound = match read[..end_spec].chars().next_back() {
-                    Some('?') => Trait::Debug,
-                    Some('o') => Trait::Octal,
-                    Some('x') => Trait::LowerHex,
-                    Some('X') => Trait::UpperHex,
-                    Some('p') => Trait::Pointer,
-                    Some('b') => Trait::Binary,
-                    Some('e') => Trait::LowerExp,
-                    Some('E') => Trait::UpperExp,
-                    Some(_) => Trait::Display,
-                    None => {
-                        has_bonus_display = true;
-                        args.extend(quote_spanned!(span=> .as_display()));
-                        Trait::Display
-                    }
-                };
-                implied_bounds.insert((field, bound));
+            if read.starts_with('}') && member_index.contains_key(&member) {
+                has_bonus_display = true;
+                args.extend(quote_spanned!(span=> .as_display()));
             }
             has_trailing_comma = false;
         }
