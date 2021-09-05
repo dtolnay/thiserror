@@ -1,12 +1,12 @@
 use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
+use crate::generics::InferredBounds;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::spanned::Spanned;
 use syn::{
-    parse_quote, Data, DeriveInput, GenericArgument, Member, PathArguments, Result, Type,
-    Visibility,
+    Data, DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type, Visibility,
 };
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
@@ -21,16 +21,12 @@ pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
 fn impl_struct(input: Struct) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let mut error_generics = input.generics.clone();
-    let error_where_clause = error_generics.make_where_clause();
+    let mut error_inferred_bounds = InferredBounds::new();
 
     let source_body = if input.attrs.transparent.is_some() {
         let only_field = &input.fields[0];
         if only_field.contains_generic {
-            let ty = only_field.ty;
-            error_where_clause
-                .predicates
-                .push(parse_quote!(#ty: std::error::Error));
+            error_inferred_bounds.insert(only_field.ty, quote!(std::error::Error));
         }
         let member = &only_field.member;
         Some(quote! {
@@ -40,9 +36,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let source = &source_field.member;
         if source_field.contains_generic {
             let ty = unoptional_type(source_field.ty);
-            error_where_clause
-                .predicates
-                .push(parse_quote!(#ty: std::error::Error + 'static));
+            error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
         }
         let asref = if type_is_option(source_field.ty) {
             Some(quote_spanned!(source.span()=> .as_ref()?))
@@ -137,17 +131,14 @@ fn impl_struct(input: Struct) -> TokenStream {
         None
     };
     let display_impl = display_body.map(|body| {
-        let mut display_generics = input.generics.clone();
-        let display_where_clause = display_generics.make_where_clause();
+        let mut display_inferred_bounds = InferredBounds::new();
         for (field, bound) in display_implied_bounds {
             let field = &input.fields[field];
             if field.contains_generic {
-                let field_ty = field.ty;
-                display_where_clause
-                    .predicates
-                    .push(parse_quote!(#field_ty: #bound));
+                display_inferred_bounds.insert(field.ty, bound);
             }
         }
+        let display_where_clause = display_inferred_bounds.augment_where_clause(input.generics);
         quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics std::fmt::Display for #ty #ty_generics #display_where_clause {
@@ -176,10 +167,11 @@ fn impl_struct(input: Struct) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
     if input.generics.type_params().next().is_some() {
-        error_where_clause
-            .predicates
-            .push(parse_quote!(Self: std::fmt::Debug + std::fmt::Display));
+        let self_token = <Token![Self]>::default();
+        error_inferred_bounds.insert(self_token, Trait::Debug);
+        error_inferred_bounds.insert(self_token, Trait::Display);
     }
+    let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
     quote! {
         #[allow(unused_qualifications)]
@@ -195,8 +187,7 @@ fn impl_struct(input: Struct) -> TokenStream {
 fn impl_enum(input: Enum) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let mut error_generics = input.generics.clone();
-    let error_where_clause = error_generics.make_where_clause();
+    let mut error_inferred_bounds = InferredBounds::new();
 
     let source_method = if input.has_source() {
         let arms = input.variants.iter().map(|variant| {
@@ -204,10 +195,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             if variant.attrs.transparent.is_some() {
                 let only_field = &variant.fields[0];
                 if only_field.contains_generic {
-                    let ty = only_field.ty;
-                    error_where_clause
-                        .predicates
-                        .push(parse_quote!(#ty: std::error::Error));
+                    error_inferred_bounds.insert(only_field.ty, quote!(std::error::Error));
                 }
                 let member = &only_field.member;
                 let source = quote!(std::error::Error::source(transparent.as_dyn_error()));
@@ -218,9 +206,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 let source = &source_field.member;
                 if source_field.contains_generic {
                     let ty = unoptional_type(source_field.ty);
-                    error_where_clause
-                        .predicates
-                        .push(parse_quote!(#ty: std::error::Error + 'static));
+                    error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
                 }
                 let asref = if type_is_option(source_field.ty) {
                     Some(quote_spanned!(source.span()=> .as_ref()?))
@@ -340,8 +326,7 @@ fn impl_enum(input: Enum) -> TokenStream {
     };
 
     let display_impl = if input.has_display() {
-        let mut display_generics = input.generics.clone();
-        let display_where_clause = display_generics.make_where_clause();
+        let mut display_inferred_bounds = InferredBounds::new();
         let use_as_display = if input.variants.iter().any(|v| {
             v.attrs
                 .display
@@ -379,10 +364,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             for (field, bound) in display_implied_bounds {
                 let field = &variant.fields[field];
                 if field.contains_generic {
-                    let field_ty = field.ty;
-                    display_where_clause
-                        .predicates
-                        .push(parse_quote!(#field_ty: #bound));
+                    display_inferred_bounds.insert(field.ty, bound);
                 }
             }
             let ident = &variant.ident;
@@ -392,6 +374,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         let arms = arms.collect::<Vec<_>>();
+        let display_where_clause = display_inferred_bounds.augment_where_clause(input.generics);
         Some(quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics std::fmt::Display for #ty #ty_generics #display_where_clause {
@@ -427,10 +410,11 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let error_trait = spanned_error_trait(input.original);
     if input.generics.type_params().next().is_some() {
-        error_where_clause
-            .predicates
-            .push(parse_quote!(Self: std::fmt::Debug + std::fmt::Display));
+        let self_token = <Token![Self]>::default();
+        error_inferred_bounds.insert(self_token, Trait::Debug);
+        error_inferred_bounds.insert(self_token, Trait::Display);
     }
+    let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
     quote! {
         #[allow(unused_qualifications)]
