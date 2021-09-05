@@ -101,6 +101,23 @@ fn test_display_enum_compound() {
 
 // Should expand to:
 //
+//     impl<E> Display for EnumTransparentGeneric<E>
+//     where
+//         E: Display;
+//
+//     impl<E> Error for EnumTransparentGeneric<E>
+//     where
+//         E: Error,
+//         Self: Debug + Display;
+//
+#[derive(Error, Debug)]
+pub enum EnumTransparentGeneric<E> {
+    #[error(transparent)]
+    Other(E),
+}
+
+// Should expand to:
+//
 //     impl<E> Display for StructDebugGeneric<E>
 //     where
 //         E: Debug;
@@ -127,3 +144,18 @@ pub struct StructFromGeneric<E> {
     #[from]
     pub source: StructDebugGeneric<E>,
 }
+
+// Should expand to:
+//
+//     impl<E> Display for StructTransparentGeneric<E>
+//     where
+//         E: Display;
+//
+//     impl<E> Error for StructTransparentGeneric<E>
+//     where
+//         E: Error,
+//         Self: Debug + Display;
+//
+#[derive(Error, Debug)]
+#[error(transparent)]
+pub struct StructTransparentGeneric<E>(E);
