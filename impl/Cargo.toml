@@ -3,6 +3,7 @@ name = "thiserror-impl"
 version = "1.0.29"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+rust-version = "1.31"
 license = "MIT OR Apache-2.0"
 description = "Implementation detail of the `thiserror` crate"
 repository = "https://github.com/dtolnay/thiserror"
