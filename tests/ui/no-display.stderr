@@ -1,5 +1,5 @@
 error[E0599]: the method `as_display` exists for reference `&NoDisplay`, but its trait bounds were not satisfied
-   --> $DIR/tests/ui/no-display.rs:7:9
+   --> tests/ui/no-display.rs:7:9
     |
 4   | struct NoDisplay;
     | ----------------- doesn't satisfy `NoDisplay: std::fmt::Display`

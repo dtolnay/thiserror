@@ -1,5 +1,5 @@
 error[E0599]: the method `as_dyn_error` exists for reference `&NotError`, but its trait bounds were not satisfied
-   --> $DIR/tests/ui/source-enum-not-error.rs:10:9
+   --> tests/ui/source-enum-not-error.rs:10:9
     |
 4   | pub struct NotError;
     | --------------------

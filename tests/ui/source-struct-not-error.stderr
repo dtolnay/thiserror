@@ -1,5 +1,5 @@
 error[E0599]: the method `as_dyn_error` exists for struct `NotError`, but its trait bounds were not satisfied
-   --> $DIR/tests/ui/source-struct-not-error.rs:9:5
+   --> tests/ui/source-struct-not-error.rs:9:5
     |
 4   | struct NotError;
     | ----------------
