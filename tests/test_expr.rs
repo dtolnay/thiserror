@@ -1,5 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
-#![allow(clippy::option_if_let_else)]
+#![allow(clippy::iter_cloned_collect, clippy::option_if_let_else)]
 
 use std::fmt::Display;
 use thiserror::Error;
