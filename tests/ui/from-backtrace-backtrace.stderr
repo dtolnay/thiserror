@@ -1,0 +1,5 @@
+error[E0063]: missing field `1` in initializer of `Error`
+  --> tests/ui/from-backtrace-backtrace.rs:10:12
+   |
+10 | pub struct Error(#[from] #[backtrace] std::io::Error, Backtrace);
+   |            ^^^^^ missing `1`
