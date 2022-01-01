@@ -6,7 +6,7 @@ on:
   schedule: [cron: "40 1 * * *"]
 
 env:
-  RUSTFLAGS: '-Dwarnings'
+  RUSTFLAGS: -Dwarnings
 
 jobs:
   test:
@@ -27,7 +27,7 @@ jobs:
           components: rust-src
       - run: cargo test --all
         env:
-          RUSTFLAGS: ${{matrix.rustflags}}
+          RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 
   msrv:
     name: Rust 1.31.0
