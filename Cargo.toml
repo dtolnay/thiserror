@@ -1,6 +1,6 @@
 [package]
 name = "thiserror"
-version = "1.0.30"
+version = "1.0.31"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 rust-version = "1.31"
@@ -12,7 +12,7 @@ categories = ["rust-patterns"]
 readme = "README.md"
 
 [dependencies]
-thiserror-impl = { version = "=1.0.30", path = "impl" }
+thiserror-impl = { version = "=1.0.31", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0"
