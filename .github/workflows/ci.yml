@@ -35,6 +35,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@1.31.0
+        with:
+          components: rust-src
       - run: cargo check
 
   clippy:
@@ -43,7 +45,9 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@clippy
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy, rust-src
       - run: cargo clippy --tests -- -Dclippy::all -Dclippy::pedantic
 
   miri:
@@ -51,7 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@miri
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
       - run: cargo miri test
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
