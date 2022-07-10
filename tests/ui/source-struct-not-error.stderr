@@ -3,8 +3,8 @@ error[E0599]: the method `as_dyn_error` exists for struct `NotError`, but its tr
     |
 4   | struct NotError;
     | ---------------
-    | |      |
-    | |      method `as_dyn_error` not found for this struct
+    | |
+    | method `as_dyn_error` not found for this struct
     | doesn't satisfy `NotError: AsDynError`
     | doesn't satisfy `NotError: std::error::Error`
 ...
