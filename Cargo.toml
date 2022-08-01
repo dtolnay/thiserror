@@ -2,14 +2,14 @@
 name = "thiserror"
 version = "1.0.31"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
-edition = "2018"
-rust-version = "1.31"
-license = "MIT OR Apache-2.0"
-description = "derive(Error)"
-repository = "https://github.com/dtolnay/thiserror"
-documentation = "https://docs.rs/thiserror"
 categories = ["rust-patterns"]
+description = "derive(Error)"
+documentation = "https://docs.rs/thiserror"
+edition = "2018"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/dtolnay/thiserror"
+rust-version = "1.31"
 
 [dependencies]
 thiserror-impl = { version = "=1.0.31", path = "impl" }
