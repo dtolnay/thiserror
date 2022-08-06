@@ -117,6 +117,7 @@ pub enum DataStoreError {
 
   ```rust
   #[derive(Error, Debug)]
+  #[error("my error")]
   pub struct MyError {
       msg: String,
       #[source]  // optional if field name is `source`
@@ -131,6 +132,7 @@ pub enum DataStoreError {
   use std::backtrace::Backtrace;
 
   #[derive(Error, Debug)]
+  #[error("my error")]
   pub struct MyError {
       msg: String,
       backtrace: Backtrace,  // automatically detected
