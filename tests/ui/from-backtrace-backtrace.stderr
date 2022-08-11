@@ -1,13 +1,5 @@
 error: deriving From requires no fields other than source and backtrace
-  --> tests/ui/from-backtrace-backtrace.rs:10:18
-   |
-10 | pub struct Error(#[from] #[backtrace] std::io::Error, Backtrace);
-   |                  ^^^^^^^
-
-warning: the feature `backtrace` has been stable since 1.65.0 and no longer requires an attribute to enable
- --> tests/ui/from-backtrace-backtrace.rs:3:12
+ --> tests/ui/from-backtrace-backtrace.rs:8:18
   |
-3 | #![feature(backtrace)]
-  |            ^^^^^^^^^
-  |
-  = note: `#[warn(stable_features)]` on by default
+8 | pub struct Error(#[from] #[backtrace] std::io::Error, Backtrace);
+  |                  ^^^^^^^
