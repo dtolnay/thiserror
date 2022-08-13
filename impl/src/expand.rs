@@ -53,7 +53,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let source_method = source_body.map(|body| {
         quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::private::AsDynError;
+                use thiserror::__private::AsDynError;
                 #body
             }
         }
@@ -84,7 +84,7 @@ fn impl_struct(input: Struct) -> TokenStream {
                 }
             };
             quote! {
-                use thiserror::private::AsDynError;
+                use thiserror::__private::AsDynError;
                 #combinator
             }
         } else if type_is_option(backtrace_field.ty) {
@@ -115,7 +115,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let use_as_display = if display.has_bonus_display {
             Some(quote! {
                 #[allow(unused_imports)]
-                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+                use thiserror::__private::{DisplayAsDisplay, PathAsDisplay};
             })
         } else {
             None
@@ -226,7 +226,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         });
         Some(quote! {
             fn source(&self) -> std::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::private::AsDynError;
+                use thiserror::__private::AsDynError;
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
@@ -271,7 +271,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #source: #varsource,
                             ..
                         } => {
-                            use thiserror::private::AsDynError;
+                            use thiserror::__private::AsDynError;
                             #combinator
                         }
                     }
@@ -292,7 +292,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     };
                     quote! {
                         #ty::#ident {#backtrace: #varsource, ..} => {
-                            use thiserror::private::AsDynError;
+                            use thiserror::__private::AsDynError;
                             #source_backtrace
                         }
                     }
@@ -335,7 +335,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         }) {
             Some(quote! {
                 #[allow(unused_imports)]
-                use thiserror::private::{DisplayAsDisplay, PathAsDisplay};
+                use thiserror::__private::{DisplayAsDisplay, PathAsDisplay};
             })
         } else {
             None
