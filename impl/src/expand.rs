@@ -67,12 +67,12 @@ fn impl_struct(input: Struct) -> TokenStream {
             let source_provide = if type_is_option(source_field.ty) {
                 quote_spanned! {source.span()=>
                     if let std::option::Option::Some(source) = &self.#source {
-                        source.as_dyn_error().provide(#demand);
+                        source.provide(#demand);
                     }
                 }
             } else {
                 quote_spanned! {source.span()=>
-                    self.#source.as_dyn_error().provide(#demand);
+                    self.#source.provide(#demand);
                 }
             };
             let self_provide = if source == backtrace {
@@ -89,7 +89,8 @@ fn impl_struct(input: Struct) -> TokenStream {
                 })
             };
             quote! {
-                use thiserror::__private::AsDynError;
+                #[allow(unused_imports)]
+                use std::error::Error as _;
                 #source_provide
                 #self_provide
             }
@@ -259,12 +260,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let source_provide = if type_is_option(source_field.ty) {
                         quote_spanned! {source.span()=>
                             if let std::option::Option::Some(source) = #varsource {
-                                source.as_dyn_error().provide(#demand);
+                                source.provide(#demand);
                             }
                         }
                     } else {
                         quote_spanned! {source.span()=>
-                            #varsource.as_dyn_error().provide(#demand);
+                            #varsource.provide(#demand);
                         }
                     };
                     let self_provide = if type_is_option(backtrace_field.ty) {
@@ -284,7 +285,8 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #source: #varsource,
                             ..
                         } => {
-                            use thiserror::__private::AsDynError;
+                            #[allow(unused_imports)]
+                            use std::error::Error as _;
                             #source_provide
                             #self_provide
                         }
@@ -298,17 +300,18 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let source_provide = if type_is_option(source_field.ty) {
                         quote_spanned! {backtrace.span()=>
                             if let std::option::Option::Some(source) = #varsource {
-                                source.as_dyn_error().provide(#demand);
+                                source.provide(#demand);
                             }
                         }
                     } else {
                         quote_spanned! {backtrace.span()=>
-                            #varsource.as_dyn_error().provide(#demand);
+                            #varsource.provide(#demand);
                         }
                     };
                     quote! {
                         #ty::#ident {#backtrace: #varsource, ..} => {
-                            use thiserror::__private::AsDynError;
+                            #[allow(unused_imports)]
+                            use std::error::Error as _;
                             #source_provide
                         }
                     }
