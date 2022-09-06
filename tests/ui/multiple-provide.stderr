@@ -1,0 +1,16 @@
+error[E0034]: multiple applicable items in scope
+  --> tests/ui/multiple-provide.rs:13:5
+   |
+13 |     x: std::io::Error,
+   |     ^ multiple `provide` found
+   |
+   = note: candidate #1 is defined in an impl of the trait `Provider` for the type `E`
+   = note: candidate #2 is defined in an impl of the trait `std::error::Error` for the type `std::io::Error`
+help: disambiguate the associated function for candidate #1
+   |
+13 |     Provider::provide(&x, Error): std::io::Error,
+   |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+help: disambiguate the associated function for candidate #2
+   |
+13 |     std::error::Error::provide(&x, Error): std::io::Error,
+   |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
