@@ -21,6 +21,7 @@ pub mod structs {
     use super::{Inner, InnerBacktrace};
     use std::any;
     use std::backtrace::Backtrace;
+    use std::error::Error;
     use std::sync::Arc;
     use thiserror::Error;
 
@@ -93,6 +94,13 @@ pub mod structs {
         source: anyhow::Error,
     }
 
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct BoxDynErrorBacktrace {
+        #[backtrace]
+        source: Box<dyn Error>,
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace {
@@ -131,6 +139,13 @@ pub mod structs {
 
         let error = AnyhowBacktrace {
             source: anyhow::Error::msg("..."),
+        };
+        assert!(any::request_ref::<Backtrace>(&error).is_some());
+
+        let error = BoxDynErrorBacktrace {
+            source: Box::new(PlainBacktrace {
+                backtrace: Backtrace::capture(),
+            }),
         };
         assert!(any::request_ref::<Backtrace>(&error).is_some());
     }
