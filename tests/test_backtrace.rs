@@ -86,6 +86,13 @@ pub mod structs {
         backtrace: Arc<Backtrace>,
     }
 
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct AnyhowBacktrace {
+        #[backtrace]
+        source: anyhow::Error,
+    }
+
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace {
@@ -120,6 +127,11 @@ pub mod structs {
         assert!(any::request_ref::<Backtrace>(&error).is_some());
 
         let error = ArcBacktraceFrom::from(Inner);
+        assert!(any::request_ref::<Backtrace>(&error).is_some());
+
+        let error = AnyhowBacktrace {
+            source: anyhow::Error::msg("..."),
+        };
         assert!(any::request_ref::<Backtrace>(&error).is_some());
     }
 }
