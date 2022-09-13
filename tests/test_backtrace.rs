@@ -149,6 +149,25 @@ pub mod structs {
         };
         assert!(any::request_ref::<Backtrace>(&error).is_some());
     }
+
+    // https://github.com/dtolnay/thiserror/issues/185 -- std::error::Error and
+    // std::any::Provide both have a method called 'provide', so directly
+    // calling it from generated code could be ambiguous.
+    #[test]
+    fn test_provide_name_collision() {
+        use std::any::Provider;
+
+        #[derive(Error, Debug)]
+        #[error("...")]
+        struct MyError {
+            #[source]
+            #[backtrace]
+            x: std::io::Error,
+        }
+
+        let _: dyn Error;
+        let _: dyn Provider;
+    }
 }
 
 #[cfg(thiserror_nightly_testing)]
