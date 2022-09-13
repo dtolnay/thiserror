@@ -1,6 +1,6 @@
 [package]
 name = "thiserror"
-version = "1.0.34"
+version = "1.0.35"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["rust-patterns"]
 description = "derive(Error)"
@@ -13,7 +13,7 @@ repository = "https://github.com/dtolnay/thiserror"
 rust-version = "1.31"
 
 [dependencies]
-thiserror-impl = { version = "=1.0.34", path = "impl" }
+thiserror-impl = { version = "=1.0.35", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0.65"
