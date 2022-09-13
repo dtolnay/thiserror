@@ -140,7 +140,8 @@ pub mod structs {
         let error = AnyhowBacktrace {
             source: anyhow::Error::msg("..."),
         };
-        assert!(any::request_ref::<Backtrace>(&error).is_some());
+        // FIXME: change back to is_some after `impl Provider for anyhow::Error` exists.
+        assert!(any::request_ref::<Backtrace>(&error).is_none());
 
         let error = BoxDynErrorBacktrace {
             source: Box::new(PlainBacktrace {
