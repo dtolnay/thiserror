@@ -1,4 +1,3 @@
-use self::private::Sealed;
 use std::error::Error;
 use std::panic::UnwindSafe;
 
@@ -41,13 +40,9 @@ impl<'a> AsDynError<'a> for dyn Error + Send + Sync + UnwindSafe + 'a {
     }
 }
 
-mod private {
-    use super::*;
-
-    pub trait Sealed {}
-    impl<'a, T: Error + 'a> Sealed for T {}
-    impl<'a> Sealed for dyn Error + 'a {}
-    impl<'a> Sealed for dyn Error + Send + 'a {}
-    impl<'a> Sealed for dyn Error + Send + Sync + 'a {}
-    impl<'a> Sealed for dyn Error + Send + Sync + UnwindSafe + 'a {}
-}
+pub trait Sealed {}
+impl<'a, T: Error + 'a> Sealed for T {}
+impl<'a> Sealed for dyn Error + 'a {}
+impl<'a> Sealed for dyn Error + Send + 'a {}
+impl<'a> Sealed for dyn Error + Send + Sync + 'a {}
+impl<'a> Sealed for dyn Error + Send + Sync + UnwindSafe + 'a {}
