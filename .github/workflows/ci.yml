@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.38.0]
+        rust: [beta, stable, 1.56.0]
         include:
           - rust: nightly
             rustflags: --cfg thiserror_nightly_testing
