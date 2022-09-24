@@ -196,6 +196,24 @@
 //!   }
 //!   ```
 //!
+//!   Another use-case is making semver-resilient opaque error types:
+//!
+//!   ```
+//!   # use thiserror::Error;
+//!   /// `LibError` is public, but opaque and easy to keep compatible.
+//!   #[derive(Error, Debug)]
+//!   #[error(transparent)]
+//!   pub struct LibError(#[from] ErrorRepr);
+//!
+//!   /// `ErrorRepr` is private and easy to change.
+//!   #[derive(Error, Debug)]
+//!   enum ErrorRepr {
+//!       # /*
+//!       ...
+//!       # */
+//!   }
+//!   ```
+//!
 //! - See also the [`anyhow`] library for a convenient single error type to use
 //!   in application code.
 //!
