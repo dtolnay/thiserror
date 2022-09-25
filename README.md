@@ -165,6 +165,27 @@ pub enum DataStoreError {
   }
   ```
 
+  Another use case is hiding implementation details of an error representation
+  behind an opaque error type, so that the representation is able to evolve
+  without breaking the crate's public API.
+
+  ```rust
+  // PublicError is public, but opaque and easy to keep compatible.
+  #[derive(Error, Debug)]
+  #[error(transparent)]
+  pub struct PublicError(#[from] ErrorRepr);
+
+  impl PublicError {
+      // Accessors for anything we do want to expose publicly.
+  }
+
+  // Private and free to change across minor version of the crate.
+  #[derive(Error, Debug)]
+  enum ErrorRepr {
+      ...
+  }
+  ```
+
 - See also the [`anyhow`] library for a convenient single error type to use in
   application code.
 

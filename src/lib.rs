@@ -202,6 +202,7 @@
 //!
 //!   ```
 //!   # use thiserror::Error;
+//!   #
 //!   // PublicError is public, but opaque and easy to keep compatible.
 //!   #[derive(Error, Debug)]
 //!   #[error(transparent)]
