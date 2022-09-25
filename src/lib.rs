@@ -196,16 +196,22 @@
 //!   }
 //!   ```
 //!
-//!   Another use-case is making semver-resilient opaque error types:
+//!   Another use case is hiding implementation details of an error
+//!   representation behind an opaque error type, so that the representation is
+//!   able to evolve without breaking the crate's public API.
 //!
 //!   ```
 //!   # use thiserror::Error;
-//!   /// `LibError` is public, but opaque and easy to keep compatible.
+//!   // PublicError is public, but opaque and easy to keep compatible.
 //!   #[derive(Error, Debug)]
 //!   #[error(transparent)]
-//!   pub struct LibError(#[from] ErrorRepr);
+//!   pub struct PublicError(#[from] ErrorRepr);
 //!
-//!   /// `ErrorRepr` is private and easy to change.
+//!   impl PublicError {
+//!       // Accessors for anything we do want to expose publicly.
+//!   }
+//!
+//!   // Private and free to change across minor version of the crate.
 //!   #[derive(Error, Debug)]
 //!   enum ErrorRepr {
 //!       # /*
