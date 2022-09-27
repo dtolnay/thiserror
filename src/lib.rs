@@ -146,8 +146,9 @@
 //!   # }
 //!   ```
 //!
-//! - The Error trait's `backtrace()` method is implemented to return whichever
-//!   field has a type named `Backtrace`, if any.
+//! - The Error trait's `provide()` method is implemented to provide whichever
+//!   field has a type named `Backtrace`, if any, as a
+//!   `std::backtrace::Backtrace`.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
@@ -163,7 +164,8 @@
 //!
 //! - If a field is both a source (named `source`, or has `#[source]` or
 //!   `#[from]` attribute) *and* is marked `#[backtrace]`, then the Error
-//!   trait's `backtrace()` method is forwarded to the source's backtrace.
+//!   trait's `provide()` method is forwarded to the source's `provide` so that
+//!   both layers of the error share the same backtrace.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
