@@ -117,6 +117,7 @@ pub enum DataStoreError {
 
   ```rust
   #[derive(Error, Debug)]
+  #[error("{msg}: {source}")]
   pub struct MyError {
       msg: String,
       #[source]  // optional if field name is `source`

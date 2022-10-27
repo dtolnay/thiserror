@@ -133,17 +133,12 @@
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
+//!   #[error("{msg}: {source}")]
 //!   pub struct MyError {
 //!       msg: String,
 //!       #[source]  // optional if field name is `source`
 //!       source: anyhow::Error,
 //!   }
-//!   #
-//!   # impl Display for MyError {
-//!   #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-//!   #         unimplemented!()
-//!   #     }
-//!   # }
 //!   ```
 //!
 //! - The Error trait's `provide()` method is implemented to provide whichever
