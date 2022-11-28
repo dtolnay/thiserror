@@ -1,4 +1,5 @@
-use std::fmt::Display;
+use core::fmt::Display;
+#[cfg(feature = "std")]
 use std::path::{self, Path, PathBuf};
 
 pub trait DisplayAsDisplay {
@@ -11,16 +12,19 @@ impl<T: Display> DisplayAsDisplay for &T {
     }
 }
 
+#[cfg(feature = "std")]
 pub trait PathAsDisplay {
     fn as_display(&self) -> path::Display<'_>;
 }
 
+#[cfg(feature = "std")]
 impl PathAsDisplay for Path {
     fn as_display(&self) -> path::Display<'_> {
         self.display()
     }
 }
 
+#[cfg(feature = "std")]
 impl PathAsDisplay for PathBuf {
     fn as_display(&self) -> path::Display<'_> {
         self.display()

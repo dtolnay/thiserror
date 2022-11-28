@@ -236,6 +236,10 @@
     clippy::wildcard_imports,
 )]
 #![cfg_attr(provide_any, feature(provide_any))]
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
+#![no_std]
+#[cfg(feature = "std")]
+extern crate std;
 
 mod aserror;
 mod display;
@@ -247,8 +251,15 @@ pub use thiserror_impl::*;
 // Not public API.
 #[doc(hidden)]
 pub mod __private {
+    #[cfg(not(feature = "std"))]
+    pub use core::error;
+    #[cfg(feature = "std")]
+    pub use std::error;
+
     pub use crate::aserror::AsDynError;
-    pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
+    pub use crate::display::DisplayAsDisplay;
+    #[cfg(feature = "std")]
+    pub use crate::display::PathAsDisplay;
     #[cfg(provide_any)]
     pub use crate::provide::ThiserrorProvide;
 }

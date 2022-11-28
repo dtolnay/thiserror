@@ -1,4 +1,7 @@
-use std::error::Error;
+use crate::__private::error::Error;
+#[cfg(not(feature = "std"))]
+use core::panic::UnwindSafe;
+#[cfg(feature = "std")]
 use std::panic::UnwindSafe;
 
 pub trait AsDynError<'a>: Sealed {

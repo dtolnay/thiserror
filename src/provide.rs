@@ -1,4 +1,4 @@
-use std::any::{Demand, Provider};
+use core::any::{Demand, Provider};
 
 pub trait ThiserrorProvide: Sealed {
     fn thiserror_provide<'a>(&'a self, demand: &mut Demand<'a>);

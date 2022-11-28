@@ -14,6 +14,10 @@ rust-version = "1.31"
 [dependencies]
 thiserror-impl = { version = "=1.0.38", path = "impl" }
 
+[features]
+default = ["std"]
+std = ["thiserror-impl/std"]
+
 [dev-dependencies]
 anyhow = "1.0.65"
 ref-cast = "1.0"

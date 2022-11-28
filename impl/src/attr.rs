@@ -208,6 +208,6 @@ impl ToTokens for Display<'_> {
 impl ToTokens for Trait {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let trait_name = format_ident!("{}", format!("{:?}", self));
-        tokens.extend(quote!(std::fmt::#trait_name));
+        tokens.extend(quote!(core::fmt::#trait_name));
     }
 }
