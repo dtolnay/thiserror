@@ -15,7 +15,7 @@ error[E0599]: the method `as_dyn_error` exists for reference `&NotError`, but it
            which is required by `NotError: AsDynError<'_>`
            `&NotError: std::error::Error`
            which is required by `&NotError: AsDynError<'_>`
-note: the following trait must be implemented
+note: the trait `std::error::Error` must be implemented
   --> $RUST/core/src/error.rs
    |
    | pub trait Error: Debug + Display {
