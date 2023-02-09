@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![allow(
     clippy::blocks_in_if_conditions,
     clippy::cast_lossless,
