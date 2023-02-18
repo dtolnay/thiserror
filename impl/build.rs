@@ -7,7 +7,7 @@ use std::str;
 // This code exercises the surface area that we expect of the Provider API. If
 // the current toolchain is able to compile it, then thiserror is able to use
 // providers for backtrace support.
-const PROVIDE_ANY_PROBE: &str = r#"
+const PROBE: &str = r#"
     #![feature(provide_any)]
 
     use std::any::{Demand, Provider};
@@ -17,34 +17,18 @@ const PROVIDE_ANY_PROBE: &str = r#"
     }
 "#;
 
-// This code checks to see if std::backtrace::Backtrace is available. If the
-// current toolchain is able to compile it, then thiserror should run tests
-// relating to backtrace support
-const BACKTRACE_PROBE: &str = r#"
-    use std::backtrace::Backtrace;
-
-    fn _f() -> Backtrace {
-        Backtrace::capture()
-    }
-"#;
-
 fn main() {
-    validate_probe(PROVIDE_ANY_PROBE, "provide_any");
-    validate_probe(BACKTRACE_PROBE, "has_backtrace");
-}
-
-fn validate_probe(probe: &str, config_name: &str) {
-    match compile_probe(probe) {
-        Some(status) if status.success() => println!("cargo:rustc-cfg={}", config_name),
+    match compile_probe() {
+        Some(status) if status.success() => println!("cargo:rustc-cfg=provide_any"),
         _ => {}
     }
 }
 
-fn compile_probe(probe: &str) -> Option<ExitStatus> {
+fn compile_probe() -> Option<ExitStatus> {
     let rustc = env::var_os("RUSTC")?;
     let out_dir = env::var_os("OUT_DIR")?;
     let probefile = Path::new(&out_dir).join("probe.rs");
-    fs::write(&probefile, probe).ok()?;
+    fs::write(&probefile, PROBE).ok()?;
 
     // Make sure to pick up Cargo rustc configuration.
     let mut cmd = if let Some(wrapper) = env::var_os("RUSTC_WRAPPER") {

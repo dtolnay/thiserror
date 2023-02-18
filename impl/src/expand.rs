@@ -59,57 +59,61 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let provide_method = input.backtrace_field().map(|backtrace_field| {
-        let demand = quote!(demand);
-        let backtrace = &backtrace_field.member;
-        let body = if let Some(source_field) = input.source_field() {
-            let source = &source_field.member;
-            let source_provide = if type_is_option(source_field.ty) {
-                quote_spanned! {source.span()=>
-                    if let std::option::Option::Some(source) = &self.#source {
-                        source.thiserror_provide(#demand);
+    let provide_method = if cfg!(provide_any) {
+        input.backtrace_field().map(|backtrace_field| {
+            let demand = quote!(demand);
+            let backtrace = &backtrace_field.member;
+            let body = if let Some(source_field) = input.source_field() {
+                let source = &source_field.member;
+                let source_provide = if type_is_option(source_field.ty) {
+                    quote_spanned! {source.span()=>
+                        if let std::option::Option::Some(source) = &self.#source {
+                            source.thiserror_provide(#demand);
+                        }
                     }
+                } else {
+                    quote_spanned! {source.span()=>
+                        self.#source.thiserror_provide(#demand);
+                    }
+                };
+                let self_provide = if source == backtrace {
+                    None
+                } else if type_is_option(backtrace_field.ty) {
+                    Some(quote! {
+                        if let std::option::Option::Some(backtrace) = &self.#backtrace {
+                            #demand.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                        }
+                    })
+                } else {
+                    Some(quote! {
+                        #demand.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
+                    })
+                };
+                quote! {
+                    use thiserror::__private::ThiserrorProvide;
+                    #source_provide
+                    #self_provide
                 }
-            } else {
-                quote_spanned! {source.span()=>
-                    self.#source.thiserror_provide(#demand);
-                }
-            };
-            let self_provide = if source == backtrace {
-                None
             } else if type_is_option(backtrace_field.ty) {
-                Some(quote! {
+                quote! {
                     if let std::option::Option::Some(backtrace) = &self.#backtrace {
                         #demand.provide_ref::<std::backtrace::Backtrace>(backtrace);
                     }
-                })
+                }
             } else {
-                Some(quote! {
+                quote! {
                     #demand.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
-                })
+                }
             };
             quote! {
-                use thiserror::__private::ThiserrorProvide;
-                #source_provide
-                #self_provide
-            }
-        } else if type_is_option(backtrace_field.ty) {
-            quote! {
-                if let std::option::Option::Some(backtrace) = &self.#backtrace {
-                    #demand.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                fn provide<'_demand>(&'_demand self, #demand: &mut std::any::Demand<'_demand>) {
+                    #body
                 }
             }
-        } else {
-            quote! {
-                #demand.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
-            }
-        };
-        quote! {
-            fn provide<'_demand>(&'_demand self, #demand: &mut std::any::Demand<'_demand>) {
-                #body
-            }
-        }
-    });
+        })
+    } else {
+        None
+    };
 
     let mut display_implied_bounds = Set::new();
     let display_body = if input.attrs.transparent.is_some() {
@@ -245,7 +249,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         None
     };
 
-    let provide_method = if input.has_backtrace() {
+    let provide_method = if cfg!(provide_any) && input.has_backtrace() {
         let demand = quote!(demand);
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;

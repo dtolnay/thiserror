@@ -1,5 +1,5 @@
 #![cfg_attr(
-    thiserror_nightly_testing,
+    provide_any,
     feature(error_generic_member_access, provide_any)
 )]
 
@@ -9,16 +9,17 @@ use thiserror::Error;
 #[error("...")]
 pub struct Inner;
 
-#[cfg(thiserror_nightly_testing)]
+#[cfg(has_backtrace)]
 #[derive(Error, Debug)]
 #[error("...")]
 pub struct InnerBacktrace {
     backtrace: std::backtrace::Backtrace,
 }
 
-#[cfg(thiserror_nightly_testing)]
+#[cfg(has_backtrace)]
 pub mod structs {
     use super::{Inner, InnerBacktrace};
+    #[cfg(thiserror_nightly_testing)]
     use std::any;
     use std::backtrace::Backtrace;
     use std::error::Error;
@@ -101,6 +102,7 @@ pub mod structs {
         source: Box<dyn Error>,
     }
 
+    #[cfg(thiserror_nightly_testing)]
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace {
@@ -150,6 +152,50 @@ pub mod structs {
         assert!(any::request_ref::<Backtrace>(&error).is_some());
     }
 
+    #[cfg(not(thiserror_nightly_testing))]
+    #[allow(unused_must_use)]
+    #[test]
+    // Make sure we can compile a derived Error for structures containing backtraces
+    fn test_backtrace() {
+        PlainBacktrace {
+            backtrace: Backtrace::capture(),
+        };
+
+        ExplicitBacktrace {
+            backtrace: Backtrace::capture(),
+        };
+
+        OptBacktrace {
+            backtrace: Some(Backtrace::capture()),
+        };
+
+        ArcBacktrace {
+            backtrace: Arc::new(Backtrace::capture()),
+        };
+
+        BacktraceFrom::from(Inner);
+
+        CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
+
+        let error = OptBacktraceFrom::from(Inner);
+        assert!(error.backtrace.is_some());
+
+        ArcBacktraceFrom::from(Inner);
+
+        AnyhowBacktrace {
+            source: anyhow::Error::msg("..."),
+        };
+
+        BoxDynErrorBacktrace {
+            source: Box::new(PlainBacktrace {
+                backtrace: Backtrace::capture(),
+            }),
+        };
+    }
+
+    #[cfg(thiserror_nightly_testing)]
     // https://github.com/dtolnay/thiserror/issues/185 -- std::error::Error and
     // std::any::Provide both have a method called 'provide', so directly
     // calling it from generated code could be ambiguous.
@@ -170,9 +216,10 @@ pub mod structs {
     }
 }
 
-#[cfg(thiserror_nightly_testing)]
+#[cfg(has_backtrace)]
 pub mod enums {
     use super::{Inner, InnerBacktrace};
+    #[cfg(thiserror_nightly_testing)]
     use std::any;
     use std::backtrace::Backtrace;
     use std::sync::Arc;
@@ -254,6 +301,7 @@ pub mod enums {
         },
     }
 
+    #[cfg(thiserror_nightly_testing)]
     #[test]
     fn test_backtrace() {
         let error = PlainBacktrace::Test {
@@ -290,8 +338,47 @@ pub mod enums {
         let error = ArcBacktraceFrom::from(Inner);
         assert!(any::request_ref::<Backtrace>(&error).is_some());
     }
+
+    #[cfg(not(thiserror_nightly_testing))]
+    #[allow(unused_must_use)]
+    #[test]
+    // Make sure we can compile a derived Error for enums containing backtraces
+    fn test_backtrace() {
+        PlainBacktrace::Test {
+            backtrace: Backtrace::capture(),
+        };
+
+        ExplicitBacktrace::Test {
+            backtrace: Backtrace::capture(),
+        };
+
+        OptBacktrace::Test {
+            backtrace: Some(Backtrace::capture()),
+        };
+
+        ArcBacktrace::Test {
+            backtrace: Arc::new(Backtrace::capture()),
+        };
+
+        BacktraceFrom::from(Inner);
+
+        CombinedBacktraceFrom::from(InnerBacktrace {
+            backtrace: Backtrace::capture(),
+        });
+
+        let error = OptBacktraceFrom::from(Inner);
+        assert!({
+            let OptBacktraceFrom::Test {
+                backtrace,
+                source: _,
+            } = error;
+            backtrace.is_some()
+        });
+
+        ArcBacktraceFrom::from(Inner);
+    }
 }
 
 #[test]
-#[cfg_attr(not(thiserror_nightly_testing), ignore)]
+#[cfg_attr(not(has_backtrace), ignore)]
 fn test_backtrace() {}
