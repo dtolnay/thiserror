@@ -32,6 +32,9 @@ jobs:
         with:
           toolchain: ${{matrix.rust}}
           components: rust-src
+      - name: Enable type layout randomization
+        run: echo RUSTFLAGS=${RUSTFLAGS}\ -Zrandomize-layout >> $GITHUB_ENV
+        if: matrix.rust == 'nightly'
       - name: Enable nightly-only tests
         run: echo RUSTFLAGS=${RUSTFLAGS}\ --cfg=thiserror_nightly_testing >> $GITHUB_ENV
         if: matrix.rust == 'nightly'
