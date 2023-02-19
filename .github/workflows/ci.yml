@@ -24,10 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.56.0]
-        include:
-          - rust: nightly
-            rustflags: --cfg thiserror_nightly_testing
+        rust: [nightly, beta, stable, 1.56.0]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
@@ -35,9 +32,10 @@ jobs:
         with:
           toolchain: ${{matrix.rust}}
           components: rust-src
+      - name: Enable nightly-only tests
+        run: echo RUSTFLAGS=${RUSTFLAGS}\ --cfg=thiserror_nightly_testing >> $GITHUB_ENV
+        if: matrix.rust == 'nightly'
       - run: cargo test --all
-        env:
-          RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 
   msrv:
     name: Rust 1.31.0
