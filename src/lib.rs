@@ -228,7 +228,7 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
-#![doc(html_root_url = "https://docs.rs/thiserror/1.0.38")]
+#![doc(html_root_url = "https://docs.rs/thiserror/1.0.39")]
 #![allow(
     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7421
     clippy::doc_markdown,
