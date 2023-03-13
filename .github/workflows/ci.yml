@@ -40,19 +40,6 @@ jobs:
         if: matrix.rust == 'nightly'
       - run: cargo test --all
 
-  msrv:
-    name: Rust 1.31.0
-    needs: pre_ci
-    if: needs.pre_ci.outputs.continue
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@1.31.0
-        with:
-          components: rust-src
-      - run: cargo check
-
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
