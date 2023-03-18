@@ -9,7 +9,7 @@ edition = "2018"
 keywords = ["error", "error-handling", "derive"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
-rust-version = "1.31"
+rust-version = "1.56"
 
 [dependencies]
 thiserror-impl = { version = "=1.0.39", path = "impl" }
