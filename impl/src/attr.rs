@@ -57,13 +57,13 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         if attr.path().is_ident("error") {
             parse_error_attribute(&mut attrs, attr)?;
         } else if attr.path().is_ident("source") {
-            require_empty_attribute(attr)?;
+            attr.meta.require_path_only()?;
             if attrs.source.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
             attrs.source = Some(attr);
         } else if attr.path().is_ident("backtrace") {
-            require_empty_attribute(attr)?;
+            attr.meta.require_path_only()?;
             if attrs.backtrace.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[backtrace] attribute"));
             }
@@ -191,18 +191,6 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
         tokens.push(token);
     }
     Ok(TokenStream::from_iter(tokens))
-}
-
-fn require_empty_attribute(attr: &Attribute) -> Result<()> {
-    let error_span = match &attr.meta {
-        Meta::Path(_) => return Ok(()),
-        Meta::List(meta) => meta.delimiter.span().open(),
-        Meta::NameValue(meta) => meta.eq_token.span,
-    };
-    Err(Error::new(
-        error_span,
-        "unexpected token in thiserror attribute",
-    ))
 }
 
 impl ToTokens for Display<'_> {
