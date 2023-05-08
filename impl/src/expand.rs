@@ -407,7 +407,14 @@ fn impl_enum(input: Enum) -> TokenStream {
                     #[allow(unused_variables, deprecated, clippy::used_underscore_binding)]
                     match #void_deref self {
                         #(#arms,)*
+                    }?;
+                    if __formatter.alternate() {
+                        if let Some(source) = std::error::Error::source(self) {
+                            std::fmt::Formatter::write_str(__formatter, ": ")?;
+                            std::fmt::Display::fmt(source, __formatter)?;
+                        }
                     }
+                    Ok(())
                 }
             }
         })
