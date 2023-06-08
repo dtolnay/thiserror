@@ -1,5 +1,10 @@
 error: missing #[error("...")] display attribute
  --> tests/ui/missing-fmt.rs:7:5
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+...
 7 |     B(usize),
   |     ^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

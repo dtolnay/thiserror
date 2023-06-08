@@ -1,5 +1,10 @@
 error: transparent variant can't contain #[source]
  --> tests/ui/transparent-enum-source.rs:6:11
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+...
 6 |     Other(#[source] anyhow::Error),
   |           ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

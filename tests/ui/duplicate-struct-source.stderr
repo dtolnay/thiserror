@@ -1,5 +1,10 @@
 error: duplicate #[source] attribute
  --> tests/ui/duplicate-struct-source.rs:7:5
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+...
 7 |     #[source]
   |     ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

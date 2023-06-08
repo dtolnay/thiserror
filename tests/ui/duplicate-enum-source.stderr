@@ -1,5 +1,10 @@
 error: duplicate #[source] attribute
  --> tests/ui/duplicate-enum-source.rs:8:9
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+...
 8 |         #[source]
   |         ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

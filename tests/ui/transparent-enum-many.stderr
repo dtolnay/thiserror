@@ -1,6 +1,11 @@
 error: #[error(transparent)] requires exactly one field
  --> tests/ui/transparent-enum-many.rs:5:5
   |
+3 |   #[derive(Error, Debug)]
+  |            ----- in this derive macro expansion
+4 |   pub enum Error {
 5 | /     #[error(transparent)]
 6 | |     Other(anyhow::Error, String),
   | |________________________________^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

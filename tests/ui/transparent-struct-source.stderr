@@ -1,5 +1,10 @@
 error: transparent error struct can't contain #[source]
  --> tests/ui/transparent-struct-source.rs:5:18
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+4 | #[error(transparent)]
 5 | pub struct Error(#[source] anyhow::Error);
   |                  ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

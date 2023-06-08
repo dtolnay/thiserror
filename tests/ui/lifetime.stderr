@@ -1,11 +1,21 @@
 error: non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static
  --> tests/ui/lifetime.rs:6:26
   |
+4 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
+5 | #[error("error")]
 6 | struct Error<'a>(#[from] Inner<'a>);
   |                          ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static
   --> tests/ui/lifetime.rs:15:17
    |
+12 | #[derive(Error, Debug)]
+   |          ----- in this derive macro expansion
+...
 15 |     Foo(#[from] Generic<&'a str>),
    |                 ^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
