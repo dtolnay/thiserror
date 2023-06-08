@@ -1,10 +1,5 @@
 error: #[error(transparent)] needs to go outside the enum or struct, not on an individual field
  --> tests/ui/bad-field-attr.rs:5:18
   |
-3 | #[derive(Error, Debug)]
-  |          ----- in this derive macro expansion
-4 | #[error(transparent)]
 5 | pub struct Error(#[error(transparent)] std::io::Error);
   |                  ^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

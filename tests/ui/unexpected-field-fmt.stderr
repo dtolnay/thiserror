@@ -1,10 +1,5 @@
 error: not expected here; the #[error(...)] attribute belongs on top of a struct or an enum variant
  --> tests/ui/unexpected-field-fmt.rs:6:9
   |
-3 | #[derive(Error, Debug)]
-  |          ----- in this derive macro expansion
-...
 6 |         #[error("...")]
   |         ^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

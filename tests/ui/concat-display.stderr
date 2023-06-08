@@ -7,4 +7,4 @@ error: expected string literal
 13 | error_type!(Error, "foo");
    | ------------------------- in this macro invocation
    |
-   = note: this error originates in the derive macro `Error` which comes from the expansion of the macro `error_type` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `error_type` (in Nightly builds, run with -Z macro-backtrace for more info)

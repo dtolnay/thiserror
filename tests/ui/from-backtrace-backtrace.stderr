@@ -1,10 +1,5 @@
 error: deriving From requires no fields other than source and backtrace
  --> tests/ui/from-backtrace-backtrace.rs:8:18
   |
-6 | #[derive(Error, Debug)]
-  |          ----- in this derive macro expansion
-7 | #[error("...")]
 8 | pub struct Error(#[from] #[backtrace] std::io::Error, Backtrace);
   |                  ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

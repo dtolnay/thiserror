@@ -1,10 +1,5 @@
 error: #[from] is only supported on the source field, not any other field
  --> tests/ui/from-not-source.rs:7:5
   |
-3 | #[derive(Debug, Error)]
-  |                 ----- in this derive macro expansion
-...
 7 |     #[from]
   |     ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
