@@ -40,6 +40,18 @@ jobs:
         if: matrix.rust == 'nightly'
       - run: cargo test --all
 
+  minimal:
+    name: Minimal versions
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo generate-lockfile -Z minimal-versions
+      - run: cargo check --locked
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
