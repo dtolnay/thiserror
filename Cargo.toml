@@ -15,10 +15,10 @@ rust-version = "1.56"
 thiserror-impl = { version = "=1.0.40", path = "impl" }
 
 [dev-dependencies]
-anyhow = "1.0.65"
-ref-cast = "1.0"
-rustversion = "1.0"
-trybuild = { version = "1.0.66", features = ["diff"] }
+anyhow = "1.0.71"
+ref-cast = "1.0.18"
+rustversion = "1.0.13"
+trybuild = { version = "1.0.81", features = ["diff"] }
 
 [workspace]
 members = ["impl"]
