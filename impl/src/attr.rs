@@ -197,7 +197,7 @@ impl ToTokens for Display<'_> {
         let fmt = &self.fmt;
         let args = &self.args;
         tokens.extend(quote! {
-            write!(__formatter, #fmt #args)
+            thiserror::__private::write!(__formatter, #fmt #args)
         });
     }
 }
