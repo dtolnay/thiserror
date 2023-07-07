@@ -252,6 +252,4 @@ pub mod __private {
     pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
     #[cfg(provide_any)]
     pub use crate::provide::ThiserrorProvide;
-
-    pub use std::write;
 }
