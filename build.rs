@@ -4,9 +4,9 @@ use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::str;
 
-// This code exercises the surface area that we expect of the Provider API. If
-// the current toolchain is able to compile it, then thiserror is able to use
-// providers for backtrace support.
+// This code exercises the surface area that we expect of the Error trait's generic member access.
+// If the current toolchain is able to compile it, then thiserror is able to offer backtrace
+// support via generic member access.
 const PROBE: &str = r#"
     #![feature(error_generic_member_access)]
 
