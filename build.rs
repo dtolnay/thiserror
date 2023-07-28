@@ -8,19 +8,36 @@ use std::str;
 // the current toolchain is able to compile it, then thiserror is able to use
 // providers for backtrace support.
 const PROBE: &str = r#"
-    #![feature(provide_any)]
+    #![feature(error_generic_member_access)]
 
-    use std::any::{Demand, Provider};
+    use std::any::Request;
 
-    fn _f<'a, P: Provider>(p: &'a P, demand: &mut Demand<'a>) {
-        p.provide(demand);
+    #[derive(Debug)]
+    struct ErrorWithGenericMemberAccess {
+        it: u32,
+    }
+
+    impl std::fmt::Display for ErrorWithGenericMemberAccess {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "ErrorWithGenericMemberAccess")
+        }
+    }
+
+    impl std::error::Error for ErrorWithGenericMemberAccess {
+        fn provide<'a>(&'a self, request: &mut Request<'a>) {
+            request.provide_value::<u32>(self.it);
+        }
+    }
+
+    fn _get_u32(e: &dyn std::error::Error) -> Option<u32> {
+        e.request_value::<u32>()
     }
 "#;
 
 fn main() {
     match compile_probe() {
-        Some(status) if status.success() => println!("cargo:rustc-cfg=provide_any"),
-        _ => {}
+        Some(status) if status.success() => println!("cargo:rustc-cfg=error_generic_member_access"),
+        _ => {},
     }
 }
 
