@@ -240,8 +240,6 @@
 
 mod aserror;
 mod display;
-#[cfg(error_generic_member_access)]
-mod provide;
 
 pub use thiserror_impl::*;
 
@@ -250,6 +248,4 @@ pub use thiserror_impl::*;
 pub mod __private {
     pub use crate::aserror::AsDynError;
     pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
-    #[cfg(error_generic_member_access)]
-    pub use crate::provide::ThiserrorProvide;
 }
