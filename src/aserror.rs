@@ -1,4 +1,4 @@
-use std::error::Error;
+use crate::__private::Error;
 use std::panic::UnwindSafe;
 
 pub trait AsDynError<'a>: Sealed {

@@ -252,4 +252,5 @@ pub mod __private {
     pub use crate::display::AsDisplay;
     #[cfg(provide_any)]
     pub use crate::provide::ThiserrorProvide;
+    pub use std::error::Error;
 }
