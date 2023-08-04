@@ -120,14 +120,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         })
     } else if let Some(display) = &input.attrs.display {
         display_implied_bounds = display.implied_bounds.clone();
-        let use_as_display = if display.has_bonus_display {
-            Some(quote! {
-                #[allow(unused_imports)]
-                use thiserror::__private::{DisplayAsDisplay, PathAsDisplay};
-            })
-        } else {
-            None
-        };
+        let use_as_display = impl_use_as_display(display.has_bonus_display);
         let pat = fields_pat(&input.fields);
         Some(quote! {
             #use_as_display
@@ -351,19 +344,13 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let display_impl = if input.has_display() {
         let mut display_inferred_bounds = InferredBounds::new();
-        let use_as_display = if input.variants.iter().any(|v| {
+        let use_as_display = input.variants.iter().any(|v| {
             v.attrs
                 .display
                 .as_ref()
                 .map_or(false, |display| display.has_bonus_display)
-        }) {
-            Some(quote! {
-                #[allow(unused_imports)]
-                use thiserror::__private::{DisplayAsDisplay, PathAsDisplay};
-            })
-        } else {
-            None
-        };
+        });
+        let use_as_display = impl_use_as_display(use_as_display);
         let void_deref = if input.variants.is_empty() {
             Some(quote!(*))
         } else {
@@ -463,6 +450,17 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
             quote!((#(#vars),*))
         }
         None => quote!({}),
+    }
+}
+
+fn impl_use_as_display(needs_as_display: bool) -> Option<TokenStream> {
+    if needs_as_display {
+        Some(quote! {
+            #[allow(unused_imports)]
+            use thiserror::__private::AsDisplay as _;
+        })
+    } else {
+        None
     }
 }
 

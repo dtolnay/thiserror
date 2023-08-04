@@ -249,7 +249,7 @@ pub use thiserror_impl::*;
 #[doc(hidden)]
 pub mod __private {
     pub use crate::aserror::AsDynError;
-    pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
+    pub use crate::display::AsDisplay;
     #[cfg(provide_any)]
     pub use crate::provide::ThiserrorProvide;
 }
