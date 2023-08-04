@@ -237,6 +237,8 @@
     clippy::wildcard_imports,
 )]
 #![cfg_attr(provide_any, feature(provide_any))]
+#![cfg_attr(feature = "no_std", feature(error_in_core))]
+#![cfg_attr(feature = "no_std", no_std)]
 
 mod aserror;
 mod display;
@@ -252,5 +254,8 @@ pub mod __private {
     pub use crate::display::AsDisplay;
     #[cfg(provide_any)]
     pub use crate::provide::ThiserrorProvide;
+    #[cfg(feature = "no_std")]
+    pub use core::error::Error;
+    #[cfg(not(feature = "no_std"))]
     pub use std::error::Error;
 }
