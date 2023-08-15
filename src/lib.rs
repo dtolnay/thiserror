@@ -236,11 +236,11 @@
     clippy::return_self_not_must_use,
     clippy::wildcard_imports,
 )]
-#![cfg_attr(provide_any, feature(provide_any))]
+#![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
 
 mod aserror;
 mod display;
-#[cfg(provide_any)]
+#[cfg(error_generic_member_access)]
 mod provide;
 
 pub use thiserror_impl::*;
@@ -250,6 +250,6 @@ pub use thiserror_impl::*;
 pub mod __private {
     pub use crate::aserror::AsDynError;
     pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
-    #[cfg(provide_any)]
+    #[cfg(error_generic_member_access)]
     pub use crate::provide::ThiserrorProvide;
 }

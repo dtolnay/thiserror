@@ -4,22 +4,40 @@ use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::str;
 
-// This code exercises the surface area that we expect of the Provider API. If
-// the current toolchain is able to compile it, then thiserror is able to use
-// providers for backtrace support.
+// This code exercises the surface area that we expect of the Error generic
+// member access API. If the current toolchain is able to compile it, then
+// thiserror is able to provide backtrace support.
 const PROBE: &str = r#"
-    #![feature(provide_any)]
+    #![feature(error_generic_member_access)]
 
-    use std::any::{Demand, Provider};
+    use std::error::{Error, Request};
+    use std::fmt::{self, Debug, Display};
 
-    fn _f<'a, P: Provider>(p: &'a P, demand: &mut Demand<'a>) {
-        p.provide(demand);
+    struct MyError(Thing);
+    struct Thing;
+
+    impl Debug for MyError {
+        fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+            unimplemented!()
+        }
+    }
+
+    impl Display for MyError {
+        fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
+            unimplemented!()
+        }
+    }
+
+    impl Error for MyError {
+        fn provide<'a>(&'a self, request: &mut Request<'a>) {
+            request.provide_ref(&self.0);
+        }
     }
 "#;
 
 fn main() {
     match compile_probe() {
-        Some(status) if status.success() => println!("cargo:rustc-cfg=provide_any"),
+        Some(status) if status.success() => println!("cargo:rustc-cfg=error_generic_member_access"),
         _ => {}
     }
 }
