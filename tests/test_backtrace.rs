@@ -136,7 +136,7 @@ pub mod structs {
         let error = AnyhowBacktrace {
             source: anyhow::Error::msg("..."),
         };
-        assert!(error::request_ref::<Backtrace>(&error).is_some() || true); // FIXME
+        assert!(error::request_ref::<Backtrace>(&error).is_some());
 
         let error = BoxDynErrorBacktrace {
             source: Box::new(PlainBacktrace {
