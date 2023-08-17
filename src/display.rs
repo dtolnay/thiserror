@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::path::{self, Path, PathBuf};
 
+#[doc(hidden)]
 pub trait DisplayAsDisplay {
     fn as_display(&self) -> Self;
 }
@@ -11,6 +12,7 @@ impl<T: Display> DisplayAsDisplay for &T {
     }
 }
 
+#[doc(hidden)]
 pub trait PathAsDisplay {
     fn as_display(&self) -> path::Display<'_>;
 }

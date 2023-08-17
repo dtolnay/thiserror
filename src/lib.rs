@@ -248,8 +248,11 @@ pub use thiserror_impl::*;
 // Not public API.
 #[doc(hidden)]
 pub mod __private {
+    #[doc(hidden)]
     pub use crate::aserror::AsDynError;
+    #[doc(hidden)]
     pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
     #[cfg(error_generic_member_access)]
+    #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
 }
