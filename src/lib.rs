@@ -233,7 +233,7 @@
     clippy::module_name_repetitions,
     clippy::needless_lifetimes,
     clippy::return_self_not_must_use,
-    clippy::wildcard_imports,
+    clippy::wildcard_imports
 )]
 #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
 
