@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 use std::path::{Path, PathBuf};
 
 #[doc(hidden)]
@@ -49,7 +49,7 @@ impl PathDisplay {
 
 impl Display for PathDisplay {
     #[inline]
-    fn fmt(&self, fmtr: &mut std::fmt::Formatter) -> std::fmt::Result {
-        self.0.display().fmt(fmtr)
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        self.0.display().fmt(formatter)
     }
 }
