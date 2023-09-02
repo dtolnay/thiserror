@@ -2,37 +2,41 @@ use std::fmt::Display;
 use std::path::{self, Path, PathBuf};
 
 #[doc(hidden)]
-pub trait AsDisplay<'a> {
-    type Target: Display;
+pub trait AsDisplay {
+    type Target<'a>: Display
+    where
+        Self: 'a;
 
-    fn as_display(&'a self) -> Self::Target;
+    fn as_display<'a>(&'a self) -> Self::Target<'a>;
 }
 
-impl<'a, T> AsDisplay<'a> for &T
+impl<T> AsDisplay for &T
 where
-    T: Display + 'a,
+    T: Display,
 {
-    type Target = &'a T;
+    type Target<'a> = &'a T
+    where
+        Self: 'a;
 
-    fn as_display(&'a self) -> Self::Target {
+    fn as_display<'a>(&'a self) -> Self::Target<'a> {
         *self
     }
 }
 
-impl<'a> AsDisplay<'a> for Path {
-    type Target = path::Display<'a>;
+impl AsDisplay for Path {
+    type Target<'a> = path::Display<'a>;
 
     #[inline]
-    fn as_display(&'a self) -> Self::Target {
+    fn as_display<'a>(&'a self) -> Self::Target<'a> {
         self.display()
     }
 }
 
-impl<'a> AsDisplay<'a> for PathBuf {
-    type Target = path::Display<'a>;
+impl AsDisplay for PathBuf {
+    type Target<'a> = path::Display<'a>;
 
     #[inline]
-    fn as_display(&'a self) -> Self::Target {
+    fn as_display<'a>(&'a self) -> Self::Target<'a> {
         self.display()
     }
 }

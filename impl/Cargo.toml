@@ -6,7 +6,7 @@ description = "Implementation detail of the `thiserror` crate"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
-rust-version = "1.56"
+rust-version = "1.65"
 
 [lib]
 proc-macro = true
