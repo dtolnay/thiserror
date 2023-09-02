@@ -456,7 +456,6 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
 fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
     if needs_as_display {
         Some(quote! {
-            #[allow(unused_imports)]
             use thiserror::__private::AsDisplay as _;
         })
     } else {
