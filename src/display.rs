@@ -1,30 +1,55 @@
 use std::fmt::Display;
-use std::path::{self, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 #[doc(hidden)]
-pub trait DisplayAsDisplay {
-    fn as_display(&self) -> Self;
+pub trait AsDisplay {
+    type Target: Display + ?Sized;
+
+    fn as_display(&self) -> &Self::Target;
 }
 
-impl<T: Display> DisplayAsDisplay for &T {
-    fn as_display(&self) -> Self {
+impl<T: Display> AsDisplay for &T {
+    type Target = T;
+
+    fn as_display(&self) -> &Self::Target {
         self
     }
 }
 
-#[doc(hidden)]
-pub trait PathAsDisplay {
-    fn as_display(&self) -> path::Display<'_>;
-}
+impl AsDisplay for Path {
+    type Target = PathDisplay;
 
-impl PathAsDisplay for Path {
-    fn as_display(&self) -> path::Display<'_> {
-        self.display()
+    #[inline]
+    fn as_display(&self) -> &Self::Target {
+        PathDisplay::new(self)
     }
 }
 
-impl PathAsDisplay for PathBuf {
-    fn as_display(&self) -> path::Display<'_> {
-        self.display()
+impl AsDisplay for PathBuf {
+    type Target = PathDisplay;
+
+    #[inline]
+    fn as_display(&self) -> &Self::Target {
+        PathDisplay::new(self.as_path())
+    }
+}
+
+#[doc(hidden)]
+#[repr(transparent)]
+pub struct PathDisplay(Path);
+
+impl PathDisplay {
+    #[inline]
+    fn new(path: &Path) -> &Self {
+        // SAFETY: PathDisplay is repr(transparent) so casting pointers between
+        // it and its payload is safe.
+        unsafe { &*(path as *const Path as *const Self) }
+    }
+}
+
+impl Display for PathDisplay {
+    #[inline]
+    fn fmt(&self, fmtr: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.0.display().fmt(fmtr)
     }
 }

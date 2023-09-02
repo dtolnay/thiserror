@@ -251,7 +251,7 @@ pub mod __private {
     #[doc(hidden)]
     pub use crate::aserror::AsDynError;
     #[doc(hidden)]
-    pub use crate::display::{DisplayAsDisplay, PathAsDisplay};
+    pub use crate::display::AsDisplay;
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
