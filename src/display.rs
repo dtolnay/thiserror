@@ -3,6 +3,8 @@ use std::path::{self, Path, PathBuf};
 
 #[doc(hidden)]
 pub trait AsDisplay<'a> {
+    // TODO: convert to generic associated type.
+    // https://github.com/dtolnay/thiserror/pull/253
     type Target: Display;
 
     fn as_display(&'a self) -> Self::Target;
