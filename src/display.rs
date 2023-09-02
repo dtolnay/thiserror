@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
-use std::path::{Path, PathBuf};
+use std::fmt::Display;
+use std::path::{self, Path, PathBuf};
 
 #[doc(hidden)]
 pub trait AsDisplay<'a> {
@@ -20,29 +20,19 @@ where
 }
 
 impl<'a> AsDisplay<'a> for Path {
-    type Target = PathDisplay<'a>;
+    type Target = path::Display<'a>;
 
     #[inline]
     fn as_display(&'a self) -> Self::Target {
-        PathDisplay(self)
+        self.display()
     }
 }
 
 impl<'a> AsDisplay<'a> for PathBuf {
-    type Target = PathDisplay<'a>;
+    type Target = path::Display<'a>;
 
     #[inline]
     fn as_display(&'a self) -> Self::Target {
-        PathDisplay(self.as_path())
-    }
-}
-
-#[doc(hidden)]
-pub struct PathDisplay<'a>(&'a Path);
-
-impl<'a> Display for PathDisplay<'a> {
-    #[inline]
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        self.0.display().fmt(formatter)
+        self.display()
     }
 }
