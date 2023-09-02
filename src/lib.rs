@@ -230,8 +230,6 @@
 
 #![doc(html_root_url = "https://docs.rs/thiserror/1.0.47")]
 #![allow(
-    // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7421
-    clippy::doc_markdown,
     clippy::module_name_repetitions,
     clippy::needless_lifetimes,
     clippy::return_self_not_must_use,
