@@ -1,3 +1,5 @@
+#![allow(clippy::needless_raw_string_hashes)]
+
 use std::env;
 use std::fs;
 use std::path::Path;
