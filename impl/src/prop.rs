@@ -1,6 +1,7 @@
 use crate::ast::{Enum, Field, Struct, Variant};
 use proc_macro2::Span;
-use syn::{spanned::Spanned, Member, Type};
+use syn::spanned::Spanned;
+use syn::{Member, Type};
 
 impl Struct<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
