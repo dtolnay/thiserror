@@ -1,7 +1,6 @@
 use crate::ast::{Enum, Field, Struct, Variant};
 use crate::span::MemberSpan;
 use proc_macro2::Span;
-use syn::spanned::Spanned;
 use syn::{Member, Type};
 
 impl Struct<'_> {
@@ -76,9 +75,9 @@ impl Field<'_> {
 
     pub(crate) fn source_span(&self) -> Span {
         if let Some(source_attr) = &self.attrs.source {
-            source_attr.path().span()
+            source_attr.path().get_ident().unwrap().span()
         } else if let Some(from_attr) = &self.attrs.from {
-            from_attr.path().span()
+            from_attr.path().get_ident().unwrap().span()
         } else {
             self.member.member_span()
         }
