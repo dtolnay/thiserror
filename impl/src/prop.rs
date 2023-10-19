@@ -1,4 +1,5 @@
 use crate::ast::{Enum, Field, Struct, Variant};
+use crate::span::MemberSpan;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::{Member, Type};
@@ -79,7 +80,7 @@ impl Field<'_> {
         } else if let Some(from_attr) = &self.attrs.from {
             from_attr.path().span()
         } else {
-            self.member.span()
+            self.member.member_span()
         }
     }
 }

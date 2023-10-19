@@ -22,6 +22,7 @@ mod expand;
 mod fmt;
 mod generics;
 mod prop;
+mod span;
 mod valid;
 
 use proc_macro::TokenStream;
