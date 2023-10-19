@@ -6,6 +6,7 @@
     clippy::manual_let_else,
     clippy::manual_map,
     clippy::map_unwrap_or,
+    clippy::module_name_repetitions,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
     clippy::range_plus_one,
