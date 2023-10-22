@@ -11,6 +11,7 @@
     clippy::option_if_let_else,
     clippy::range_plus_one,
     clippy::single_match_else,
+    clippy::struct_field_names,
     clippy::too_many_lines,
     clippy::wrong_self_convention
 )]
