@@ -36,7 +36,10 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
         #error
 
         #[allow(unused_qualifications)]
-        impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {}
+        impl #impl_generics std::error::Error for #ty #ty_generics #where_clause
+        where
+            #ty #ty_generics: ::core::fmt::Debug,
+        {}
 
         #[allow(unused_qualifications)]
         impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {

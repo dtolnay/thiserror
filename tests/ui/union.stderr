@@ -8,20 +8,18 @@ error: union as errors are not supported
   | |_^
 
 error[E0277]: `U` doesn't implement `Debug`
- --> tests/ui/union.rs:4:11
+ --> tests/ui/union.rs:3:10
   |
-4 | pub union U {
-  |           ^ `U` cannot be formatted using `{:?}`
+3 | #[derive(Error)]
+  |          ^^^^^ `U` cannot be formatted using `{:?}`
   |
   = help: the trait `Debug` is not implemented for `U`
   = note: add `#[derive(Debug)]` to `U` or manually `impl Debug for U`
-note: required by a bound in `std::error::Error`
- --> $RUST/core/src/error.rs
-  |
-  | pub trait Error: Debug + Display {
-  |                  ^^^^^ required by this bound in `Error`
+  = help: see issue #48214
+  = help: add `#![feature(trivial_bounds)]` to the crate attributes to enable
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider annotating `U` with `#[derive(Debug)]`
   |
-4  + #[derive(Debug)]
-5  | pub union U {
-   |
+4 + #[derive(Debug)]
+5 | pub union U {
+  |
