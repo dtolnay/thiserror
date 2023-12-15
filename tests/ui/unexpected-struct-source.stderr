@@ -3,17 +3,3 @@ error: not expected here; the #[source] attribute belongs on a specific field
   |
 4 | #[source]
   | ^^^^^^^^^
-
-error[E0277]: `Error` doesn't implement `std::fmt::Display`
- --> tests/ui/unexpected-struct-source.rs:5:12
-  |
-5 | pub struct Error;
-  |            ^^^^^ `Error` cannot be formatted with the default formatter
-  |
-  = help: the trait `std::fmt::Display` is not implemented for `Error`
-  = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
-note: required by a bound in `std::error::Error`
- --> $RUST/core/src/error.rs
-  |
-  | pub trait Error: Debug + Display {
-  |                          ^^^^^^^ required by this bound in `Error`

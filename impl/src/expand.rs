@@ -37,6 +37,13 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
 
         #[allow(unused_qualifications)]
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause {}
+
+        #[allow(unused_qualifications)]
+        impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {
+            fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                ::core::unreachable!()
+            }
+        }
     }
 }
 

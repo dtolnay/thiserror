@@ -3,17 +3,3 @@ error: expected attribute arguments in parentheses: #[error(...)]
   |
 4 | #[error]
   |   ^^^^^
-
-error[E0277]: `MyError` doesn't implement `std::fmt::Display`
- --> tests/ui/invalid-input-impl-anyway.rs:5:12
-  |
-5 | pub struct MyError;
-  |            ^^^^^^^ `MyError` cannot be formatted with the default formatter
-  |
-  = help: the trait `std::fmt::Display` is not implemented for `MyError`
-  = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
-note: required by a bound in `std::error::Error`
- --> $RUST/core/src/error.rs
-  |
-  | pub trait Error: Debug + Display {
-  |                          ^^^^^^^ required by this bound in `Error`

@@ -4,17 +4,3 @@ error: #[error(transparent)] requires exactly one field
 5 | /     #[error(transparent)]
 6 | |     Other(anyhow::Error, String),
   | |________________________________^
-
-error[E0277]: `Error` doesn't implement `std::fmt::Display`
- --> tests/ui/transparent-enum-many.rs:4:10
-  |
-4 | pub enum Error {
-  |          ^^^^^ `Error` cannot be formatted with the default formatter
-  |
-  = help: the trait `std::fmt::Display` is not implemented for `Error`
-  = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
-note: required by a bound in `std::error::Error`
- --> $RUST/core/src/error.rs
-  |
-  | pub trait Error: Debug + Display {
-  |                          ^^^^^^^ required by this bound in `Error`

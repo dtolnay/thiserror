@@ -9,31 +9,3 @@ error: non-static lifetimes are not allowed in the source of an error, because s
    |
 15 |     Foo(#[from] Generic<&'a str>),
    |                 ^^^^^^^^^^^^^^^^
-
-error[E0277]: `Error<'a>` doesn't implement `std::fmt::Display`
- --> tests/ui/lifetime.rs:6:8
-  |
-6 | struct Error<'a>(#[from] Inner<'a>);
-  |        ^^^^^^^^^ `Error<'a>` cannot be formatted with the default formatter
-  |
-  = help: the trait `std::fmt::Display` is not implemented for `Error<'a>`
-  = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
-note: required by a bound in `std::error::Error`
- --> $RUST/core/src/error.rs
-  |
-  | pub trait Error: Debug + Display {
-  |                          ^^^^^^^ required by this bound in `Error`
-
-error[E0277]: `Enum<'a>` doesn't implement `std::fmt::Display`
-  --> tests/ui/lifetime.rs:13:6
-   |
-13 | enum Enum<'a> {
-   |      ^^^^^^^^ `Enum<'a>` cannot be formatted with the default formatter
-   |
-   = help: the trait `std::fmt::Display` is not implemented for `Enum<'a>`
-   = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
-note: required by a bound in `std::error::Error`
-  --> $RUST/core/src/error.rs
-   |
-   | pub trait Error: Debug + Display {
-   |                          ^^^^^^^ required by this bound in `Error`
