@@ -38,7 +38,9 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
         #[allow(unused_qualifications)]
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause
         where
-            #ty #ty_generics: ::core::fmt::Debug,
+            // Work around trivial bounds being unstable.
+            // https://github.com/rust-lang/rust/issues/48214
+            for<'workaround> #ty #ty_generics: ::core::fmt::Debug,
         {}
 
         #[allow(unused_qualifications)]
