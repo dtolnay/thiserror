@@ -10,4 +10,4 @@ note: required by a bound in `std::error::Error`
   --> $RUST/core/src/error.rs
    |
    | pub trait Error: Debug + Display {
-   |                          ^^^^^^^ required by this bound in `std::error::Error`
+   |                          ^^^^^^^ required by this bound in `Error`
