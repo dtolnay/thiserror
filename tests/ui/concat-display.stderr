@@ -8,3 +8,17 @@ error: expected string literal
    | ------------------------- in this macro invocation
    |
    = note: this error originates in the macro `error_type` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: `Error` doesn't implement `std::fmt::Display`
+  --> tests/ui/concat-display.rs:13:13
+   |
+13 | error_type!(Error, "foo");
+   |             ^^^^^ `Error` cannot be formatted with the default formatter
+   |
+   = help: the trait `std::fmt::Display` is not implemented for `Error`
+   = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
+note: required by a bound in `std::error::Error`
+  --> $RUST/core/src/error.rs
+   |
+   | pub trait Error: Debug + Display {
+   |                          ^^^^^^^ required by this bound in `Error`

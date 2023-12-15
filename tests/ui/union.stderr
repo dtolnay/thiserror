@@ -6,3 +6,36 @@ error: union as errors are not supported
 6 | |     num: usize,
 7 | | }
   | |_^
+
+error[E0277]: `U` doesn't implement `std::fmt::Display`
+ --> tests/ui/union.rs:4:11
+  |
+4 | pub union U {
+  |           ^ `U` cannot be formatted with the default formatter
+  |
+  = help: the trait `std::fmt::Display` is not implemented for `U`
+  = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
+note: required by a bound in `std::error::Error`
+ --> $RUST/core/src/error.rs
+  |
+  | pub trait Error: Debug + Display {
+  |                          ^^^^^^^ required by this bound in `Error`
+
+error[E0277]: `U` doesn't implement `Debug`
+ --> tests/ui/union.rs:4:11
+  |
+4 | pub union U {
+  |           ^ `U` cannot be formatted using `{:?}`
+  |
+  = help: the trait `Debug` is not implemented for `U`
+  = note: add `#[derive(Debug)]` to `U` or manually `impl Debug for U`
+note: required by a bound in `std::error::Error`
+ --> $RUST/core/src/error.rs
+  |
+  | pub trait Error: Debug + Display {
+  |                  ^^^^^ required by this bound in `Error`
+help: consider annotating `U` with `#[derive(Debug)]`
+  |
+4  + #[derive(Debug)]
+5  | pub union U {
+   |
