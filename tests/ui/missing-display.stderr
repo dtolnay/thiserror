@@ -4,7 +4,7 @@ error[E0277]: `MyError` doesn't implement `std::fmt::Display`
 4  | pub enum MyError {
    | ^^^^^^^^^^^^^^^^ `MyError` cannot be formatted with the default formatter
    |
-  ::: $RUST/src/libstd/error.rs
+  ::: $RUST/std/src/error.rs
    |
    | pub trait Error: Debug + Display {
    |                          ------- required by this bound in `std::error::Error`
