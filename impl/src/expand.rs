@@ -5,9 +5,7 @@ use crate::span::MemberSpan;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
-use syn::{
-    Data, DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type, Visibility,
-};
+use syn::{DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type};
 
 pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(node)?;
@@ -168,7 +166,6 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let error_trait = spanned_error_trait(input.original);
     if input.generics.type_params().next().is_some() {
         let self_token = <Token![Self]>::default();
         error_inferred_bounds.insert(self_token, Trait::Debug);
@@ -178,7 +175,7 @@ fn impl_struct(input: Struct) -> TokenStream {
 
     quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics #error_trait for #ty #ty_generics #error_where_clause {
+        impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
             #source_method
             #provide_method
         }
@@ -425,7 +422,6 @@ fn impl_enum(input: Enum) -> TokenStream {
         })
     });
 
-    let error_trait = spanned_error_trait(input.original);
     if input.generics.type_params().next().is_some() {
         let self_token = <Token![Self]>::default();
         error_inferred_bounds.insert(self_token, Trait::Debug);
@@ -435,7 +431,7 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     quote! {
         #[allow(unused_qualifications)]
-        impl #impl_generics #error_trait for #ty #ty_generics #error_where_clause {
+        impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
             #source_method
             #provide_method
         }
@@ -527,22 +523,4 @@ fn type_parameter_of_option(ty: &Type) -> Option<&Type> {
         GenericArgument::Type(arg) => Some(arg),
         _ => None,
     }
-}
-
-fn spanned_error_trait(input: &DeriveInput) -> TokenStream {
-    let vis_span = match &input.vis {
-        Visibility::Public(vis) => Some(vis.span),
-        Visibility::Restricted(vis) => Some(vis.pub_token.span),
-        Visibility::Inherited => None,
-    };
-    let data_span = match &input.data {
-        Data::Struct(data) => data.struct_token.span,
-        Data::Enum(data) => data.enum_token.span,
-        Data::Union(data) => data.union_token.span,
-    };
-    let first_span = vis_span.unwrap_or(data_span);
-    let last_span = input.ident.span();
-    let path = quote_spanned!(first_span=> std::error::);
-    let error = quote_spanned!(last_span=> Error);
-    quote!(#path #error)
 }
