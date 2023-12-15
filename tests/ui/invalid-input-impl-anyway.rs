@@ -5,7 +5,7 @@ use thiserror::Error;
 pub struct MyError;
 
 fn main() {
-    // FIXME: there should be no error on the following line. Thiserror should
-    // emit an Error impl regardless of the bad attribute.
+    // No error on the following line. Thiserror emits an Error impl despite the
+    // bad attribute.
     _ = &MyError as &dyn std::error::Error;
 }

@@ -7,13 +7,49 @@ use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::{DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type};
 
-pub fn derive(node: &DeriveInput) -> Result<TokenStream> {
-    let input = Input::from_syn(node)?;
+pub fn derive(input: &DeriveInput) -> TokenStream {
+    match try_expand(input) {
+        Ok(expanded) => expanded,
+        // If there are invalid attributes in the input, expand to an Error impl
+        // anyway to minimize spurious knock-on errors in other code that uses
+        // this type as an Error.
+        Err(error) => fallback(input, error),
+    }
+}
+
+fn try_expand(input: &DeriveInput) -> Result<TokenStream> {
+    let input = Input::from_syn(input)?;
     input.validate()?;
     Ok(match input {
         Input::Struct(input) => impl_struct(input),
         Input::Enum(input) => impl_enum(input),
     })
+}
+
+fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
+    let ty = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let error = error.to_compile_error();
+
+    quote! {
+        #error
+
+        #[allow(unused_qualifications)]
+        impl #impl_generics std::error::Error for #ty #ty_generics #where_clause
+        where
+            // Work around trivial bounds being unstable.
+            // https://github.com/rust-lang/rust/issues/48214
+            for<'workaround> #ty #ty_generics: ::core::fmt::Debug,
+        {}
+
+        #[allow(unused_qualifications)]
+        impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {
+            fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                ::core::unreachable!()
+            }
+        }
+    }
 }
 
 fn impl_struct(input: Struct) -> TokenStream {
