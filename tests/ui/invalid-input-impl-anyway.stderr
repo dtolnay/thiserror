@@ -1,0 +1,13 @@
+error: expected attribute arguments in parentheses: #[error(...)]
+ --> tests/ui/invalid-input-impl-anyway.rs:4:3
+  |
+4 | #[error]
+  |   ^^^^^
+
+error[E0277]: the trait bound `MyError: std::error::Error` is not satisfied
+  --> tests/ui/invalid-input-impl-anyway.rs:10:9
+   |
+10 |     _ = &MyError as &dyn std::error::Error;
+   |         ^^^^^^^^ the trait `std::error::Error` is not implemented for `MyError`
+   |
+   = note: required for the cast from `&MyError` to `&dyn std::error::Error`
