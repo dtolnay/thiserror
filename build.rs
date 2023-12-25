@@ -42,6 +42,16 @@ fn main() {
         Some(status) if status.success() => println!("cargo:rustc-cfg=error_generic_member_access"),
         _ => {}
     }
+
+    let rustc = match rustc_minor_version() {
+        Some(rustc) => rustc,
+        None => return,
+    };
+
+    if rustc < 65 {
+        // std::backtrace::Backtrace
+        println!("cargo:rustc-cfg=thiserror_no_backtrace");
+    }
 }
 
 fn compile_probe() -> Option<ExitStatus> {
@@ -94,4 +104,15 @@ fn compile_probe() -> Option<ExitStatus> {
     }
 
     cmd.status().ok()
+}
+
+fn rustc_minor_version() -> Option<u32> {
+    let rustc = env::var_os("RUSTC")?;
+    let output = Command::new(rustc).arg("--version").output().ok()?;
+    let version = str::from_utf8(&output.stdout).ok()?;
+    let mut pieces = version.split('.');
+    if pieces.next() != Some("rustc 1") {
+        return None;
+    }
+    pieces.next()?.parse().ok()
 }
