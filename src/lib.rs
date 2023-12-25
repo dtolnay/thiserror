@@ -286,4 +286,8 @@ pub mod __private {
     macro_rules! __if_no_generic_member_access {
         ($($tt:tt)*) => {};
     }
+
+    #[cfg(not(thiserror_no_backtrace))]
+    #[doc(hidden)]
+    pub fn typecheck_backtrace(_: &std::backtrace::Backtrace) {}
 }

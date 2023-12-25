@@ -86,19 +86,14 @@ fn impl_struct(input: Struct) -> TokenStream {
     } else {
         None
     };
-    let source_method = source_body.map(|body| {
-        quote! {
-            fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
-                #body
-            }
-        }
-    });
 
-    let provide_method = input.backtrace_field().map(|backtrace_field| {
+    let provide_method;
+    let backtrace_typecheck;
+    if let Some(backtrace_field) = input.backtrace_field() {
         let request = quote!(request);
         let backtrace = &backtrace_field.member;
-        let body = if let Some(source_field) = input.source_field() {
+        let provide_body;
+        if let Some(source_field) = input.source_field() {
             let source = &source_field.member;
             let source_provide = if type_is_option(source_field.ty) {
                 quote_spanned! {source.member_span()=>
@@ -111,40 +106,92 @@ fn impl_struct(input: Struct) -> TokenStream {
                     self.#source.thiserror_provide(#request);
                 }
             };
-            let self_provide = if source == backtrace {
-                None
+            let self_provide;
+            if source == backtrace {
+                self_provide = None;
+                backtrace_typecheck = None;
             } else if type_is_option(backtrace_field.ty) {
-                Some(quote! {
+                self_provide = Some(quote! {
                     if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
                         #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
                     }
-                })
+                });
+                backtrace_typecheck = Some(quote! {
+                    if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
+                        thiserror::__private::typecheck_backtrace(backtrace);
+                    }
+                });
             } else {
-                Some(quote! {
+                self_provide = Some(quote! {
                     #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
-                })
-            };
-            quote! {
+                });
+                backtrace_typecheck = Some(quote! {
+                    thiserror::__private::typecheck_backtrace(&self.#backtrace);
+                });
+            }
+            provide_body = quote! {
                 use thiserror::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
-            }
+            };
         } else if type_is_option(backtrace_field.ty) {
-            quote! {
+            provide_body = quote! {
                 if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
                     #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
                 }
-            }
+            };
+            backtrace_typecheck = Some(quote! {
+                if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
+                    thiserror::__private::typecheck_backtrace(backtrace);
+                }
+            });
         } else {
-            quote! {
+            provide_body = quote! {
                 #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
-            }
-        };
-        quote! {
+            };
+            backtrace_typecheck = Some(quote! {
+                thiserror::__private::typecheck_backtrace(&self.#backtrace);
+            });
+        }
+        provide_method = Some(quote! {
             thiserror::__if_generic_member_access! {
                 fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
-                    #body
+                    #provide_body
                 }
+            }
+        });
+    } else {
+        provide_method = None;
+        backtrace_typecheck = None;
+    }
+
+    let backtrace_typecheck = backtrace_typecheck.map(|body| {
+        quote! {
+            thiserror::__if_no_generic_member_access! {
+                #body
+            }
+        }
+    });
+
+    let source_body = if let Some(source_body) = source_body {
+        Some(quote! {
+            use thiserror::__private::AsDynError as _;
+            #backtrace_typecheck
+            #source_body
+        })
+    } else if let Some(backtrace_typecheck) = backtrace_typecheck {
+        Some(quote! {
+            #backtrace_typecheck
+            ::core::option::Option::None
+        })
+    } else {
+        None
+    };
+
+    let source_method = source_body.map(|body| {
+        quote! {
+            fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
+                #body
             }
         }
     });
@@ -227,61 +274,10 @@ fn impl_enum(input: Enum) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
-    let source_method = if input.has_source() {
-        let arms = input.variants.iter().map(|variant| {
-            let ident = &variant.ident;
-            if let Some(transparent_attr) = &variant.attrs.transparent {
-                let only_field = &variant.fields[0];
-                if only_field.contains_generic {
-                    error_inferred_bounds.insert(only_field.ty, quote!(std::error::Error));
-                }
-                let member = &only_field.member;
-                let source = quote_spanned! {transparent_attr.span=>
-                    std::error::Error::source(transparent.as_dyn_error())
-                };
-                quote! {
-                    #ty::#ident {#member: transparent} => #source,
-                }
-            } else if let Some(source_field) = variant.source_field() {
-                let source = &source_field.member;
-                if source_field.contains_generic {
-                    let ty = unoptional_type(source_field.ty);
-                    error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
-                }
-                let asref = if type_is_option(source_field.ty) {
-                    Some(quote_spanned!(source.member_span()=> .as_ref()?))
-                } else {
-                    None
-                };
-                let varsource = quote!(source);
-                let dyn_error = quote_spanned! {source_field.source_span()=>
-                    #varsource #asref.as_dyn_error()
-                };
-                quote! {
-                    #ty::#ident {#source: #varsource, ..} => ::core::option::Option::Some(#dyn_error),
-                }
-            } else {
-                quote! {
-                    #ty::#ident {..} => ::core::option::Option::None,
-                }
-            }
-        });
-        Some(quote! {
-            fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
-                #[allow(deprecated)]
-                match self {
-                    #(#arms)*
-                }
-            }
-        })
-    } else {
-        None
-    };
-
+    let mut backtrace_typecheck = vec![None; input.variants.len()];
     let provide_method = if input.has_backtrace() {
         let request = quote!(request);
-        let arms = input.variants.iter().map(|variant| {
+        let arms = input.variants.iter().enumerate().map(|(i, variant)| {
             let ident = &variant.ident;
             match (variant.backtrace_field(), variant.source_field()) {
                 (Some(backtrace_field), Some(source_field))
@@ -301,17 +297,26 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #varsource.thiserror_provide(#request);
                         }
                     };
-                    let self_provide = if type_is_option(backtrace_field.ty) {
-                        quote! {
+                    let self_provide;
+                    if type_is_option(backtrace_field.ty) {
+                        self_provide = quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
                                 #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
                             }
-                        }
+                        };
+                        backtrace_typecheck[i] = Some(quote! {
+                            if let ::core::option::Option::Some(backtrace) = backtrace {
+                                thiserror::__private::typecheck_backtrace(backtrace);
+                            }
+                        });
                     } else {
-                        quote! {
+                        self_provide = quote! {
                             #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
-                        }
-                    };
+                        };
+                        backtrace_typecheck[i] = Some(quote! {
+                            thiserror::__private::typecheck_backtrace(backtrace);
+                        });
+                    }
                     quote! {
                         #ty::#ident {
                             #backtrace: backtrace,
@@ -349,20 +354,29 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
                 (Some(backtrace_field), _) => {
                     let backtrace = &backtrace_field.member;
-                    let body = if type_is_option(backtrace_field.ty) {
-                        quote! {
+                    let self_provide;
+                    if type_is_option(backtrace_field.ty) {
+                        self_provide = quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
                                 #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
                             }
-                        }
+                        };
+                        backtrace_typecheck[i] = Some(quote! {
+                            if let ::core::option::Option::Some(backtrace) = backtrace {
+                                thiserror::__private::typecheck_backtrace(backtrace);
+                            }
+                        });
                     } else {
-                        quote! {
+                        self_provide = quote! {
                             #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
-                        }
-                    };
+                        };
+                        backtrace_typecheck[i] = Some(quote! {
+                            thiserror::__private::typecheck_backtrace(backtrace);
+                        });
+                    }
                     quote! {
                         #ty::#ident {#backtrace: backtrace, ..} => {
-                            #body
+                            #self_provide
                         }
                     }
                 }
@@ -378,6 +392,83 @@ fn impl_enum(input: Enum) -> TokenStream {
                     match self {
                         #(#arms)*
                     }
+                }
+            }
+        })
+    } else {
+        None
+    };
+
+    let source_method = if input.has_source() || backtrace_typecheck.iter().any(Option::is_some) {
+        let use_as_dyn_error = if input.has_source() {
+            Some(quote! {
+                use thiserror::__private::AsDynError as _;
+            })
+        } else {
+            None
+        };
+        let arms = input.variants.iter().zip(&backtrace_typecheck).map(|(variant, backtrace_typecheck)| {
+            let ident = &variant.ident;
+            if let Some(transparent_attr) = &variant.attrs.transparent {
+                let only_field = &variant.fields[0];
+                if only_field.contains_generic {
+                    error_inferred_bounds.insert(only_field.ty, quote!(std::error::Error));
+                }
+                let member = &only_field.member;
+                let source = quote_spanned! {transparent_attr.span=>
+                    std::error::Error::source(transparent.as_dyn_error())
+                };
+                quote! {
+                    #ty::#ident {#member: transparent} => #source,
+                }
+            } else if let Some(source_field) = variant.source_field() {
+                let source = &source_field.member;
+                if source_field.contains_generic {
+                    let ty = unoptional_type(source_field.ty);
+                    error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
+                }
+                let asref = if type_is_option(source_field.ty) {
+                    Some(quote_spanned!(source.member_span()=> .as_ref()?))
+                } else {
+                    None
+                };
+                let varsource = quote!(source);
+                let dyn_error = quote_spanned! {source_field.source_span()=>
+                    #varsource #asref.as_dyn_error()
+                };
+                if let Some(backtrace_typecheck) = backtrace_typecheck {
+                    let backtrace = &variant.backtrace_field().unwrap().member;
+                    quote! {
+                        #ty::#ident {#backtrace: backtrace, #source: #varsource, ..} => {
+                            #backtrace_typecheck
+                            ::core::option::Option::Some(#dyn_error)
+                        }
+                    }
+                } else {
+                    quote! {
+                        #ty::#ident {#source: #varsource, ..} => ::core::option::Option::Some(#dyn_error),
+                    }
+                }
+            } else if let Some(backtrace_typecheck) = backtrace_typecheck {
+                let backtrace = &variant.backtrace_field().unwrap().member;
+                quote! {
+                    #ty::#ident {#backtrace: backtrace, ..} => {
+                        #backtrace_typecheck
+                        ::core::option::Option::None
+                    }
+                }
+            } else {
+                quote! {
+                    #ty::#ident {..} => ::core::option::Option::None,
+                }
+            }
+        });
+        Some(quote! {
+            fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
+                #use_as_dyn_error
+                #[allow(deprecated)]
+                match self {
+                    #(#arms)*
                 }
             }
         })
