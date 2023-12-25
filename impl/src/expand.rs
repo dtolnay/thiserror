@@ -141,8 +141,10 @@ fn impl_struct(input: Struct) -> TokenStream {
             }
         };
         quote! {
-            fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
-                #body
+            thiserror::__if_generic_member_access! {
+                fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
+                    #body
+                }
             }
         }
     });
@@ -370,10 +372,12 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         Some(quote! {
-            fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
-                #[allow(deprecated)]
-                match self {
-                    #(#arms)*
+            thiserror::__if_generic_member_access! {
+                fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
+                    #[allow(deprecated)]
+                    match self {
+                        #(#arms)*
+                    }
                 }
             }
         })
