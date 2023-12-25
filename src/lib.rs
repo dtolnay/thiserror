@@ -254,4 +254,36 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+
+    #[cfg(error_generic_member_access)]
+    #[doc(hidden)]
+    #[macro_export]
+    macro_rules! __if_generic_member_access {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    #[cfg(not(error_generic_member_access))]
+    #[doc(hidden)]
+    #[macro_export]
+    macro_rules! __if_generic_member_access {
+        ($($tt:tt)*) => {};
+    }
+
+    #[cfg(not(error_generic_member_access))]
+    #[doc(hidden)]
+    #[macro_export]
+    macro_rules! __if_no_generic_member_access {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    #[cfg(error_generic_member_access)]
+    #[doc(hidden)]
+    #[macro_export]
+    macro_rules! __if_no_generic_member_access {
+        ($($tt:tt)*) => {};
+    }
 }
