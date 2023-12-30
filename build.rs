@@ -1,18 +1,17 @@
 use std::env;
 use std::ffi::OsString;
 use std::path::Path;
-use std::process::{self, Command, ExitStatus, Stdio};
+use std::process::{self, Command, Stdio};
 
 fn main() {
     println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
 
-    match compile_probe() {
-        Some(status) if status.success() => println!("cargo:rustc-cfg=error_generic_member_access"),
-        _ => {}
+    if compile_probe() {
+        println!("cargo:rustc-cfg=error_generic_member_access");
     }
 }
 
-fn compile_probe() -> Option<ExitStatus> {
+fn compile_probe() -> bool {
     if env::var_os("RUSTC_STAGE").is_some() {
         // We are running inside rustc bootstrap. This is a highly non-standard
         // environment with issues such as:
@@ -21,7 +20,7 @@ fn compile_probe() -> Option<ExitStatus> {
         //     https://github.com/rust-lang/rust/issues/114839
         //
         // Let's just not use nightly features here.
-        return None;
+        return false;
     }
 
     let rustc = cargo_env_var("RUSTC");
@@ -60,7 +59,10 @@ fn compile_probe() -> Option<ExitStatus> {
         }
     }
 
-    cmd.status().ok()
+    match cmd.status() {
+        Ok(status) => status.success(),
+        Err(_) => false,
+    }
 }
 
 fn cargo_env_var(key: &str) -> OsString {
