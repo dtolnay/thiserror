@@ -4,6 +4,8 @@ use std::path::Path;
 use std::process::{self, Command, Stdio};
 
 fn main() {
+    println!("cargo:rerun-if-changed=build/probe.rs");
+
     let error_generic_member_access;
     let consider_rustc_bootstrap;
     if compile_probe(false) {
