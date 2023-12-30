@@ -1,8 +1,9 @@
 #![allow(clippy::needless_raw_string_hashes)]
 
 use std::env;
+use std::ffi::OsString;
 use std::path::Path;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{self, Command, ExitStatus, Stdio};
 
 fn main() {
     println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
@@ -25,8 +26,8 @@ fn compile_probe() -> Option<ExitStatus> {
         return None;
     }
 
-    let rustc = env::var_os("RUSTC")?;
-    let out_dir = env::var_os("OUT_DIR")?;
+    let rustc = cargo_env_var("RUSTC");
+    let out_dir = cargo_env_var("OUT_DIR");
     let probefile = Path::new("build").join("probe.rs");
 
     // Make sure to pick up Cargo rustc configuration.
@@ -62,4 +63,14 @@ fn compile_probe() -> Option<ExitStatus> {
     }
 
     cmd.status().ok()
+}
+
+fn cargo_env_var(key: &str) -> OsString {
+    env::var_os(key).unwrap_or_else(|| {
+        eprintln!(
+            "Environment variable ${} is not set during execution of build script",
+            key,
+        );
+        process::exit(1);
+    })
 }
