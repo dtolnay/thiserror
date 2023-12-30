@@ -1,5 +1,3 @@
-#![allow(clippy::needless_raw_string_hashes)]
-
 use std::env;
 use std::ffi::OsString;
 use std::path::Path;
