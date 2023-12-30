@@ -1,8 +1,4 @@
-#![allow(
-    clippy::iter_cloned_collect,
-    clippy::option_if_let_else,
-    clippy::uninlined_format_args
-)]
+#![allow(clippy::iter_cloned_collect, clippy::uninlined_format_args)]
 
 use std::fmt::Display;
 use thiserror::Error;

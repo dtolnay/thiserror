@@ -8,7 +8,6 @@
     clippy::map_unwrap_or,
     clippy::module_name_repetitions,
     clippy::needless_pass_by_value,
-    clippy::option_if_let_else,
     clippy::range_plus_one,
     clippy::single_match_else,
     clippy::struct_field_names,
