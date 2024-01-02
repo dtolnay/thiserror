@@ -27,3 +27,6 @@ impl Error for MyError {
         request.provide_ref(&self.0);
     }
 }
+
+// Include in sccache cache key.
+const _: Option<&str> = option_env!("RUSTC_BOOTSTRAP");
