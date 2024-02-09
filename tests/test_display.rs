@@ -306,14 +306,18 @@ fn test_keyword() {
 fn test_str_special_chars() {
     #[derive(Error, Debug)]
     pub enum Error {
-        #[error("text")]
-        Text,
-        #[error("braces {{}}")]
-        Braces,
-        #[error("braces2 \x7B\x7B\x7D\x7D")]
-        Braces2,
-        #[error("braces3 \u{7B}\u{7B}\u{7D}\u{7D}")]
-        Braces3,
+        #[error("brace left {{")]
+        BraceLeft,
+        #[error("brace left 2 \x7B\x7B")]
+        BraceLeft2,
+        #[error("brace left 3 \u{7B}\u{7B}")]
+        BraceLeft3,
+        #[error("brace right }}")]
+        BraceRight,
+        #[error("brace right 2 \x7D\x7D")]
+        BraceRight2,
+        #[error("brace right 3 \u{7D}\u{7D}")]
+        BraceRight3,
         #[error(
             "new_\
 line"
@@ -323,10 +327,12 @@ line"
         Escape24,
     }
 
-    assert("text", Error::Text);
-    assert("braces {}", Error::Braces);
-    assert("braces2 {}", Error::Braces2);
-    assert("braces3 {}", Error::Braces3);
+    assert("brace left {", Error::BraceLeft);
+    assert("brace left 2 {", Error::BraceLeft2);
+    assert("brace left 3 {", Error::BraceLeft3);
+    assert("brace right }", Error::BraceRight);
+    assert("brace right 2 }", Error::BraceRight2);
+    assert("brace right 3 }", Error::BraceRight3);
     assert("new_line", Error::NewLine);
     assert("escape24 x", Error::Escape24);
 }
@@ -335,25 +341,18 @@ line"
 fn test_raw_str() {
     #[derive(Error, Debug)]
     pub enum Error {
-        #[error(r#"raw_text"#)]
-        Text,
-        #[error(r#"raw_braces {{}}"#)]
-        Braces,
-        #[error(r#"raw_braces2 \x7B\x7D"#)]
-        Braces2,
-        #[error(
-            r#"raw_new_\
-line"#
-        )]
-        NewLine,
+        #[error(r#"raw brace left {{"#)]
+        BraceLeft,
+        #[error(r#"raw brace left 2 \x7B"#)]
+        BraceLeft2,
+        #[error(r#"raw brace right }}"#)]
+        BraceRight,
+        #[error(r#"raw brace right 2 \x7D"#)]
+        BraceRight2,
     }
 
-    assert(r#"raw_text"#, Error::Text);
-    assert(r#"raw_braces {}"#, Error::Braces);
-    assert(r#"raw_braces2 \x7B\x7D"#, Error::Braces2);
-    assert(
-        r#"raw_new_\
-line"#,
-        Error::NewLine,
-    );
+    assert(r#"raw brace left {"#, Error::BraceLeft);
+    assert(r#"raw brace left 2 \x7B"#, Error::BraceLeft2);
+    assert(r#"raw brace right }"#, Error::BraceRight);
+    assert(r#"raw brace right 2 \x7D"#, Error::BraceRight2);
 }
