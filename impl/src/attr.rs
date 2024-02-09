@@ -196,8 +196,23 @@ impl ToTokens for Display<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let fmt = &self.fmt;
         let args = &self.args;
-        tokens.extend(quote! {
-            ::core::write!(__formatter, #fmt #args)
+
+        // Currently compiler is unable to generate as efficient code for
+        //    write!(f, "text")   as it does for   f.write_str("text"),
+        // so handle it here when the literal string has no braces/no args.
+        let use_write_str = self.args.is_empty() && {
+            let value = fmt.value();
+            !value.contains('{') && !value.contains('}')
+        };
+
+        tokens.extend(if use_write_str {
+            quote! {
+                __formatter.write_str(#fmt)
+            }
+        } else {
+            quote! {
+                ::core::write!(__formatter, #fmt #args)
+            }
         });
     }
 }
