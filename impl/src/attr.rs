@@ -104,7 +104,7 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             return Ok(());
         }
 
-        let fmt = input.parse()?;
+        let fmt: LitStr = input.parse()?;
         let args = parse_token_expr(input, false)?;
         let display = Display {
             original: attr,
@@ -202,9 +202,9 @@ impl ToTokens for Display<'_> {
         let fmt = &self.fmt;
         let args = &self.args;
 
-        // Currently compiler is unable to generate as efficient code for
-        //    write!(f, "text")   as it does for   f.write_str("text"),
-        // so handle it here when the literal string has no braces/no args.
+        // Currently `write!(f, "text")` produces less efficient code than
+        // `f.write_str("text")`. We recognize the case when the format string
+        // has no braces and no interpolated values, and generate simpler code.
         tokens.extend(if self.use_write_str {
             quote! {
                 __formatter.write_str(#fmt)
