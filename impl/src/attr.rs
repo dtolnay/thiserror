@@ -1,6 +1,7 @@
 use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::collections::BTreeSet as Set;
+use syn::parse::discouraged::Speculative;
 use syn::parse::ParseStream;
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr, Meta,
@@ -105,8 +106,18 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
         }
 
         let fmt: LitStr = input.parse()?;
-        let args = parse_token_expr(input, false)?;
+
+        let ahead = input.fork();
+        ahead.parse::<Option<Token![,]>>()?;
+        let args = if ahead.is_empty() {
+            input.advance_to(&ahead);
+            TokenStream::new()
+        } else {
+            parse_token_expr(input, false)?
+        };
+
         let requires_fmt_machinery = !args.is_empty();
+
         let display = Display {
             original: attr,
             fmt,
