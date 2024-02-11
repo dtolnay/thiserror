@@ -18,9 +18,9 @@ pub struct Attrs<'a> {
 #[derive(Clone)]
 pub struct Display<'a> {
     pub original: &'a Attribute,
-    pub use_write_str: bool,
     pub fmt: LitStr,
     pub args: TokenStream,
+    pub requires_fmt_machinery: bool,
     pub has_bonus_display: bool,
     pub implied_bounds: Set<(usize, Trait)>,
 }
@@ -106,12 +106,12 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
 
         let fmt: LitStr = input.parse()?;
         let args = parse_token_expr(input, false)?;
+        let requires_fmt_machinery = !args.is_empty();
         let display = Display {
             original: attr,
-            // This will be updated later if format_args are still required (i.e. has braces)
-            use_write_str: args.is_empty(),
             fmt,
             args,
+            requires_fmt_machinery,
             has_bonus_display: false,
             implied_bounds: Set::new(),
         };
@@ -205,13 +205,13 @@ impl ToTokens for Display<'_> {
         // Currently `write!(f, "text")` produces less efficient code than
         // `f.write_str("text")`. We recognize the case when the format string
         // has no braces and no interpolated values, and generate simpler code.
-        tokens.extend(if self.use_write_str {
+        tokens.extend(if self.requires_fmt_machinery {
             quote! {
-                __formatter.write_str(#fmt)
+                ::core::write!(__formatter, #fmt #args)
             }
         } else {
             quote! {
-                ::core::write!(__formatter, #fmt #args)
+                __formatter.write_str(#fmt)
             }
         });
     }
