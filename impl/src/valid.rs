@@ -138,6 +138,7 @@ fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
 fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut from_field = None;
     let mut source_field = None;
+    let mut location_field = None;
     let mut backtrace_field = None;
     let mut has_backtrace = false;
     for field in fields {
@@ -163,6 +164,16 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             backtrace_field = Some(field);
             has_backtrace = true;
         }
+        if let Some(location) = field.attrs.location {
+            if location_field.is_some() {
+                return Err(Error::new_spanned(
+                    location,
+                    "duplicate #[location] attribute",
+                ));
+            }
+
+            location_field = Some(field);
+        }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
                 transparent.original,
@@ -180,9 +191,11 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     if let Some(from_field) = from_field {
-        let max_expected_fields = match backtrace_field {
-            Some(backtrace_field) => 1 + !same_member(from_field, backtrace_field) as usize,
-            None => 1 + has_backtrace as usize,
+        let max_expected_fields = match (backtrace_field, location_field) {
+            (Some(backtrace), Some(_)) => 2 + !same_member(from_field, backtrace) as usize,
+            (Some(backtrace_field), None) => 1 + !same_member(from_field, backtrace_field) as usize,
+            (None, Some(_)) => 2 + has_backtrace as usize,
+            (None, None) => 1 + has_backtrace as usize,
         };
         if fields.len() > max_expected_fields {
             return Err(Error::new_spanned(

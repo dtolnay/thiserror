@@ -62,6 +62,10 @@ impl Variant<'_> {
         backtrace_field(&self.fields)
     }
 
+    pub(crate) fn location_field(&self) -> Option<&Field> {
+        location_field(&self.fields)
+    }
+
     pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
@@ -71,6 +75,10 @@ impl Variant<'_> {
 impl Field<'_> {
     pub(crate) fn is_backtrace(&self) -> bool {
         type_is_backtrace(self.ty)
+    }
+
+    pub(crate) fn is_location(&self) -> bool {
+        type_is_location(self.ty)
     }
 
     pub(crate) fn source_span(&self) -> Span {
@@ -122,6 +130,20 @@ fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     None
 }
 
+fn location_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
+    for field in fields {
+        if field.attrs.location.is_some() {
+            return Some(field);
+        }
+    }
+    for field in fields {
+        if field.is_location() {
+            return Some(field);
+        }
+    }
+    None
+}
+
 // The #[backtrace] field, if it is not the same as the #[from] field.
 fn distinct_backtrace_field<'a, 'b>(
     backtrace_field: &'a Field<'b>,
@@ -144,4 +166,14 @@ fn type_is_backtrace(ty: &Type) -> bool {
 
     let last = path.segments.last().unwrap();
     last.ident == "Backtrace" && last.arguments.is_empty()
+}
+
+fn type_is_location(ty: &Type) -> bool {
+    let path = match ty {
+        Type::Path(ty) => &ty.path,
+        _ => return false,
+    };
+
+    let last = path.segments.last().unwrap();
+    last.ident == "Location" && last.arguments.is_empty()
 }
