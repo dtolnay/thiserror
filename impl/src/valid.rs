@@ -204,7 +204,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         if fields.len() > max_expected_fields {
             return Err(Error::new_spanned(
                 from_field.attrs.from,
-                "deriving From requires no fields other than source and backtrace",
+                "deriving From requires no fields other than source, backtrace, and location",
             ));
         }
     }

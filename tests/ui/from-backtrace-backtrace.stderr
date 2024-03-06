@@ -1,4 +1,4 @@
-error: deriving From requires no fields other than source and backtrace
+error: deriving From requires no fields other than source, backtrace, and location
  --> tests/ui/from-backtrace-backtrace.rs:9:5
   |
 9 |     #[from]
