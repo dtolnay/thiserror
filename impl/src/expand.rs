@@ -124,10 +124,28 @@ fn impl_struct(input: Struct) -> TokenStream {
                     #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
                 })
             };
+            let location_provide = if let Some(location_field) = input.location_field() {
+                let location = &location_field.member;
+
+                if type_is_option(location_field.ty) {
+                    Some(quote! {
+                        if let ::core::option::Option::Some(location) = &self.#location {
+                            #request.provide_ref::<::core::panic::Location>(location);
+                        }
+                    })
+                } else {
+                    Some(quote! {
+                        #request.provide_ref::<::core::panic::Location>(&self.#location);
+                    })
+                }
+            } else {
+                None
+            };
             quote! {
                 use thiserror::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
+                #location_provide
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
@@ -190,11 +208,14 @@ fn impl_struct(input: Struct) -> TokenStream {
     let from_impl = input.from_field().map(|from_field| {
         let backtrace_field = input.distinct_backtrace_field();
         let from = unoptional_type(from_field.ty);
-        let body = from_initializer(from_field, backtrace_field, None);
+        let body = from_initializer(from_field, backtrace_field, input.location_field());
+        let track_caller = input.location_field().map(|_| quote!(#[track_caller]));
+
         quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
+                #track_caller
                 fn from(source: #from) -> Self {
                     #ty #body
                 }

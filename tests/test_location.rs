@@ -12,10 +12,30 @@ enum MError {
     },
 }
 
+#[derive(Error, Debug)]
+#[error("Atlocation test error, sourced from {other}")]
+pub struct TestError {
+    #[from]
+    other: io::Error,
+    #[location]
+    location: &'static Location<'static>,
+}
+
 #[test]
 #[should_panic]
 fn test_enum() {
     fn inner() -> Result<(), MError> {
+        Err(io::Error::new(io::ErrorKind::AddrInUse, String::new()))?;
+        Ok(())
+    }
+
+    inner().unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_struct() {
+    fn inner() -> Result<(), TestError> {
         Err(io::Error::new(io::ErrorKind::AddrInUse, String::new()))?;
         Ok(())
     }
