@@ -5,19 +5,17 @@ use thiserror::Error;
 enum MError {
     #[error("At {location}: location test error, sourced from {other}")]
     Test {
-        #[location]
-        location: &'static Location<'static>,
         #[from]
         other: io::Error,
+        location: &'static Location<'static>,
     },
 }
 
 #[derive(Error, Debug)]
-#[error("Atlocation test error, sourced from {other}")]
+#[error("At {location} test error, sourced from {other}")]
 pub struct TestError {
     #[from]
     other: io::Error,
-    #[location]
     location: &'static Location<'static>,
 }
 

@@ -1,7 +1,10 @@
 use crate::ast::{Enum, Field, Struct, Variant};
 use crate::span::MemberSpan;
 use proc_macro2::Span;
-use syn::{Member, Type};
+use syn::{
+    AngleBracketedGenericArguments, GenericArgument, Lifetime, Member, PathArguments, Type,
+    TypeReference,
+};
 
 impl Struct<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
@@ -174,10 +177,27 @@ fn type_is_backtrace(ty: &Type) -> bool {
 
 fn type_is_location(ty: &Type) -> bool {
     let path = match ty {
-        Type::Path(ty) => &ty.path,
+        Type::Reference(TypeReference {
+            lifetime: Some(Lifetime { ident: ltident, .. }),
+            elem, // TODO: replace with `elem: box Type::Path(path)` once box_patterns stabalizes
+            ..
+        }) if ltident == "static" => match &**elem {
+            Type::Path(ty) => &ty.path,
+            _ => return false,
+        },
         _ => return false,
     };
 
     let last = path.segments.last().unwrap();
-    last.ident == "Location" && last.arguments.is_empty()
+
+    last.ident == "Location"
+        && match &last.arguments {
+            PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
+                match args.first() {
+                    Some(GenericArgument::Lifetime(Lifetime { ident, .. })) => ident == "static",
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
 }

@@ -141,6 +141,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut location_field = None;
     let mut backtrace_field = None;
     let mut has_backtrace = false;
+    let mut has_location = false;
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
@@ -173,6 +174,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             }
 
             location_field = Some(field);
+            has_location = true;
         }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
@@ -181,6 +183,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
         has_backtrace |= field.is_backtrace();
+        has_location |= field.is_location();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
         if !same_member(from_field, source_field) {
@@ -191,11 +194,12 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     if let Some(from_field) = from_field {
+        let extra_fields = has_backtrace as usize + has_location as usize;
         let max_expected_fields = match (backtrace_field, location_field) {
             (Some(backtrace), Some(_)) => 2 + !same_member(from_field, backtrace) as usize,
             (Some(backtrace_field), None) => 1 + !same_member(from_field, backtrace_field) as usize,
-            (None, Some(_)) => 2 + has_backtrace as usize,
-            (None, None) => 1 + has_backtrace as usize,
+            (None, Some(_)) => 1 + extra_fields,
+            (None, None) => 1 + extra_fields,
         };
         if fields.len() > max_expected_fields {
             return Err(Error::new_spanned(
