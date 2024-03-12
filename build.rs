@@ -84,6 +84,7 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
         .arg("--edition=2018")
         .arg("--crate-name=thiserror")
         .arg("--crate-type=lib")
+        .arg("--cap-lints=allow")
         .arg("--emit=dep-info,metadata")
         .arg("--out-dir")
         .arg(out_dir)
