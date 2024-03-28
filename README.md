@@ -88,6 +88,20 @@ pub enum DataStoreError {
   }
   ```
 
+  The attribute accepts complex expressions as well. For example, if you'd like
+  to transform an `Option<T>` into something else in the error messsage, you
+  can do so.
+
+  ```rust
+  #[derive(Error, Debug)]
+  pub enum Error {
+      #[error("lost connection to the server: {}", match .0 {
+          Some(reason) => &reason,
+          None => "unknown reason",
+      })]
+      ConnectionLost(Option<String>),
+  }
+
 - A `From` impl is generated for each variant containing a `#[from]` attribute.
 
   Note that the variant must not contain any other fields beyond the source
