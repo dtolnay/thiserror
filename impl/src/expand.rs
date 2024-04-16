@@ -7,34 +7,38 @@ use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::{DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type};
 
-pub fn derive(input: &DeriveInput) -> TokenStream {
-    match try_expand(input) {
+#[derive(Clone, Copy)]
+pub enum DeriveType {
+    Error,
+    Display,
+}
+
+pub fn derive(input: &DeriveInput, derive_type: DeriveType) -> TokenStream {
+    match try_expand(input, derive_type) {
         Ok(expanded) => expanded,
         // If there are invalid attributes in the input, expand to an Error impl
         // anyway to minimize spurious knock-on errors in other code that uses
         // this type as an Error.
-        Err(error) => fallback(input, error),
+        Err(error) => fallback(input, error, derive_type),
     }
 }
 
-fn try_expand(input: &DeriveInput) -> Result<TokenStream> {
+fn try_expand(input: &DeriveInput, derive_type: DeriveType) -> Result<TokenStream> {
     let input = Input::from_syn(input)?;
     input.validate()?;
     Ok(match input {
-        Input::Struct(input) => impl_struct(input),
-        Input::Enum(input) => impl_enum(input),
+        Input::Struct(input) => impl_struct(input, derive_type),
+        Input::Enum(input) => impl_enum(input, derive_type),
     })
 }
 
-fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
+fn fallback(input: &DeriveInput, error: syn::Error, derive_type: DeriveType) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let error = error.to_compile_error();
 
-    quote! {
-        #error
-
+    let error_impl = quote! {
         #[allow(unused_qualifications)]
         impl #impl_generics std::error::Error for #ty #ty_generics #where_clause
         where
@@ -42,17 +46,34 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
             // https://github.com/rust-lang/rust/issues/48214
             for<'workaround> #ty #ty_generics: ::core::fmt::Debug,
         {}
+    };
 
-        #[allow(unused_qualifications)]
-        impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {
-            fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                ::core::unreachable!()
+    let display_impl = quote! {        #[allow(unused_qualifications)]
+    impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {
+        fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+            ::core::unreachable!()
+        }
+    }};
+
+    match derive_type {
+        DeriveType::Error => quote! {
+            #error
+
+            #error_impl
+
+            #display_impl
+        },
+        DeriveType::Display => {
+            quote! {
+                #error
+
+                #display_impl
             }
         }
     }
 }
 
-fn impl_struct(input: Struct) -> TokenStream {
+fn impl_struct(input: Struct, derive_type: DeriveType) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
@@ -209,18 +230,24 @@ fn impl_struct(input: Struct) -> TokenStream {
     }
     let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
-    quote! {
-        #[allow(unused_qualifications)]
-        impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
-            #source_method
-            #provide_method
-        }
-        #display_impl
-        #from_impl
+    match derive_type {
+        DeriveType::Error => quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
+                #source_method
+                #provide_method
+            }
+            #display_impl
+            #from_impl
+        },
+        DeriveType::Display => quote! {
+            #display_impl
+            #from_impl
+        },
     }
 }
 
-fn impl_enum(input: Enum) -> TokenStream {
+fn impl_enum(input: Enum, derive_type: DeriveType) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
@@ -465,14 +492,20 @@ fn impl_enum(input: Enum) -> TokenStream {
     }
     let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
-    quote! {
-        #[allow(unused_qualifications)]
-        impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
-            #source_method
-            #provide_method
-        }
-        #display_impl
-        #(#from_impls)*
+    match derive_type {
+        DeriveType::Error => quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics std::error::Error for #ty #ty_generics #error_where_clause {
+                #source_method
+                #provide_method
+            }
+            #display_impl
+            #(#from_impls)*
+        },
+        DeriveType::Display => quote! {
+            #display_impl
+            #(#from_impls)*
+        },
     }
 }
 

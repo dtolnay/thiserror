@@ -32,5 +32,11 @@ use syn::{parse_macro_input, DeriveInput};
 #[proc_macro_derive(Error, attributes(backtrace, error, from, source))]
 pub fn derive_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    expand::derive(&input).into()
+    expand::derive(&input, expand::DeriveType::Error).into()
+}
+
+#[proc_macro_derive(Display, attributes(backtrace, error, from, source))]
+pub fn derive_display(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    expand::derive(&input, expand::DeriveType::Display).into()
 }
