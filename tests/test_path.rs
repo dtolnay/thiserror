@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use ref_cast::RefCast;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};

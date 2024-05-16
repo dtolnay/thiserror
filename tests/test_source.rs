@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
+
 use std::error::Error as StdError;
 use std::io;
 use thiserror::Error;

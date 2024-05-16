@@ -66,7 +66,7 @@
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
-//!   pub enum Error {
+//!   pub enum MyError {
 //!       #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::MAX)]
 //!       InvalidLookahead(u32),
 //!   }
@@ -90,7 +90,7 @@
 //!   # }
 //!   #
 //!   #[derive(Error, Debug)]
-//!   pub enum Error {
+//!   pub enum MyError {
 //!       #[error("first letter must be lowercase but was {:?}", first_char(.0))]
 //!       WrongCase(String),
 //!       #[error("invalid index {idx}, expected at least {} and at most {}", .limits.lo, .limits.hi)]
@@ -236,6 +236,7 @@
     clippy::wildcard_imports
 )]
 #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
+#![cfg_attr(not(feature = "std"), no_std, feature(error_in_core))]
 
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
@@ -244,6 +245,14 @@ mod aserror;
 mod display;
 #[cfg(error_generic_member_access)]
 mod provide;
+
+#[cfg(feature = "std")]
+#[doc(hidden)]
+pub use std::error;
+
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+pub use core::error;
 
 pub use thiserror_impl::*;
 

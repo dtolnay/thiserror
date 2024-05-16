@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![cfg_attr(thiserror_nightly_testing, feature(error_generic_member_access))]
 
 use thiserror::Error;
