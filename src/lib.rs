@@ -16,6 +16,7 @@
 //! # Example
 //!
 //! ```rust
+//! # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //! # use std::io;
 //! use thiserror::Error;
 //!
@@ -62,6 +63,7 @@
 //!   which may be arbitrary expressions. For example:
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use std::i32;
 //!   # use thiserror::Error;
 //!   #
@@ -77,6 +79,7 @@
 //!   as `.0`.
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   # fn first_char(s: &String) -> char {
@@ -106,6 +109,7 @@
 //!   `From` impl if there is a field for it.
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
@@ -129,6 +133,7 @@
 //!   std::error::Error` will work as a source.
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use std::fmt::{self, Display};
 //!   # use thiserror::Error;
 //!   #
@@ -151,6 +156,7 @@
 //!   `std::backtrace::Backtrace`.
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   use std::backtrace::Backtrace;
 //!
@@ -168,6 +174,7 @@
 //!   both layers of the error share the same backtrace.
 //!
 //!   ```rust
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
@@ -185,6 +192,7 @@
 //!   "anything else" variant.
 //!
 //!   ```
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
@@ -203,6 +211,7 @@
 //!   able to evolve without breaking the crate's public API.
 //!
 //!   ```
+//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   // PublicError is public, but opaque and easy to keep compatible.
