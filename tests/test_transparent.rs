@@ -2,8 +2,8 @@
 
 use anyhow::anyhow;
 // std or core
-use thiserror::error::Error;
 use thiserror::Error;
+use thiserror::__private::error::Error;
 
 #[cfg(feature = "std")]
 #[test]

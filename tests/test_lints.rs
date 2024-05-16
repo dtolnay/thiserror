@@ -4,7 +4,7 @@
 use thiserror::Error;
 
 // std or core
-pub use thiserror::error::Error;
+pub use thiserror::__private::error::Error;
 
 #[test]
 fn test_unused_qualifications() {

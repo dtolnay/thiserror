@@ -255,16 +255,6 @@ mod display;
 #[cfg(error_generic_member_access)]
 mod provide;
 
-#[cfg(feature = "std")]
-#[doc(hidden)]
-// Hidden re-export for derive macro
-pub use std::error;
-
-#[cfg(not(feature = "std"))]
-#[doc(hidden)]
-// Hidden re-export for derive macro
-pub use core::error;
-
 pub use thiserror_impl::*;
 
 // Not public API.
@@ -277,4 +267,8 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+    #[cfg(not(feature = "std"))]
+    pub use core::error;
+    #[cfg(feature = "std")]
+    pub use std::error;
 }
