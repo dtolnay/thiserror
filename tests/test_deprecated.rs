@@ -4,7 +4,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum MyError {
+pub enum Error {
     #[deprecated]
     #[error("...")]
     Deprecated,

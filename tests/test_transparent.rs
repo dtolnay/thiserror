@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 
 use anyhow::anyhow;
+// std or core
 use thiserror::error::Error;
 use thiserror::Error;
 
@@ -34,17 +35,17 @@ fn test_transparent_struct() {
 #[test]
 fn test_transparent_enum() {
     #[derive(Error, Debug)]
-    enum MyError {
+    enum Error {
         #[error("this failed")]
         This,
         #[error(transparent)]
         Other(anyhow::Error),
     }
 
-    let error = MyError::This;
+    let error = Error::This;
     assert_eq!("this failed", error.to_string());
 
-    let error = MyError::Other(anyhow!("inner").context("outer"));
+    let error = Error::Other(anyhow!("inner").context("outer"));
     assert_eq!("outer", error.to_string());
     assert_eq!("inner", error.source().unwrap().to_string());
 }
@@ -64,7 +65,7 @@ fn test_anyhow() {
 fn test_non_static() {
     #[derive(Error, Debug)]
     #[error(transparent)]
-    struct MyError<'a> {
+    struct Error<'a> {
         inner: ErrorKind<'a>,
     }
 
@@ -74,7 +75,7 @@ fn test_non_static() {
         Unexpected { token: &'a str },
     }
 
-    let error = MyError {
+    let error = Error {
         inner: ErrorKind::Unexpected { token: "error" },
     };
     assert_eq!("unexpected token: \"error\"", error.to_string());

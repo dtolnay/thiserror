@@ -68,7 +68,7 @@
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
-//!   pub enum MyError {
+//!   pub enum Error {
 //!       #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::MAX)]
 //!       InvalidLookahead(u32),
 //!   }
@@ -93,7 +93,7 @@
 //!   # }
 //!   #
 //!   #[derive(Error, Debug)]
-//!   pub enum MyError {
+//!   pub enum Error {
 //!       #[error("first letter must be lowercase but was {:?}", first_char(.0))]
 //!       WrongCase(String),
 //!       #[error("invalid index {idx}, expected at least {} and at most {}", .limits.lo, .limits.hi)]
@@ -257,10 +257,12 @@ mod provide;
 
 #[cfg(feature = "std")]
 #[doc(hidden)]
+// Hidden re-export for derive macro
 pub use std::error;
 
 #[cfg(not(feature = "std"))]
 #[doc(hidden)]
+// Hidden re-export for derive macro
 pub use core::error;
 
 pub use thiserror_impl::*;
