@@ -5,7 +5,7 @@
 #![feature(error_generic_member_access)]
 
 use std::error::{Error, Request};
-use std::fmt::{self, Debug, Display};
+use core::fmt::{self, Debug, Display};
 
 struct MyError(Thing);
 struct Thing;
