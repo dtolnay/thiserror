@@ -1,5 +1,5 @@
-use std::error::Error;
 use core::panic::UnwindSafe;
+use std::error::Error;
 
 #[doc(hidden)]
 pub trait AsDynError<'a>: Sealed {
