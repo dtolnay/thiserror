@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(clippy::iter_cloned_collect, clippy::uninlined_format_args)]
 
-use std::fmt::Display;
+use core::fmt::Display;
 use thiserror::Error;
 
 // Some of the elaborate cases from the rcc codebase, which is a C compiler in

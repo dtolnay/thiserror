@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(dead_code)]
 
-use std::fmt::{self, Display};
+use core::fmt::{self, Display};
 use std::io;
 use thiserror::Error;
 

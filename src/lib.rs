@@ -64,7 +64,7 @@
 //!
 //!   ```rust
 //!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
-//!   # use std::i32;
+//!   # use core::i32;
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
@@ -134,7 +134,7 @@
 //!
 //!   ```rust
 //!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
-//!   # use std::fmt::{self, Display};
+//!   # use core::fmt::{self, Display};
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
@@ -237,7 +237,7 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
-#![doc(html_root_url = "https://docs.rs/thiserror/1.0.60")]
+#![doc(html_root_url = "https://docs.rs/thiserror/1.0.61")]
 #![allow(
     clippy::module_name_repetitions,
     clippy::needless_lifetimes,

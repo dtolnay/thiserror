@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 
 use anyhow::anyhow;
-// std or core
 use thiserror::Error;
+// std or core
 use thiserror::__private::error::Error;
 
 #[cfg(feature = "std")]
