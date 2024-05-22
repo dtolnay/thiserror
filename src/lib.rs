@@ -16,7 +16,6 @@
 //! # Example
 //!
 //! ```rust
-//! # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //! # use std::io;
 //! use thiserror::Error;
 //!
@@ -63,7 +62,6 @@
 //!   which may be arbitrary expressions. For example:
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use core::i32;
 //!   # use thiserror::Error;
 //!   #
@@ -79,7 +77,6 @@
 //!   as `.0`.
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   # fn first_char(s: &String) -> char {
@@ -109,7 +106,6 @@
 //!   `From` impl if there is a field for it.
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
@@ -133,7 +129,6 @@
 //!   std::error::Error` will work as a source.
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use core::fmt::{self, Display};
 //!   # use thiserror::Error;
 //!   #
@@ -156,7 +151,6 @@
 //!   `std::backtrace::Backtrace`.
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   use std::backtrace::Backtrace;
 //!
@@ -174,7 +168,6 @@
 //!   both layers of the error share the same backtrace.
 //!
 //!   ```rust
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # const IGNORE: &str = stringify! {
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
@@ -192,7 +185,6 @@
 //!   "anything else" variant.
 //!
 //!   ```
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   #[derive(Error, Debug)]
@@ -211,7 +203,6 @@
 //!   able to evolve without breaking the crate's public API.
 //!
 //!   ```
-//!   # #![cfg_attr(not(feature = "std"), feature(error_in_core))]
 //!   # use thiserror::Error;
 //!   #
 //!   // PublicError is public, but opaque and easy to keep compatible.
@@ -245,7 +236,12 @@
     clippy::wildcard_imports
 )]
 #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
-#![cfg_attr(not(feature = "std"), no_std, feature(error_in_core))]
+#![cfg_attr(
+    not(feature = "std"),
+    no_std,
+    feature(error_in_core),
+    doc(test(attr(feature(error_in_core))))
+)]
 
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
@@ -268,7 +264,9 @@ pub mod __private {
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
     #[cfg(not(feature = "std"))]
+    #[doc(hidden)]
     pub use core::error;
     #[cfg(feature = "std")]
+    #[doc(hidden)]
     pub use std::error;
 }
