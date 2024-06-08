@@ -7,6 +7,7 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    #[allow(dead_code)]
     pub struct OptSourceNoBacktrace {
         #[source]
         source: Option<anyhow::Error>,
@@ -14,6 +15,7 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    #[allow(dead_code)]
     pub struct OptSourceAlwaysBacktrace {
         #[source]
         source: Option<anyhow::Error>,
@@ -22,6 +24,7 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    #[allow(dead_code)]
     pub struct NoSourceOptBacktrace {
         #[backtrace]
         backtrace: Option<Backtrace>,
@@ -29,6 +32,7 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    #[allow(dead_code)]
     pub struct AlwaysSourceOptBacktrace {
         source: anyhow::Error,
         #[backtrace]
@@ -37,6 +41,7 @@ pub mod structs {
 
     #[derive(Error, Debug)]
     #[error("...")]
+    #[allow(dead_code)]
     pub struct OptSourceOptBacktrace {
         #[source]
         source: Option<anyhow::Error>,
