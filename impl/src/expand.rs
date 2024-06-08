@@ -124,10 +124,28 @@ fn impl_struct(input: Struct) -> TokenStream {
                     #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
                 })
             };
+            let location_provide = if let Some(location_field) = input.location_field() {
+                let location = &location_field.member;
+
+                if type_is_option(location_field.ty) {
+                    Some(quote! {
+                        if let ::core::option::Option::Some(location) = &self.#location {
+                            #request.provide_ref::<::core::panic::Location>(location);
+                        }
+                    })
+                } else {
+                    Some(quote! {
+                        #request.provide_ref::<::core::panic::Location>(&self.#location);
+                    })
+                }
+            } else {
+                None
+            };
             quote! {
                 use thiserror::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
+                #location_provide
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
@@ -190,11 +208,14 @@ fn impl_struct(input: Struct) -> TokenStream {
     let from_impl = input.from_field().map(|from_field| {
         let backtrace_field = input.distinct_backtrace_field();
         let from = unoptional_type(from_field.ty);
-        let body = from_initializer(from_field, backtrace_field);
+        let body = from_initializer(from_field, backtrace_field, input.location_field());
+        let track_caller = input.location_field().map(|_| quote!(#[track_caller]));
+
         quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
+                #track_caller
                 fn from(source: #from) -> Self {
                     #ty #body
                 }
@@ -281,71 +302,41 @@ fn impl_enum(input: Enum) -> TokenStream {
         let request = quote!(request);
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            match (variant.backtrace_field(), variant.source_field()) {
-                (Some(backtrace_field), Some(source_field))
-                    if backtrace_field.attrs.backtrace.is_none() =>
-                {
-                    let backtrace = &backtrace_field.member;
-                    let source = &source_field.member;
-                    let varsource = quote!(source);
-                    let source_provide = if type_is_option(source_field.ty) {
-                        quote_spanned! {source.member_span()=>
-                            if let ::core::option::Option::Some(source) = #varsource {
-                                source.thiserror_provide(#request);
-                            }
-                        }
+
+            let mut arm = vec![];
+            let mut head = vec![];
+
+            if let Some((source_field, backtrace_field)) = variant
+                .backtrace_field()
+                .and_then(|b| variant.source_field().take().map(|s| (s, b)))
+                .and_then(|(s, b)| {
+                    // TODO: replace with take_if upon stabilization
+
+                    if s.member == b.member {
+                        Some((s, b))
                     } else {
-                        quote_spanned! {source.member_span()=>
-                            #varsource.thiserror_provide(#request);
-                        }
-                    };
-                    let self_provide = if type_is_option(backtrace_field.ty) {
-                        quote! {
-                            if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
-                            }
-                        }
-                    } else {
-                        quote! {
-                            #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
-                        }
-                    };
-                    quote! {
-                        #ty::#ident {
-                            #backtrace: backtrace,
-                            #source: #varsource,
-                            ..
-                        } => {
-                            use thiserror::__private::ThiserrorProvide as _;
-                            #source_provide
-                            #self_provide
+                        None
+                    }
+                })
+            {
+                let backtrace = &backtrace_field.member;
+                let varsource = quote!(source);
+                let source_provide = if type_is_option(source_field.ty) {
+                    quote_spanned! {backtrace.member_span()=>
+                        if let ::core::option::Option::Some(source) = #varsource {
+                            source.thiserror_provide(#request);
                         }
                     }
-                }
-                (Some(backtrace_field), Some(source_field))
-                    if backtrace_field.member == source_field.member =>
-                {
-                    let backtrace = &backtrace_field.member;
-                    let varsource = quote!(source);
-                    let source_provide = if type_is_option(source_field.ty) {
-                        quote_spanned! {backtrace.member_span()=>
-                            if let ::core::option::Option::Some(source) = #varsource {
-                                source.thiserror_provide(#request);
-                            }
-                        }
-                    } else {
-                        quote_spanned! {backtrace.member_span()=>
-                            #varsource.thiserror_provide(#request);
-                        }
-                    };
-                    quote! {
-                        #ty::#ident {#backtrace: #varsource, ..} => {
-                            use thiserror::__private::ThiserrorProvide as _;
-                            #source_provide
-                        }
+                } else {
+                    quote_spanned! {backtrace.member_span()=>
+                        #varsource.thiserror_provide(#request);
                     }
-                }
-                (Some(backtrace_field), _) => {
+                };
+
+                head.push(quote! { #backtrace: #varsource });
+                arm.push(quote! { #source_provide });
+            } else {
+                if let Some(backtrace_field) = variant.backtrace_field() {
                     let backtrace = &backtrace_field.member;
                     let body = if type_is_option(backtrace_field.ty) {
                         quote! {
@@ -358,20 +349,64 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
                         }
                     };
+
+                    head.push(quote! { #backtrace: backtrace });
+                    arm.push(quote! { #body });
+                }
+
+                if let Some(source_field) = variant.source_field() {
+                    let source = &source_field.member;
+                    let varsource = quote!(source);
+
+                    let source_provide = if type_is_option(source_field.ty) {
+                        quote_spanned! {source.member_span()=>
+                            if let ::core::option::Option::Some(source) = #varsource {
+                                source.thiserror_provide(#request);
+                            }
+                        }
+                    } else {
+                        quote_spanned! {source.member_span()=>
+                            #varsource.thiserror_provide(#request);
+                        }
+                    };
+
+                    head.push(quote! { #source: #varsource });
+                    arm.push(quote! { #source_provide });
+                }
+            }
+
+            if let Some(location_field) = variant.location_field() {
+                let location = &location_field.member;
+
+                let location_provide = if type_is_option(location_field.ty) {
                     quote! {
-                        #ty::#ident {#backtrace: backtrace, ..} => {
-                            #body
+                        if let ::core::option::Option::Some(location) = location {
+                            #request.provide_ref::<::core::panic::Location>(location);
                         }
                     }
+                } else {
+                    quote! {
+                        #request.provide_ref::<::core::panic::Location>(location);
+                    }
+                };
+
+                head.push(quote! { #location: location });
+                arm.push(quote! { #location_provide });
+            }
+
+            quote! {
+                #ty::#ident {
+                    #(#head,)*
+                    ..
+                } => {
+                    use thiserror::__private::ThiserrorProvide as _;
+                    #(#arm)*
                 }
-                (None, _) => quote! {
-                    #ty::#ident {..} => {}
-                },
             }
         });
         Some(quote! {
             fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
-                #[allow(deprecated)]
+                #[allow(deprecated, unused_imports)]
                 match self {
                     #(#arms)*
                 }
@@ -444,13 +479,17 @@ fn impl_enum(input: Enum) -> TokenStream {
     let from_impls = input.variants.iter().filter_map(|variant| {
         let from_field = variant.from_field()?;
         let backtrace_field = variant.distinct_backtrace_field();
+        let location_field = variant.location_field();
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
-        let body = from_initializer(from_field, backtrace_field);
+        let body = from_initializer(from_field, backtrace_field, location_field);
+        let track_caller = location_field.map(|_| quote!(#[track_caller]));
+
         Some(quote! {
             #[allow(unused_qualifications)]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
+                #track_caller
                 fn from(source: #from) -> Self {
                     #ty::#variant #body
                 }
@@ -501,7 +540,11 @@ fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
     }
 }
 
-fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> TokenStream {
+fn from_initializer(
+    from_field: &Field,
+    backtrace_field: Option<&Field>,
+    location_field: Option<&Field>,
+) -> TokenStream {
     let from_member = &from_field.member;
     let some_source = if type_is_option(from_field.ty) {
         quote!(::core::option::Option::Some(source))
@@ -520,9 +563,23 @@ fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> Toke
             }
         }
     });
+    let location = location_field.map(|location_field| {
+        let location_member = &location_field.member;
+
+        if type_is_option(location_field.ty) {
+            quote! {
+                #location_member: ::core::option::Option::Some(::core::panic::Location::caller()),
+            }
+        } else {
+            quote! {
+                #location_member: ::core::convert::From::from(::core::panic::Location::caller()),
+            }
+        }
+    });
     quote!({
         #from_member: #some_source,
         #backtrace
+        #location
     })
 }
 
