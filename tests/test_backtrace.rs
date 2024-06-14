@@ -16,8 +16,8 @@ pub struct InnerBacktrace {
 #[cfg(thiserror_nightly_testing)]
 pub mod structs {
     use super::{Inner, InnerBacktrace};
+    use core::error::{self, Error};
     use std::backtrace::Backtrace;
-    use std::error::{self, Error};
     use std::sync::Arc;
     use thiserror::Error;
 
@@ -150,8 +150,8 @@ pub mod structs {
 #[cfg(thiserror_nightly_testing)]
 pub mod enums {
     use super::{Inner, InnerBacktrace};
+    use core::error;
     use std::backtrace::Backtrace;
-    use std::error;
     use std::sync::Arc;
     use thiserror::Error;
 

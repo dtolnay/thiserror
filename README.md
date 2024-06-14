@@ -7,9 +7,9 @@ derive(Error)
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/dtolnay/thiserror/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/dtolnay/thiserror/actions?query=branch%3Amaster)
 
 This library provides a convenient derive macro for the standard library's
-[`std::error::Error`] trait.
+[`core::error::Error`] trait.
 
-[`std::error::Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
+[`core::error::Error`]: https://doc.rust-lang.org/core/error/trait.Error.html
 
 ```toml
 [dependencies]
@@ -46,7 +46,7 @@ pub enum DataStoreError {
 ## Details
 
 - Thiserror deliberately does not appear in your public API. You get the same
-  thing as if you had written an implementation of `std::error::Error` by hand,
+  thing as if you had written an implementation of `core::error::Error` by hand,
   and switching from handwritten impls to thiserror or vice versa is not a
   breaking change.
 
@@ -112,8 +112,8 @@ pub enum DataStoreError {
   The `#[from]` attribute always implies that the same field is `#[source]`, so
   you don't ever need to specify both attributes.
 
-  Any error type that implements `std::error::Error` or dereferences to `dyn
-  std::error::Error` will work as a source.
+  Any error type that implements `core::error::Error` or dereferences to `dyn
+  core::error::Error` will work as a source.
 
   ```rust
   #[derive(Error, Debug)]
