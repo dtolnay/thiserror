@@ -1,4 +1,3 @@
-#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(clippy::needless_raw_string_hashes, clippy::uninlined_format_args)]
 
 use core::fmt::{self, Display};

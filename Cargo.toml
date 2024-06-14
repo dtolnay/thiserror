@@ -31,8 +31,3 @@ features = ["std"]
 [features]
 std = []
 default = ["std"]
-
-[[test]]
-name = "compiletest"
-# Merely to avoid spraying cfg(error_in_core)
-required-features = ["std"]
