@@ -1,11 +1,11 @@
-use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::parse::discouraged::Speculative;
 use syn::parse::ParseStream;
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr, Meta,
-    Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitFloat, LitInt,
+    LitStr, Meta, Result, Token,
 };
 
 pub struct Attrs<'a> {
@@ -145,14 +145,42 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
                 input.parse::<Token![.]>()?;
                 begin_expr = false;
                 continue;
-            }
-            if input.peek2(LitInt) {
+            } else if input.peek2(LitInt) {
                 input.parse::<Token![.]>()?;
                 let int: Index = input.parse()?;
-                let ident = format_ident!("_{}", int.index, span = int.span);
-                tokens.push(TokenTree::Ident(ident));
+                tokens.push({
+                    let ident = format_ident!("_{}", int.index, span = int.span);
+                    TokenTree::Ident(ident)
+                });
                 begin_expr = false;
                 continue;
+            } else if input.peek2(LitFloat) {
+                let ahead = input.fork();
+                ahead.parse::<Token![.]>()?;
+                let float: LitFloat = ahead.parse()?;
+                let repr = float.to_string();
+                let mut indices = repr.split('.').map(syn::parse_str::<Index>);
+                if let (Some(Ok(first)), Some(Ok(second)), None) =
+                    (indices.next(), indices.next(), indices.next())
+                {
+                    input.advance_to(&ahead);
+                    tokens.push({
+                        let ident = format_ident!("_{}", first, span = float.span());
+                        TokenTree::Ident(ident)
+                    });
+                    tokens.push({
+                        let mut punct = Punct::new('.', Spacing::Alone);
+                        punct.set_span(float.span());
+                        TokenTree::Punct(punct)
+                    });
+                    tokens.push({
+                        let mut literal = Literal::u32_unsuffixed(second.index);
+                        literal.set_span(float.span());
+                        TokenTree::Literal(literal)
+                    });
+                    begin_expr = false;
+                    continue;
+                }
             }
         }
 
