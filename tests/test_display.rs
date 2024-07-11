@@ -235,6 +235,18 @@ fn test_field() {
 }
 
 #[test]
+fn test_nested_tuple_field() {
+    #[derive(Debug)]
+    struct Inner(usize);
+
+    #[derive(Error, Debug)]
+    #[error("{}", .0.0)]
+    struct Error(Inner);
+
+    assert("0", Error(Inner(0)));
+}
+
+#[test]
 fn test_macro_rules() {
     // Regression test for https://github.com/dtolnay/thiserror/issues/86
 
