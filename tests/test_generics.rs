@@ -158,4 +158,4 @@ pub struct StructFromGeneric<E> {
 //
 #[derive(Error, Debug)]
 #[error(transparent)]
-pub struct StructTransparentGeneric<E>(E);
+pub struct StructTransparentGeneric<E>(pub E);
