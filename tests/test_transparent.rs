@@ -1,10 +1,12 @@
 use anyhow::anyhow;
-use std::error::Error as _;
-use std::io;
+use core::error::Error;
 use thiserror::Error;
 
+#[cfg(feature = "std")]
 #[test]
 fn test_transparent_struct() {
+    use std::io;
+
     #[derive(Error, Debug)]
     #[error(transparent)]
     struct Error(ErrorKind);
