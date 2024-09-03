@@ -98,24 +98,36 @@
 //!   }
 //!   ```
 //!
-//! - A `From` impl is generated for each variant containing a `#[from]`
+//! - A `From` impl is generated for each variant that contains a `#[from]`
 //!   attribute.
 //!
-//!   Note that the variant must not contain any other fields beyond the source
-//!   error and possibly a backtrace. A backtrace is captured from within the
-//!   `From` impl if there is a field for it.
+//!   The variant using `#[from]` must not contain any other fields beyond the
+//!   source error (and possibly a backtrace &mdash; see below). Usually
+//!   `#[from]` fields are unnamed, but `#[from]` is allowed on a named field
+//!   too.
 //!
 //!   ```rust
-//!   # const IGNORE: &str = stringify! {
+//!   # use core::fmt::{self, Display};
+//!   # use std::io;
+//!   # use thiserror::Error;
+//!   #
+//!   # mod globset {
+//!   #     #[derive(thiserror::Error, Debug)]
+//!   #     #[error("...")]
+//!   #     pub struct Error;
+//!   # }
+//!   #
 //!   #[derive(Error, Debug)]
 //!   pub enum MyError {
-//!       Io {
-//!           #[from]
-//!           source: io::Error,
-//!           backtrace: Backtrace,
-//!       },
+//!       Io(#[from] io::Error),
+//!       Glob(#[from] globset::Error),
 //!   }
-//!   # };
+//!   #
+//!   # impl Display for MyError {
+//!   #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//!   #         unimplemented!()
+//!   #     }
+//!   # }
 //!   ```
 //!
 //! - The Error trait's `source()` method is implemented to return whichever
@@ -148,7 +160,8 @@
 //!
 //! - The Error trait's `provide()` method is implemented to provide whichever
 //!   field has a type named `Backtrace`, if any, as a
-//!   `std::backtrace::Backtrace`.
+//!   `std::backtrace::Backtrace`. Using `Backtrace` in errors requires a
+//!   nightly compiler with Rust version 1.73 or newer.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
@@ -165,7 +178,8 @@
 //! - If a field is both a source (named `source`, or has `#[source]` or
 //!   `#[from]` attribute) *and* is marked `#[backtrace]`, then the Error
 //!   trait's `provide()` method is forwarded to the source's `provide` so that
-//!   both layers of the error share the same backtrace.
+//!   both layers of the error share the same backtrace. The `#[backtrace]`
+//!   attribute requires a nightly compiler with Rust version 1.73 or newer.
 //!
 //!   ```rust
 //!   # const IGNORE: &str = stringify! {
@@ -174,6 +188,22 @@
 //!       Io {
 //!           #[backtrace]
 //!           source: io::Error,
+//!       },
+//!   }
+//!   # };
+//!   ```
+//!
+//! - For variants that use `#[from]` and also contain a `Backtrace` field, a
+//!   backtrace is captured from within the `From` impl.
+//!
+//!   ```rust
+//!   # const IGNORE: &str = stringify! {
+//!   #[derive(Error, Debug)]
+//!   pub enum MyError {
+//!       Io {
+//!           #[from]
+//!           source: io::Error,
+//!           backtrace: Backtrace,
 //!       },
 //!   }
 //!   # };
@@ -228,7 +258,7 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
-#![doc(html_root_url = "https://docs.rs/thiserror/1.0.61")]
+#![doc(html_root_url = "https://docs.rs/thiserror/1.0.63")]
 #![allow(
     clippy::module_name_repetitions,
     clippy::needless_lifetimes,

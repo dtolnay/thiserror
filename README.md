@@ -88,20 +88,18 @@ pub enum DataStoreError {
   }
   ```
 
-- A `From` impl is generated for each variant containing a `#[from]` attribute.
+- A `From` impl is generated for each variant that contains a `#[from]`
+  attribute.
 
-  Note that the variant must not contain any other fields beyond the source
-  error and possibly a backtrace. A backtrace is captured from within the `From`
-  impl if there is a field for it.
+  The variant using `#[from]` must not contain any other fields beyond the
+  source error (and possibly a backtrace &mdash; see below). Usually `#[from]`
+  fields are unnamed, but `#[from]` is allowed on a named field too.
 
   ```rust
   #[derive(Error, Debug)]
   pub enum MyError {
-      Io {
-          #[from]
-          source: io::Error,
-          backtrace: Backtrace,
-      },
+      Io(#[from] io::Error),
+      Glob(#[from] globset::Error),
   }
   ```
 
@@ -125,7 +123,9 @@ pub enum DataStoreError {
   ```
 
 - The Error trait's `provide()` method is implemented to provide whichever field
-  has a type named `Backtrace`, if any, as a `std::backtrace::Backtrace`.
+  has a type named `Backtrace`, if any, as a `std::backtrace::Backtrace`. Using
+  `Backtrace` in errors requires a nightly compiler with Rust version 1.73 or
+  newer.
 
   ```rust
   use std::backtrace::Backtrace;
@@ -140,7 +140,9 @@ pub enum DataStoreError {
 - If a field is both a source (named `source`, or has `#[source]` or `#[from]`
   attribute) *and* is marked `#[backtrace]`, then the Error trait's `provide()`
   method is forwarded to the source's `provide` so that both layers of the error
-  share the same backtrace.
+  share the same backtrace. The `#[backtrace]` attribute requires a nightly
+  compiler with Rust version 1.73 or newer.
+
 
   ```rust
   #[derive(Error, Debug)]
@@ -148,6 +150,20 @@ pub enum DataStoreError {
       Io {
           #[backtrace]
           source: io::Error,
+      },
+  }
+  ```
+
+- For variants that use `#[from]` and also contain a `Backtrace` field, a
+  backtrace is captured from within the `From` impl.
+
+  ```rust
+  #[derive(Error, Debug)]
+  pub enum MyError {
+      Io {
+          #[from]
+          source: io::Error,
+          backtrace: Backtrace,
       },
   }
   ```

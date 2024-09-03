@@ -1,6 +1,6 @@
 [package]
 name = "thiserror-impl"
-version = "1.0.61"
+version = "1.0.63"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Implementation detail of the `thiserror` crate"
 edition = "2021"
