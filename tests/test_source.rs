@@ -1,4 +1,4 @@
-use core::error::Error as StdError;
+use std::error::Error as StdError;
 use std::io;
 use thiserror::Error;
 

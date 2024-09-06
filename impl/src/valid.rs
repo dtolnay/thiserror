@@ -195,7 +195,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         if contains_non_static_lifetime(source_field.ty) {
             return Err(Error::new_spanned(
                 &source_field.original.ty,
-                "non-static lifetimes are not allowed in the source of an error, because core::error::Error requires the source is dyn Error + 'static",
+                "non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static",
             ));
         }
     }
