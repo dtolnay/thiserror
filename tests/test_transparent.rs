@@ -1,15 +1,12 @@
-#![cfg_attr(not(feature = "std"), feature(error_in_core))]
+#![cfg(feature = "std")]
 
 use anyhow::anyhow;
+use std::error::Error as _;
+use std::io;
 use thiserror::Error;
-// std or core
-use thiserror::__private::error::Error;
 
-#[cfg(feature = "std")]
 #[test]
 fn test_transparent_struct() {
-    use std::io;
-
     #[derive(Error, Debug)]
     #[error(transparent)]
     struct Error(ErrorKind);

@@ -1,4 +1,3 @@
-#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(clippy::iter_cloned_collect, clippy::uninlined_format_args)]
 
 use core::fmt::Display;
