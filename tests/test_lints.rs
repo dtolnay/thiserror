@@ -1,8 +1,10 @@
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(clippy::mixed_attributes_style)]
 
 use thiserror::Error;
 
-pub use core::error::Error;
+// std or core
+pub use thiserror::__private::error::Error;
 
 #[test]
 fn test_unused_qualifications() {

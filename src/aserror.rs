@@ -1,4 +1,4 @@
-use core::error::Error;
+use crate::__private::error::Error;
 use core::panic::UnwindSafe;
 
 #[doc(hidden)]

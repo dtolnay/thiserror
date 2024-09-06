@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 #![allow(clippy::extra_unused_type_parameters)]
 
 use std::io;

@@ -266,7 +266,12 @@
     clippy::wildcard_imports
 )]
 #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(
+    not(feature = "std"),
+    no_std,
+    feature(error_in_core),
+    doc(test(attr(feature(error_in_core))))
+)]
 
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
@@ -288,4 +293,10 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+    #[cfg(not(feature = "std"))]
+    #[doc(hidden)]
+    pub use core::error;
+    #[cfg(feature = "std")]
+    #[doc(hidden)]
+    pub use std::error;
 }

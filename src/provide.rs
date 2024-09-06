@@ -1,4 +1,4 @@
-use core::error::{Error, Request};
+use crate::__private::error::{Error, Request};
 
 #[doc(hidden)]
 pub trait ThiserrorProvide: Sealed {
