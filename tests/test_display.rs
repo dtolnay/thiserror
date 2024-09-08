@@ -1,6 +1,6 @@
 #![allow(clippy::needless_raw_string_hashes, clippy::uninlined_format_args)]
 
-use std::fmt::{self, Display};
+use core::fmt::{self, Display};
 use thiserror::Error;
 
 fn assert<T: Display>(expected: &str, value: T) {
@@ -232,6 +232,18 @@ fn test_field() {
     struct Error(Inner);
 
     assert("0", Error(Inner { data: 0 }));
+}
+
+#[test]
+fn test_nested_tuple_field() {
+    #[derive(Debug)]
+    struct Inner(usize);
+
+    #[derive(Error, Debug)]
+    #[error("{}", .0.0)]
+    struct Error(Inner);
+
+    assert("0", Error(Inner(0)));
 }
 
 #[test]

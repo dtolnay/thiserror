@@ -1,6 +1,6 @@
 #![allow(clippy::needless_late_init, clippy::uninlined_format_args)]
 
-use std::fmt::{self, Debug, Display};
+use core::fmt::{self, Debug, Display};
 use thiserror::Error;
 
 pub struct NoFormat;
@@ -158,4 +158,4 @@ pub struct StructFromGeneric<E> {
 //
 #[derive(Error, Debug)]
 #[error(transparent)]
-pub struct StructTransparentGeneric<E>(E);
+pub struct StructTransparentGeneric<E>(pub E);
