@@ -1,5 +1,3 @@
-#![cfg(feature = "std")]
-
 use anyhow::anyhow;
 use std::error::Error as _;
 use std::io;

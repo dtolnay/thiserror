@@ -1,5 +1,3 @@
-#![cfg(feature = "std")]
-
 use core::fmt::Display;
 use ref_cast::RefCast;
 use std::path::{Path, PathBuf};

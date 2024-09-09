@@ -1,4 +1,3 @@
-#![cfg(feature = "std")]
 #![allow(clippy::mixed_attributes_style)]
 
 use thiserror::Error;
