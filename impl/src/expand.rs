@@ -91,7 +91,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let source_method = source_body.map(|body| {
         quote! {
             fn source(&self) -> ::core::option::Option<&(dyn ::thiserror::__private::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
+                use ::thiserror::__private::AsDynError as _;
                 #body
             }
         }
@@ -118,32 +118,32 @@ fn impl_struct(input: Struct) -> TokenStream {
             } else if type_is_option(backtrace_field.ty) {
                 Some(quote! {
                     if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                        #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                        #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                     }
                 })
             } else {
                 Some(quote! {
-                    #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
+                    #request.provide_ref::<::std::backtrace::Backtrace>(&self.#backtrace);
                 })
             };
             quote! {
-                use thiserror::__private::ThiserrorProvide as _;
+                use ::thiserror::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
                 if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                    #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                    #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                 }
             }
         } else {
             quote! {
-                #request.provide_ref::<std::backtrace::Backtrace>(&self.#backtrace);
+                #request.provide_ref::<::std::backtrace::Backtrace>(&self.#backtrace);
             }
         };
         quote! {
-            fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
+            fn provide<'_request>(&'_request self, #request: &mut ::thiserror::__private::error::Request<'_request>) {
                 #body
             }
         }
@@ -267,8 +267,8 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         Some(quote! {
-            fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
+            fn source(&self) -> ::core::option::Option<&(dyn ::thiserror::__private::error::Error + 'static)> {
+                use ::thiserror::__private::AsDynError as _;
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
@@ -304,12 +304,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let self_provide = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                                #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                            #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -318,7 +318,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #source: #varsource,
                             ..
                         } => {
-                            use thiserror::__private::ThiserrorProvide as _;
+                            use ::thiserror::__private::ThiserrorProvide as _;
                             #source_provide
                             #self_provide
                         }
@@ -342,7 +342,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     };
                     quote! {
                         #ty::#ident {#backtrace: #varsource, ..} => {
-                            use thiserror::__private::ThiserrorProvide as _;
+                            use ::thiserror::__private::ThiserrorProvide as _;
                             #source_provide
                         }
                     }
@@ -352,12 +352,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let body = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                                #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<std::backtrace::Backtrace>(backtrace);
+                            #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -372,7 +372,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         Some(quote! {
-            fn provide<'_request>(&'_request self, #request: &mut std::error::Request<'_request>) {
+            fn provide<'_request>(&'_request self, #request: &mut ::thiserror::__private::error::Request<'_request>) {
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
@@ -496,7 +496,7 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
 fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
     if needs_as_display {
         Some(quote! {
-            use thiserror::__private::AsDisplay as _;
+            use ::thiserror::__private::AsDisplay as _;
         })
     } else {
         None
@@ -514,11 +514,11 @@ fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> Toke
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
             quote! {
-                #backtrace_member: ::core::option::Option::Some(std::backtrace::Backtrace::capture()),
+                #backtrace_member: ::core::option::Option::Some(::std::backtrace::Backtrace::capture()),
             }
         } else {
             quote! {
-                #backtrace_member: ::core::convert::From::from(std::backtrace::Backtrace::capture()),
+                #backtrace_member: ::core::convert::From::from(::std::backtrace::Backtrace::capture()),
             }
         }
     });
