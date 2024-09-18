@@ -34,13 +34,5 @@ std = []
 default = ["std"]
 
 [[test]]
-name = "test_lints"
-required-features = ["std"]
-
-[[test]]
 name = "test_path"
-required-features = ["std"]
-
-[[test]]
-name = "test_transparent"
 required-features = ["std"]
