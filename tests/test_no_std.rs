@@ -14,7 +14,7 @@ pub enum MyError {
 }
 
 #[test]
-#[cfg_attr(feature = "std", ignore)]
+#[cfg(not(feature = "std"))]
 fn test_no_std() {
     use core::error::Error as _;
 
