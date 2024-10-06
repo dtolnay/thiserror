@@ -38,6 +38,9 @@ jobs:
       - name: Enable nightly-only tests
         run: echo RUSTFLAGS=${RUSTFLAGS}\ --cfg=thiserror_nightly_testing >> $GITHUB_ENV
         if: matrix.rust == 'nightly'
+      - name: Test no-default-features
+        run: cargo test --all --no-default-features
+        if: matrix.rust != '1.56.0'
       - run: cargo test --all
       - uses: actions/upload-artifact@v4
         if: matrix.rust == 'nightly' && always()

@@ -11,6 +11,8 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
 rust-version = "1.56"
 
+# without the `std` feature (i.e. `no_std`): rust-version = "1.81"
+
 [dependencies]
 thiserror-impl = { version = "=1.0.64", path = "impl" }
 
@@ -26,3 +28,11 @@ members = ["impl"]
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
+
+[features]
+std = []
+default = ["std"]
+
+[[test]]
+name = "test_path"
+required-features = ["std"]
