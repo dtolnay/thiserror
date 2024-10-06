@@ -1,4 +1,8 @@
-#![allow(clippy::needless_raw_string_hashes, clippy::uninlined_format_args)]
+#![allow(
+    clippy::needless_lifetimes,
+    clippy::needless_raw_string_hashes,
+    clippy::uninlined_format_args
+)]
 
 use core::fmt::{self, Display};
 use thiserror::Error;
