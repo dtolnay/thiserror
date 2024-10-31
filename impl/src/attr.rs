@@ -91,7 +91,11 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
     syn::custom_keyword!(transparent);
 
     attr.parse_args_with(|input: ParseStream| {
-        if let Some(kw) = input.parse::<Option<transparent>>()? {
+        let lookahead = input.lookahead1();
+        let fmt = if lookahead.peek(LitStr) {
+            input.parse::<LitStr>()?
+        } else if lookahead.peek(transparent) {
+            let kw: transparent = input.parse()?;
             if attrs.transparent.is_some() {
                 return Err(Error::new_spanned(
                     attr,
@@ -103,9 +107,9 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
                 span: kw.span,
             });
             return Ok(());
-        }
-
-        let fmt: LitStr = input.parse()?;
+        } else {
+            return Err(lookahead.error());
+        };
 
         let ahead = input.fork();
         ahead.parse::<Option<Token![,]>>()?;
