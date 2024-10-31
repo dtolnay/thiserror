@@ -2,7 +2,7 @@ use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, 
 use quote::{format_ident, quote, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::parse::discouraged::Speculative;
-use syn::parse::ParseStream;
+use syn::parse::{End, ParseStream};
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitFloat, LitInt,
     LitStr, Meta, Result, Token,
@@ -111,10 +111,8 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             return Err(lookahead.error());
         };
 
-        let ahead = input.fork();
-        ahead.parse::<Option<Token![,]>>()?;
-        let args = if ahead.is_empty() {
-            input.advance_to(&ahead);
+        let args = if input.is_empty() || input.peek(Token![,]) && input.peek2(End) {
+            input.parse::<Option<Token![,]>>()?;
             TokenStream::new()
         } else {
             parse_token_expr(input, false)?
