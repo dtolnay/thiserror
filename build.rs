@@ -137,10 +137,7 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
 
 fn cargo_env_var(key: &str) -> OsString {
     env::var_os(key).unwrap_or_else(|| {
-        eprintln!(
-            "Environment variable ${} is not set during execution of build script",
-            key,
-        );
+        eprintln!("Environment variable ${key} is not set during execution of build script");
         process::exit(1);
     })
 }
