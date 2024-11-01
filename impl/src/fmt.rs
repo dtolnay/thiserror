@@ -93,11 +93,6 @@ impl Display<'_> {
             if formatvar.to_string().starts_with("r#") {
                 formatvar = format_ident!("r_{}", formatvar);
             }
-            if formatvar.to_string().starts_with('_') {
-                // Work around leading underscore being rejected by 1.40 and
-                // older compilers. https://github.com/rust-lang/rust/pull/66847
-                formatvar = format_ident!("field_{}", formatvar);
-            }
             out += &formatvar.to_string();
             if !named_args.insert(formatvar.clone()) {
                 // Already specified in the format argument list.
