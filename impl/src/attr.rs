@@ -8,6 +8,7 @@ use syn::{
     LitStr, Meta, Result, Token,
 };
 
+#[derive(Default)]
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
     pub source: Option<&'a Attribute>,
@@ -46,13 +47,7 @@ pub enum Trait {
 }
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
-    let mut attrs = Attrs {
-        display: None,
-        source: None,
-        backtrace: None,
-        from: None,
-        transparent: None,
-    };
+    let mut attrs = Attrs::default();
 
     for attr in input {
         if attr.path().is_ident("error") {

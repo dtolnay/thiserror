@@ -44,6 +44,7 @@ fn crawl(in_scope: &ParamsInScope, ty: &Type, found: &mut bool) {
     }
 }
 
+#[derive(Default)]
 pub struct InferredBounds {
     bounds: Map<String, (Set<String>, Punctuated<TokenStream, Token![+]>)>,
     order: Vec<TokenStream>,
@@ -51,10 +52,7 @@ pub struct InferredBounds {
 
 impl InferredBounds {
     pub fn new() -> Self {
-        InferredBounds {
-            bounds: Map::new(),
-            order: Vec::new(),
-        }
+        Self::default()
     }
 
     #[allow(clippy::type_repetition_in_bounds, clippy::trait_duplication_in_bounds)] // clippy bug: https://github.com/rust-lang/rust-clippy/issues/8771
