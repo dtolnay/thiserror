@@ -230,7 +230,7 @@ fn impl_enum(input: Enum) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
-    let source_method = if input.has_source() {
+    let source_method = input.has_source().then(|| {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             if let Some(transparent_attr) = &variant.attrs.transparent {
@@ -278,11 +278,9 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
             }
         })
-    } else {
-        None
-    };
+    });
 
-    let provide_method = if input.has_backtrace() {
+    let provide_method = input.has_backtrace().then(|| {
         let request = quote!(request);
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
@@ -382,11 +380,9 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
             }
         })
-    } else {
-        None
-    };
+    });
 
-    let display_impl = if input.has_display() {
+    let display_impl = input.has_display().then(|| {
         let mut display_inferred_bounds = InferredBounds::new();
         let has_bonus_display = input.variants.iter().any(|v| {
             v.attrs
@@ -443,9 +439,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
             }
         })
-    } else {
-        None
-    };
+    });
 
     let from_impls = input.variants.iter().filter_map(|variant| {
         let from_field = variant.from_field()?;
@@ -500,13 +494,11 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
 }
 
 fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
-    if needs_as_display {
-        Some(quote! {
+    needs_as_display.then(|| {
+        quote! {
             use thiserror::__private::AsDisplay as _;
-        })
-    } else {
-        None
-    }
+        }
+    })
 }
 
 fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> TokenStream {
