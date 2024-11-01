@@ -142,6 +142,13 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
 fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStream> {
     let mut tokens = Vec::new();
     while !input.is_empty() {
+        if input.peek(token::Group) {
+            let group: TokenTree = input.parse()?;
+            tokens.push(group);
+            begin_expr = false;
+            continue;
+        }
+
         if begin_expr && input.peek(Token![.]) {
             if input.peek2(Ident) {
                 input.parse::<Token![.]>()?;
