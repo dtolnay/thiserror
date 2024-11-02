@@ -13,10 +13,11 @@ impl Display<'_> {
     pub fn expand_shorthand(&mut self, fields: &[Field]) {
         let raw_args = self.args.clone();
         let mut named_args = explicit_named_args.parse2(raw_args).unwrap();
-        let mut member_index = Map::new();
-        for (i, field) in fields.iter().enumerate() {
-            member_index.insert(&field.member, i);
-        }
+        let member_index = fields
+            .iter()
+            .enumerate()
+            .map(|(i, field)| (&field.member, i))
+            .collect::<Map<_, _>>();
 
         let span = self.fmt.span();
         let fmt = self.fmt.value();

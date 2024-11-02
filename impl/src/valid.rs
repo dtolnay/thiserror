@@ -86,9 +86,7 @@ impl Variant<'_> {
             }
         }
         check_field_attrs(&self.fields)?;
-        for field in &self.fields {
-            field.validate()?;
-        }
+        self.fields.iter().try_for_each(Field::validate)?;
         Ok(())
     }
 }

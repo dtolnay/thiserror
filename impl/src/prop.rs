@@ -85,39 +85,32 @@ impl Field<'_> {
 }
 
 fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
-    for field in fields {
-        if field.attrs.from.is_some() {
-            return Some(field);
-        }
-    }
-    None
+    fields.iter().find(|field| field.attrs.from.is_some())
 }
 
 fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
-    for field in fields {
-        if field.attrs.from.is_some() || field.attrs.source.is_some() {
-            return Some(field);
-        }
+    if let Some(field) = fields
+        .iter()
+        .find(|field| field.attrs.from.is_some() || field.attrs.source.is_some())
+    {
+        return Some(field);
     }
-    for field in fields {
-        match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(field),
-            _ => {}
-        }
+    if let Some(field) = fields.iter().find(|field| {
+        matches!(&field.member,
+            Member::Named(ident) if ident == "source"
+        )
+    }) {
+        return Some(field);
     }
     None
 }
 
 fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
-    for field in fields {
-        if field.attrs.backtrace.is_some() {
-            return Some(field);
-        }
+    if let Some(field) = fields.iter().find(|field| field.attrs.backtrace.is_some()) {
+        return Some(field);
     }
-    for field in fields {
-        if field.is_backtrace() {
-            return Some(field);
-        }
+    if let Some(field) = fields.iter().find(|field| field.is_backtrace()) {
+        return Some(field);
     }
     None
 }
