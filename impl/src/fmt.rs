@@ -139,16 +139,11 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
 }
 
 fn take_int(read: &mut &str) -> String {
-    let mut int = String::new();
-    for (i, ch) in read.char_indices() {
-        match ch {
-            '0'..='9' => int.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
-        }
-    }
+    let end = read
+        .find(|ch: char| !ch.is_ascii_digit())
+        .unwrap_or_default();
+    let int = read[..end].to_string();
+    *read = &read[end..];
     int
 }
 
@@ -159,14 +154,10 @@ fn take_ident(read: &mut &str) -> Ident {
         ident.push_str("r#");
         *read = &read[2..];
     }
-    for (i, ch) in read.char_indices() {
-        match ch {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
-        }
-    }
+    let end = read
+        .find(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')
+        .unwrap_or_default();
+    ident.push_str(&read[..end]);
+    *read = &read[end..];
     Ident::parse_any.parse_str(&ident).unwrap()
 }
