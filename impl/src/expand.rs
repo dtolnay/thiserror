@@ -412,12 +412,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     quote!(::core::fmt::Display::fmt(#only_field, __formatter))
                 }
             };
-            for (field, bound) in display_implied_bounds {
-                let field = &variant.fields[field];
-                if field.contains_generic {
-                    display_inferred_bounds.insert(field.ty, bound);
-                }
-            }
+            display_inferred_bounds.extend(display_implied_bounds.into_iter().filter_map(
+                |(field, bound)| {
+                    let field = &variant.fields[field];
+                    field.contains_generic.then(|| (field.ty, bound))
+                },
+            ));
             let ident = &variant.ident;
             let pat = fields_pat(&variant.fields);
             quote! {

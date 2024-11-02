@@ -87,3 +87,10 @@ impl InferredBounds {
         generics.where_clause.unwrap()
     }
 }
+
+impl<T: ToTokens, B: ToTokens> Extend<(T, B)> for InferredBounds {
+    fn extend<I: IntoIterator<Item = (T, B)>>(&mut self, iter: I) {
+        iter.into_iter()
+            .for_each(|(ty, bound)| self.insert(ty, bound));
+    }
+}
