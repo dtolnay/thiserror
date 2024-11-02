@@ -50,6 +50,7 @@ pub enum RustupError {
     },
 }
 
+#[track_caller]
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }
