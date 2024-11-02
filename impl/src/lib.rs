@@ -23,6 +23,7 @@ mod expand;
 mod fmt;
 mod generics;
 mod prop;
+mod scan_expr;
 mod span;
 mod valid;
 
