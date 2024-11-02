@@ -2,6 +2,7 @@
     clippy::blocks_in_conditions,
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
+    clippy::enum_glob_use,
     clippy::manual_find,
     clippy::manual_let_else,
     clippy::manual_map,
@@ -23,6 +24,7 @@ mod expand;
 mod fmt;
 mod generics;
 mod prop;
+mod scan_expr;
 mod span;
 mod valid;
 
