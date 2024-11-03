@@ -119,6 +119,7 @@ impl Display<'_> {
     }
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
     let ahead = input.fork();
     if let Ok(set) = try_explicit_named_args(&ahead) {
