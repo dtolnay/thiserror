@@ -1,10 +1,11 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
 use crate::scan_expr;
-use proc_macro2::TokenTree;
+use proc_macro2::{TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
 use syn::ext::IdentExt;
+use syn::parse::discouraged::Speculative;
 use syn::parse::{ParseStream, Parser};
 use syn::{Expr, Ident, Index, LitStr, Member, Result, Token};
 
@@ -118,7 +119,25 @@ impl Display<'_> {
     }
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+    let ahead = input.fork();
+    if let Ok(set) = try_explicit_named_args(&ahead) {
+        input.advance_to(&ahead);
+        return Ok(set);
+    }
+
+    let ahead = input.fork();
+    if let Ok(set) = fallback_explicit_named_args(&ahead) {
+        input.advance_to(&ahead);
+        return Ok(set);
+    }
+
+    input.parse::<TokenStream>().unwrap();
+    Ok(Set::new())
+}
+
+fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
     let scan_expr = if is_syn_full() {
         |input: ParseStream| input.parse::<Expr>().map(drop)
     } else {
@@ -138,6 +157,21 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
             named_args.insert(ident);
         }
         scan_expr(input)?;
+    }
+
+    Ok(named_args)
+}
+
+fn fallback_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+    let mut named_args = Set::new();
+
+    while !input.is_empty() {
+        if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
+            input.parse::<Token![,]>()?;
+            let ident = input.call(Ident::parse_any)?;
+            input.parse::<Token![=]>()?;
+            named_args.insert(ident);
+        }
     }
 
     Ok(named_args)
