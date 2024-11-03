@@ -1,12 +1,12 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
-use crate::scan_expr::scan_expr;
+use crate::scan_expr;
 use proc_macro2::TokenTree;
-use quote::{format_ident, quote_spanned};
+use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
 use syn::ext::IdentExt;
 use syn::parse::{ParseStream, Parser};
-use syn::{Ident, Index, LitStr, Member, Result, Token};
+use syn::{Expr, Ident, Index, LitStr, Member, Result, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
@@ -119,6 +119,12 @@ impl Display<'_> {
 }
 
 fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+    let scan_expr = if is_syn_full() {
+        |input: ParseStream| input.parse::<Expr>().map(drop)
+    } else {
+        scan_expr::scan_expr
+    };
+
     let mut named_args = Set::new();
 
     while !input.is_empty() {
@@ -135,6 +141,24 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
     }
 
     Ok(named_args)
+}
+
+fn is_syn_full() -> bool {
+    // Expr::Block contains syn::Block which contains Vec<syn::Stmt>. In the
+    // current version of Syn, syn::Stmt is exhaustive and could only plausibly
+    // represent `trait Trait {}` in Stmt::Item which contains syn::Item. Most
+    // of the point of syn's non-"full" mode is to avoid compiling Item and the
+    // entire expansive syntax tree it comprises. So the following expression
+    // being parsed to Expr::Block is a reliable indication that "full" is
+    // enabled.
+    let test = quote!({
+        trait Trait {}
+    });
+    match syn::parse2(test) {
+        Ok(Expr::Verbatim(_)) | Err(_) => false,
+        Ok(Expr::Block(_)) => true,
+        Ok(_) => unreachable!(),
+    }
 }
 
 fn take_int(read: &mut &str) -> String {
