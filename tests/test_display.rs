@@ -131,7 +131,7 @@ fn test_nested() {
 #[test]
 fn test_match() {
     #[derive(Error, Debug)]
-    #[error("{}: {0}", match .1 {
+    #[error("{intro}: {0}", intro = match .1 {
         Some(n) => format!("error occurred with {}", n),
         None => "there was an empty error".to_owned(),
     })]

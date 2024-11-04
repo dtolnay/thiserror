@@ -2,22 +2,29 @@ use crate::ast::Field;
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
+use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
-use syn::parse::{ParseStream, Parser};
-use syn::{Expr, Ident, Index, LitStr, Result, Token};
+use syn::parse::{Error, ParseStream, Parser, Result};
+use syn::{Expr, Ident, Index, LitStr, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
-    pub fn expand_shorthand(&mut self, fields: &[Field]) {
+    pub fn expand_shorthand(&mut self, fields: &[Field]) -> Result<()> {
         let raw_args = self.args.clone();
-        let mut named_args = explicit_named_args.parse2(raw_args).unwrap().named;
+        let FmtArguments {
+            named: mut named_args,
+            first_unnamed,
+        } = explicit_named_args.parse2(raw_args).unwrap();
+
         let mut member_index = Map::new();
+        let mut extra_positional_arguments_allowed = true;
         for (i, field) in fields.iter().enumerate() {
             member_index.insert(&field.member, i);
+            extra_positional_arguments_allowed &= matches!(&field.member, MemberUnraw::Named(_));
         }
 
         let span = self.fmt.span();
@@ -48,14 +55,20 @@ impl Display<'_> {
             }
             let next = match read.chars().next() {
                 Some(next) => next,
-                None => return,
+                None => return Ok(()),
             };
             let member = match next {
                 '0'..='9' => {
                     let int = take_int(&mut read);
+                    if !extra_positional_arguments_allowed {
+                        if let Some(first_unnamed) = &first_unnamed {
+                            let msg = "ambiguous reference to positional arguments by number in a tuple struct; change this to a named argument";
+                            return Err(Error::new_spanned(first_unnamed, msg));
+                        }
+                    }
                     let member = match int.parse::<u32>() {
                         Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
-                        Err(_) => return,
+                        Err(_) => return Ok(()),
                     };
                     if !member_index.contains_key(&member) {
                         out += int;
@@ -86,7 +99,7 @@ impl Display<'_> {
             if let Some(&field) = member_index.get(&member) {
                 let end_spec = match read.find('}') {
                     Some(end_spec) => end_spec,
-                    None => return,
+                    None => return Ok(()),
                 };
                 let bound = match read[..end_spec].chars().next_back() {
                     Some('?') => Trait::Debug,
@@ -114,12 +127,13 @@ impl Display<'_> {
         self.args = args;
         self.has_bonus_display = has_bonus_display;
         self.implied_bounds = implied_bounds;
+        Ok(())
     }
 }
 
 struct FmtArguments {
     named: Set<IdentUnraw>,
-    unnamed: bool,
+    first_unnamed: Option<TokenStream>,
 }
 
 #[allow(clippy::unnecessary_wraps)]
@@ -139,7 +153,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     input.parse::<TokenStream>().unwrap();
     Ok(FmtArguments {
         named: Set::new(),
-        unnamed: false,
+        first_unnamed: None,
     })
 }
 
@@ -147,7 +161,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut syn_full = None;
     let mut args = FmtArguments {
         named: Set::new(),
-        unnamed: false,
+        first_unnamed: None,
     };
 
     while !input.is_empty() {
@@ -155,21 +169,31 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
         if input.is_empty() {
             break;
         }
+
+        let mut begin_unnamed = None;
         if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
             args.named.insert(ident);
         } else {
-            args.unnamed = true;
+            begin_unnamed = Some(input.fork());
         }
-        if *syn_full.get_or_insert_with(is_syn_full) {
-            let ahead = input.fork();
-            if ahead.parse::<Expr>().is_ok() {
-                input.advance_to(&ahead);
-                continue;
+
+        let ahead;
+        if *syn_full.get_or_insert_with(is_syn_full) && {
+            ahead = input.fork();
+            ahead.parse::<Expr>().is_ok()
+        } {
+            input.advance_to(&ahead);
+        } else {
+            scan_expr(input)?;
+        }
+
+        if let Some(begin_unnamed) = begin_unnamed {
+            if args.first_unnamed.is_none() {
+                args.first_unnamed = Some(between(&begin_unnamed, input));
             }
         }
-        scan_expr(input)?;
     }
 
     Ok(args)
@@ -178,7 +202,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut args = FmtArguments {
         named: Set::new(),
-        unnamed: false,
+        first_unnamed: None,
     };
 
     while !input.is_empty() {
@@ -239,4 +263,30 @@ fn take_ident<'a>(read: &mut &'a str) -> &'a str {
     let (ident, rest) = read.split_at(ident_len);
     *read = rest;
     ident
+}
+
+fn between<'a>(begin: ParseStream<'a>, end: ParseStream<'a>) -> TokenStream {
+    let end = end.cursor();
+    let mut cursor = begin.cursor();
+    let mut tokens = TokenStream::new();
+
+    while cursor < end {
+        let (tt, next) = cursor.token_tree().unwrap();
+
+        if end < next {
+            if let Some((inside, _span, _after)) = cursor.group(Delimiter::None) {
+                cursor = inside;
+                continue;
+            }
+            if tokens.is_empty() {
+                tokens.extend(iter::once(tt));
+            }
+            break;
+        }
+
+        tokens.extend(iter::once(tt));
+        cursor = next;
+    }
+
+    tokens
 }

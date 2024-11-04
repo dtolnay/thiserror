@@ -60,7 +60,7 @@ impl<'a> Struct<'a> {
         let span = attrs.span().unwrap_or_else(Span::call_site);
         let fields = Field::multiple_from_syn(&data.fields, &scope, span)?;
         if let Some(display) = &mut attrs.display {
-            display.expand_shorthand(&fields);
+            display.expand_shorthand(&fields)?;
         }
         Ok(Struct {
             attrs,
@@ -85,7 +85,7 @@ impl<'a> Enum<'a> {
                     display.clone_from(&attrs.display);
                 }
                 if let Some(display) = &mut variant.attrs.display {
-                    display.expand_shorthand(&variant.fields);
+                    display.expand_shorthand(&variant.fields)?;
                 } else if variant.attrs.transparent.is_none() {
                     variant.attrs.transparent = attrs.transparent;
                 }
