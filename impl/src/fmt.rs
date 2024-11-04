@@ -184,7 +184,11 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     };
 
     while !input.is_empty() {
-        if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
+        if input.peek(Token![,])
+            && input.peek2(Ident::peek_any)
+            && input.peek3(Token![=])
+            && !input.peek3(Token![==])
+        {
             input.parse::<Token![,]>()?;
             let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
