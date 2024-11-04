@@ -138,7 +138,7 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
 }
 
 fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
-    let syn_full = is_syn_full();
+    let mut syn_full = None;
     let mut named_args = Set::new();
 
     while !input.is_empty() {
@@ -151,7 +151,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
             input.parse::<Token![=]>()?;
             named_args.insert(ident);
         }
-        if syn_full {
+        if *syn_full.get_or_insert_with(is_syn_full) {
             let ahead = input.fork();
             if ahead.parse::<Expr>().is_ok() {
                 input.advance_to(&ahead);
