@@ -1,7 +1,8 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
-use proc_macro2::{Span, TokenStream, TokenTree};
+use crate::unraw::IdentUnraw;
+use proc_macro2::{TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
 use syn::ext::IdentExt;
@@ -86,10 +87,10 @@ impl Display<'_> {
                 };
                 implied_bounds.insert((field, bound));
             }
-            let formatvar = match &member {
+            let formatvar = IdentUnraw::new(match &member {
                 Member::Unnamed(index) => format_ident!("_{}", index),
                 Member::Named(ident) => ident.clone(),
-            };
+            });
             out += &formatvar.to_string();
             if !named_args.insert(formatvar.clone()) {
                 // Already specified in the format argument list.
@@ -98,7 +99,7 @@ impl Display<'_> {
             if !has_trailing_comma {
                 args.extend(quote_spanned!(span=> ,));
             }
-            let local = raw_if_needed(&formatvar);
+            let local = formatvar.to_local();
             args.extend(quote_spanned!(span=> #formatvar = #local));
             if read.starts_with('}') && member_index.contains_key(&member) {
                 has_bonus_display = true;
@@ -116,7 +117,7 @@ impl Display<'_> {
 }
 
 struct FmtArguments {
-    named: Set<Ident>,
+    named: Set<IdentUnraw>,
     unnamed: bool,
 }
 
@@ -154,7 +155,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             break;
         }
         if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
-            let ident = input.call(Ident::parse_any)?;
+            let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
             args.named.insert(ident);
         } else {
@@ -186,7 +187,7 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             && !input.peek3(Token![==])
         {
             input.parse::<Token![,]>()?;
-            let ident = input.call(Ident::parse_any)?;
+            let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
             args.named.insert(ident);
         }
@@ -237,16 +238,4 @@ fn take_ident<'a>(read: &mut &'a str) -> &'a str {
     let (ident, rest) = read.split_at(ident_len);
     *read = rest;
     ident
-}
-
-fn raw_if_needed(ident: &Ident) -> Ident {
-    let repr = ident.to_string();
-    if syn::parse_str::<Ident>(&repr).is_err() {
-        if let "_" | "super" | "self" | "Self" | "crate" = repr.as_str() {
-            // Some identifiers are never allowed to appear as raw, like r#self and r#_.
-        } else {
-            return Ident::new_raw(&repr, Span::call_site());
-        }
-    }
-    ident.clone()
 }
