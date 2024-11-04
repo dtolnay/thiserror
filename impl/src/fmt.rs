@@ -1,6 +1,6 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
-use crate::scan_expr;
+use crate::scan_expr::scan_expr;
 use proc_macro2::{TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
@@ -138,12 +138,7 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
 }
 
 fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
-    let scan_expr = if is_syn_full() {
-        |input: ParseStream| input.parse::<Expr>().map(drop)
-    } else {
-        scan_expr::scan_expr
-    };
-
+    let syn_full = is_syn_full();
     let mut named_args = Set::new();
 
     while !input.is_empty() {
@@ -155,6 +150,13 @@ fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
             let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
             named_args.insert(ident);
+        }
+        if syn_full {
+            let ahead = input.fork();
+            if ahead.parse::<Expr>().is_ok() {
+                input.advance_to(&ahead);
+                continue;
+            }
         }
         scan_expr(input)?;
     }
