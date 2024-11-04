@@ -319,6 +319,15 @@ fn test_keyword() {
 }
 
 #[test]
+fn test_self() {
+    #[derive(Error, Debug)]
+    #[error("error: {self:?}")]
+    struct Error;
+
+    assert("error: Error", Error);
+}
+
+#[test]
 fn test_str_special_chars() {
     #[derive(Error, Debug)]
     pub enum Error {
