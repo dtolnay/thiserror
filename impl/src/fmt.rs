@@ -57,13 +57,13 @@ impl Display<'_> {
                         Err(_) => return,
                     };
                     if !member_index.contains_key(&member) {
-                        out += &int;
+                        out += int;
                         continue;
                     }
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    let ident = Ident::new(&take_ident(&mut read), span);
+                    let ident = Ident::new(take_ident(&mut read), span);
                     Member::Named(ident)
                 }
                 _ => continue,
@@ -213,31 +213,29 @@ fn is_syn_full() -> bool {
     }
 }
 
-fn take_int(read: &mut &str) -> String {
-    let mut int = String::new();
-    for (i, ch) in read.char_indices() {
+fn take_int<'a>(read: &mut &'a str) -> &'a str {
+    let mut int_len = 0;
+    for ch in read.chars() {
         match ch {
-            '0'..='9' => int.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
+            '0'..='9' => int_len += 1,
+            _ => break,
         }
     }
+    let (int, rest) = read.split_at(int_len);
+    *read = rest;
     int
 }
 
-fn take_ident(read: &mut &str) -> String {
-    let mut ident = String::new();
-    for (i, ch) in read.char_indices() {
+fn take_ident<'a>(read: &mut &'a str) -> &'a str {
+    let mut ident_len = 0;
+    for ch in read.chars() {
         match ch {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident_len += 1,
+            _ => break,
         }
     }
+    let (ident, rest) = read.split_at(ident_len);
+    *read = rest;
     ident
 }
 
