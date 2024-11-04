@@ -2,12 +2,14 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
+use std::hash::{Hash, Hasher};
 use syn::ext::IdentExt as _;
 use syn::parse::{Parse, ParseStream, Result};
+use syn::Index;
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub(crate) struct IdentUnraw(Ident);
+pub struct IdentUnraw(Ident);
 
 impl IdentUnraw {
     pub fn new(ident: Ident) -> Self {
@@ -42,6 +44,12 @@ impl PartialEq for IdentUnraw {
     }
 }
 
+impl PartialEq<str> for IdentUnraw {
+    fn eq(&self, other: &str) -> bool {
+        self.0 == other
+    }
+}
+
 impl Ord for IdentUnraw {
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&self.0.unraw(), &other.0.unraw())
@@ -63,5 +71,49 @@ impl Parse for IdentUnraw {
 impl ToTokens for IdentUnraw {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.0.unraw().to_tokens(tokens);
+    }
+}
+
+pub enum MemberUnraw {
+    Named(IdentUnraw),
+    Unnamed(Index),
+}
+
+impl MemberUnraw {
+    pub fn member_span(&self) -> Span {
+        match self {
+            MemberUnraw::Named(ident) => ident.0.span(),
+            MemberUnraw::Unnamed(index) => index.span,
+        }
+    }
+}
+
+impl Eq for MemberUnraw {}
+
+impl PartialEq for MemberUnraw {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (MemberUnraw::Named(this), MemberUnraw::Named(other)) => this == other,
+            (MemberUnraw::Unnamed(this), MemberUnraw::Unnamed(other)) => this == other,
+            _ => false,
+        }
+    }
+}
+
+impl Hash for MemberUnraw {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        match self {
+            MemberUnraw::Named(ident) => ident.0.unraw().hash(hasher),
+            MemberUnraw::Unnamed(index) => index.hash(hasher),
+        }
+    }
+}
+
+impl ToTokens for MemberUnraw {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            MemberUnraw::Named(ident) => ident.to_local().to_tokens(tokens),
+            MemberUnraw::Unnamed(index) => index.to_tokens(tokens),
+        }
     }
 }

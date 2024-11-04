@@ -1,14 +1,14 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
-use crate::unraw::IdentUnraw;
+use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{ParseStream, Parser};
-use syn::{Expr, Ident, Index, LitStr, Member, Result, Token};
+use syn::{Expr, Ident, Index, LitStr, Result, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
@@ -54,7 +54,7 @@ impl Display<'_> {
                 '0'..='9' => {
                     let int = take_int(&mut read);
                     let member = match int.parse::<u32>() {
-                        Ok(index) => Member::Unnamed(Index { index, span }),
+                        Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
                         Err(_) => return,
                     };
                     if !member_index.contains_key(&member) {
@@ -65,7 +65,7 @@ impl Display<'_> {
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let ident = Ident::new(take_ident(&mut read), span);
-                    Member::Named(ident)
+                    MemberUnraw::Named(IdentUnraw::new(ident))
                 }
                 _ => continue,
             };
@@ -87,10 +87,10 @@ impl Display<'_> {
                 };
                 implied_bounds.insert((field, bound));
             }
-            let formatvar = IdentUnraw::new(match &member {
-                Member::Unnamed(index) => format_ident!("_{}", index),
-                Member::Named(ident) => ident.clone(),
-            });
+            let formatvar = match &member {
+                MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("_{}", index)),
+                MemberUnraw::Named(ident) => ident.clone(),
+            };
             out += &formatvar.to_string();
             if !named_args.insert(formatvar.clone()) {
                 // Already specified in the format argument list.

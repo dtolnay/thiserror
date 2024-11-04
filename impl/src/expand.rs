@@ -1,11 +1,11 @@
 use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
 use crate::generics::InferredBounds;
-use crate::span::MemberSpan;
+use crate::unraw::MemberUnraw;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
-use syn::{DeriveInput, GenericArgument, Member, PathArguments, Result, Token, Type};
+use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
 
 pub fn derive(input: &DeriveInput) -> TokenStream {
     match try_expand(input) {
@@ -409,8 +409,8 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
                 None => {
                     let only_field = match &variant.fields[0].member {
-                        Member::Named(ident) => ident.clone(),
-                        Member::Unnamed(index) => format_ident!("_{}", index),
+                        MemberUnraw::Named(ident) => ident.to_local(),
+                        MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                     };
                     display_implied_bounds.insert((0, Trait::Display));
                     quote!(::core::fmt::Display::fmt(#only_field, __formatter))
@@ -487,11 +487,11 @@ fn impl_enum(input: Enum) -> TokenStream {
 fn fields_pat(fields: &[Field]) -> TokenStream {
     let mut members = fields.iter().map(|field| &field.member).peekable();
     match members.peek() {
-        Some(Member::Named(_)) => quote!({ #(#members),* }),
-        Some(Member::Unnamed(_)) => {
+        Some(MemberUnraw::Named(_)) => quote!({ #(#members),* }),
+        Some(MemberUnraw::Unnamed(_)) => {
             let vars = members.map(|member| match member {
-                Member::Unnamed(member) => format_ident!("_{}", member),
-                Member::Named(_) => unreachable!(),
+                MemberUnraw::Unnamed(member) => format_ident!("_{}", member),
+                MemberUnraw::Named(_) => unreachable!(),
             });
             quote!((#(#vars),*))
         }

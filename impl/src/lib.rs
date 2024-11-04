@@ -25,7 +25,6 @@ mod fmt;
 mod generics;
 mod prop;
 mod scan_expr;
-mod span;
 mod unraw;
 mod valid;
 
