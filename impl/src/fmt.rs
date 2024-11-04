@@ -1,7 +1,7 @@
 use crate::ast::Field;
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet as Set, HashMap as Map};
 use syn::ext::IdentExt;
@@ -87,14 +87,10 @@ impl Display<'_> {
                 };
                 implied_bounds.insert((field, bound));
             }
-            let local = match &member {
+            let formatvar = match &member {
                 Member::Unnamed(index) => format_ident!("_{}", index),
                 Member::Named(ident) => ident.clone(),
             };
-            let mut formatvar = local.clone();
-            if formatvar.to_string().starts_with("r#") {
-                formatvar = format_ident!("r_{}", formatvar);
-            }
             out += &formatvar.to_string();
             if !named_args.insert(formatvar.clone()) {
                 // Already specified in the format argument list.
@@ -103,6 +99,7 @@ impl Display<'_> {
             if !has_trailing_comma {
                 args.extend(quote_spanned!(span=> ,));
             }
+            let local = raw_if_needed(&formatvar);
             args.extend(quote_spanned!(span=> #formatvar = #local));
             if read.starts_with('}') && member_index.contains_key(&member) {
                 has_bonus_display = true;
@@ -233,11 +230,6 @@ fn take_int(read: &mut &str) -> String {
 
 fn take_ident(read: &mut &str) -> Ident {
     let mut ident = String::new();
-    let raw = read.starts_with("r#");
-    if raw {
-        ident.push_str("r#");
-        *read = &read[2..];
-    }
     for (i, ch) in read.char_indices() {
         match ch {
             'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
@@ -247,5 +239,17 @@ fn take_ident(read: &mut &str) -> Ident {
             }
         }
     }
-    Ident::parse_any.parse_str(&ident).unwrap()
+    Ident::new(&ident, Span::call_site())
+}
+
+fn raw_if_needed(ident: &Ident) -> Ident {
+    let repr = ident.to_string();
+    if syn::parse_str::<Ident>(&repr).is_err() {
+        if let "_" | "super" | "self" | "Self" | "crate" = repr.as_str() {
+            // Some identifiers are never allowed to appear as raw, like r#self and r#_.
+        } else {
+            return Ident::new_raw(&repr, Span::call_site());
+        }
+    }
+    ident.clone()
 }
