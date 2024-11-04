@@ -13,7 +13,7 @@ impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
     pub fn expand_shorthand(&mut self, fields: &[Field]) {
         let raw_args = self.args.clone();
-        let mut named_args = explicit_named_args.parse2(raw_args).unwrap();
+        let mut named_args = explicit_named_args.parse2(raw_args).unwrap().named;
         let mut member_index = Map::new();
         for (i, field) in fields.iter().enumerate() {
             member_index.insert(&field.member, i);
@@ -119,8 +119,13 @@ impl Display<'_> {
     }
 }
 
+struct FmtArguments {
+    named: Set<Ident>,
+    unnamed: bool,
+}
+
 #[allow(clippy::unnecessary_wraps)]
-fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let ahead = input.fork();
     if let Ok(set) = try_explicit_named_args(&ahead) {
         input.advance_to(&ahead);
@@ -134,12 +139,18 @@ fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
     }
 
     input.parse::<TokenStream>().unwrap();
-    Ok(Set::new())
+    Ok(FmtArguments {
+        named: Set::new(),
+        unnamed: false,
+    })
 }
 
-fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
+fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut syn_full = None;
-    let mut named_args = Set::new();
+    let mut args = FmtArguments {
+        named: Set::new(),
+        unnamed: false,
+    };
 
     while !input.is_empty() {
         input.parse::<Token![,]>()?;
@@ -149,7 +160,9 @@ fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
         if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
             let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
-            named_args.insert(ident);
+            args.named.insert(ident);
+        } else {
+            args.unnamed = true;
         }
         if *syn_full.get_or_insert_with(is_syn_full) {
             let ahead = input.fork();
@@ -161,22 +174,25 @@ fn try_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
         scan_expr(input)?;
     }
 
-    Ok(named_args)
+    Ok(args)
 }
 
-fn fallback_explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
-    let mut named_args = Set::new();
+fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
+    let mut args = FmtArguments {
+        named: Set::new(),
+        unnamed: false,
+    };
 
     while !input.is_empty() {
         if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
             input.parse::<Token![,]>()?;
             let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
-            named_args.insert(ident);
+            args.named.insert(ident);
         }
     }
 
-    Ok(named_args)
+    Ok(args)
 }
 
 fn is_syn_full() -> bool {
