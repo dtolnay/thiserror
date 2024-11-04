@@ -63,8 +63,7 @@ impl Display<'_> {
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    let mut ident = take_ident(&mut read);
-                    ident.set_span(span);
+                    let ident = Ident::new(&take_ident(&mut read), span);
                     Member::Named(ident)
                 }
                 _ => continue,
@@ -228,7 +227,7 @@ fn take_int(read: &mut &str) -> String {
     int
 }
 
-fn take_ident(read: &mut &str) -> Ident {
+fn take_ident(read: &mut &str) -> String {
     let mut ident = String::new();
     for (i, ch) in read.char_indices() {
         match ch {
@@ -239,7 +238,7 @@ fn take_ident(read: &mut &str) -> Ident {
             }
         }
     }
-    Ident::new(&ident, Span::call_site())
+    ident
 }
 
 fn raw_if_needed(ident: &Ident) -> Ident {
