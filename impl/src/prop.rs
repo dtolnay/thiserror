@@ -79,7 +79,7 @@ impl Field<'_> {
         } else if let Some(from_attr) = &self.attrs.from {
             from_attr.path().get_ident().unwrap().span()
         } else {
-            self.member.member_span()
+            self.member.span()
         }
     }
 }

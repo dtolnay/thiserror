@@ -80,7 +80,7 @@ pub enum MemberUnraw {
 }
 
 impl MemberUnraw {
-    pub fn member_span(&self) -> Span {
+    pub fn span(&self) -> Span {
         match self {
             MemberUnraw::Named(ident) => ident.0.span(),
             MemberUnraw::Unnamed(index) => index.span,

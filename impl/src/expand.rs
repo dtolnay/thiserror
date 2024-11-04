@@ -75,7 +75,7 @@ fn impl_struct(input: Struct) -> TokenStream {
             error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
         }
         let asref = if type_is_option(source_field.ty) {
-            Some(quote_spanned!(source.member_span()=> .as_ref()?))
+            Some(quote_spanned!(source.span()=> .as_ref()?))
         } else {
             None
         };
@@ -103,13 +103,13 @@ fn impl_struct(input: Struct) -> TokenStream {
         let body = if let Some(source_field) = input.source_field() {
             let source = &source_field.member;
             let source_provide = if type_is_option(source_field.ty) {
-                quote_spanned! {source.member_span()=>
+                quote_spanned! {source.span()=>
                     if let ::core::option::Option::Some(source) = &self.#source {
                         source.thiserror_provide(#request);
                     }
                 }
             } else {
-                quote_spanned! {source.member_span()=>
+                quote_spanned! {source.span()=>
                     self.#source.thiserror_provide(#request);
                 }
             };
@@ -252,7 +252,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     error_inferred_bounds.insert(ty, quote!(std::error::Error + 'static));
                 }
                 let asref = if type_is_option(source_field.ty) {
-                    Some(quote_spanned!(source.member_span()=> .as_ref()?))
+                    Some(quote_spanned!(source.span()=> .as_ref()?))
                 } else {
                     None
                 };
@@ -294,13 +294,13 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let source = &source_field.member;
                     let varsource = quote!(source);
                     let source_provide = if type_is_option(source_field.ty) {
-                        quote_spanned! {source.member_span()=>
+                        quote_spanned! {source.span()=>
                             if let ::core::option::Option::Some(source) = #varsource {
                                 source.thiserror_provide(#request);
                             }
                         }
                     } else {
-                        quote_spanned! {source.member_span()=>
+                        quote_spanned! {source.span()=>
                             #varsource.thiserror_provide(#request);
                         }
                     };
@@ -333,13 +333,13 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let backtrace = &backtrace_field.member;
                     let varsource = quote!(source);
                     let source_provide = if type_is_option(source_field.ty) {
-                        quote_spanned! {backtrace.member_span()=>
+                        quote_spanned! {backtrace.span()=>
                             if let ::core::option::Option::Some(source) = #varsource {
                                 source.thiserror_provide(#request);
                             }
                         }
                     } else {
-                        quote_spanned! {backtrace.member_span()=>
+                        quote_spanned! {backtrace.span()=>
                             #varsource.thiserror_provide(#request);
                         }
                     };
