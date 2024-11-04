@@ -1,9 +1,9 @@
 use crate::attr::{self, Attrs};
 use crate::generics::ParamsInScope;
+use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::Span;
 use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Ident, Index, Member, Result,
-    Type,
+    Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Ident, Index, Result, Type,
 };
 
 pub enum Input<'a> {
@@ -35,7 +35,7 @@ pub struct Variant<'a> {
 pub struct Field<'a> {
     pub original: &'a syn::Field,
     pub attrs: Attrs<'a>,
-    pub member: Member,
+    pub member: MemberUnraw,
     pub ty: &'a Type,
     pub contains_generic: bool,
 }
@@ -136,12 +136,13 @@ impl<'a> Field<'a> {
         Ok(Field {
             original: node,
             attrs: attr::get(&node.attrs)?,
-            member: node.ident.clone().map(Member::Named).unwrap_or_else(|| {
-                Member::Unnamed(Index {
+            member: match &node.ident {
+                Some(name) => MemberUnraw::Named(IdentUnraw::new(name.clone())),
+                None => MemberUnraw::Unnamed(Index {
                     index: i as u32,
                     span,
-                })
-            }),
+                }),
+            },
             ty: &node.ty,
             contains_generic: scope.intersects(&node.ty),
         })

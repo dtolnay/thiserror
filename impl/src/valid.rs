@@ -1,8 +1,9 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
+use crate::unraw::MemberUnraw;
 use quote::ToTokens;
 use std::collections::BTreeSet as Set;
-use syn::{Error, GenericArgument, Member, PathArguments, Result, Type};
+use syn::{Error, GenericArgument, PathArguments, Result, Type};
 
 impl Input<'_> {
     pub(crate) fn validate(&self) -> Result<()> {
@@ -204,8 +205,8 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
 
 fn same_member(one: &Field, two: &Field) -> bool {
     match (&one.member, &two.member) {
-        (Member::Named(one), Member::Named(two)) => one == two,
-        (Member::Unnamed(one), Member::Unnamed(two)) => one.index == two.index,
+        (MemberUnraw::Named(one), MemberUnraw::Named(two)) => one == two,
+        (MemberUnraw::Unnamed(one), MemberUnraw::Unnamed(two)) => one.index == two.index,
         _ => unreachable!(),
     }
 }

@@ -1,7 +1,7 @@
 use crate::ast::{Enum, Field, Struct, Variant};
-use crate::span::MemberSpan;
+use crate::unraw::MemberUnraw;
 use proc_macro2::Span;
-use syn::{Member, Type};
+use syn::Type;
 
 impl Struct<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
@@ -79,7 +79,7 @@ impl Field<'_> {
         } else if let Some(from_attr) = &self.attrs.from {
             from_attr.path().get_ident().unwrap().span()
         } else {
-            self.member.member_span()
+            self.member.span()
         }
     }
 }
@@ -101,7 +101,7 @@ fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     }
     for field in fields {
         match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(field),
+            MemberUnraw::Named(ident) if ident == "source" => return Some(field),
             _ => {}
         }
     }
