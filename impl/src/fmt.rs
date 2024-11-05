@@ -102,28 +102,39 @@ impl Display<'_> {
                 MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 MemberUnraw::Named(ident) => ident.to_local(),
             });
-            if let Some(&field) = member_index.get(&member) {
-                let end_spec = match read.find('}') {
-                    Some(end_spec) => end_spec,
-                    None => return Ok(()),
-                };
-                let bound = match read[..end_spec].chars().next_back() {
-                    Some('?') => Trait::Debug,
-                    Some('o') => Trait::Octal,
-                    Some('x') => Trait::LowerHex,
-                    Some('X') => Trait::UpperHex,
-                    Some('p') => Trait::Pointer,
-                    Some('b') => Trait::Binary,
-                    Some('e') => Trait::LowerExp,
-                    Some('E') => Trait::UpperExp,
-                    Some(_) => Trait::Display,
-                    None => {
+            let end_spec = match read.find('}') {
+                Some(end_spec) => end_spec,
+                None => return Ok(()),
+            };
+            let bound = match read[..end_spec].chars().next_back() {
+                Some('?') => Trait::Debug,
+                Some('o') => Trait::Octal,
+                Some('x') => Trait::LowerHex,
+                Some('X') => Trait::UpperHex,
+                Some('p') => Trait::Pointer,
+                Some('b') => Trait::Binary,
+                Some('e') => Trait::LowerExp,
+                Some('E') => Trait::UpperExp,
+                Some(_) => Trait::Display,
+                None => {
+                    if member_index.contains_key(&member) {
                         has_bonus_display = true;
                         binding_value.extend(quote_spanned!(span=> .as_display()));
-                        Trait::Display
                     }
-                };
+                    Trait::Display
+                }
+            };
+            if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
+            }
+            if member == *"self" && bound == Trait::Display {
+                binding_value = quote_spanned!(member.span()=>
+                    {
+                        #[warn(unconditional_recursion)]
+                        fn _fmt() { _fmt() }
+                        #member
+                    }
+                );
             }
             bindings.push((local, binding_value));
         }

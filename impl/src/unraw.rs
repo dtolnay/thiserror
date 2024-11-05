@@ -101,6 +101,15 @@ impl PartialEq for MemberUnraw {
     }
 }
 
+impl PartialEq<str> for MemberUnraw {
+    fn eq(&self, other: &str) -> bool {
+        match self {
+            MemberUnraw::Named(this) => this == other,
+            MemberUnraw::Unnamed(_) => false,
+        }
+    }
+}
+
 impl Hash for MemberUnraw {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         match self {
