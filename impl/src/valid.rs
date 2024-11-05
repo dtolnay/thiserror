@@ -28,6 +28,12 @@ impl Struct<'_> {
                 ));
             }
         }
+        if let Some(fmt) = &self.attrs.fmt {
+            return Err(Error::new_spanned(
+                fmt.original,
+                "#[error(fmt = ...)] is only supported in enums; for a struct, handwrite your own Display impl",
+            ));
+        }
         check_field_attrs(&self.fields)?;
         for field in &self.fields {
             field.validate()?;
@@ -42,7 +48,10 @@ impl Enum<'_> {
         let has_display = self.has_display();
         for variant in &self.variants {
             variant.validate()?;
-            if has_display && variant.attrs.display.is_none() && variant.attrs.transparent.is_none()
+            if has_display
+                && variant.attrs.display.is_none()
+                && variant.attrs.transparent.is_none()
+                && variant.attrs.fmt.is_none()
             {
                 return Err(Error::new_spanned(
                     variant.original,
@@ -81,9 +90,15 @@ impl Variant<'_> {
 
 impl Field<'_> {
     fn validate(&self) -> Result<()> {
-        if let Some(display) = &self.attrs.display {
+        if let Some(unexpected_display_attr) = if let Some(display) = &self.attrs.display {
+            Some(display.original)
+        } else if let Some(fmt) = &self.attrs.fmt {
+            Some(fmt.original)
+        } else {
+            None
+        } {
             return Err(Error::new_spanned(
-                display.original,
+                unexpected_display_attr,
                 "not expected here; the #[error(...)] attribute belongs on top of a struct or an enum variant",
             ));
         }
@@ -110,14 +125,26 @@ fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
             "not expected here; the #[backtrace] attribute belongs on a specific field",
         ));
     }
-    if let Some(display) = &attrs.display {
-        if attrs.transparent.is_some() {
+    if attrs.transparent.is_some() {
+        if let Some(display) = &attrs.display {
             return Err(Error::new_spanned(
                 display.original,
                 "cannot have both #[error(transparent)] and a display attribute",
             ));
         }
+        if let Some(fmt) = &attrs.fmt {
+            return Err(Error::new_spanned(
+                fmt.original,
+                "cannot have both #[error(transparent)] and #[error(fmt = ...)]",
+            ));
+        }
+    } else if let (Some(display), Some(_)) = (&attrs.display, &attrs.fmt) {
+        return Err(Error::new_spanned(
+            display.original,
+            "cannot have both #[error(fmt = ...)] and a format arguments attribute",
+        ));
     }
+
     Ok(())
 }
 

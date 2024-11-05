@@ -38,10 +38,11 @@ impl Enum<'_> {
     pub(crate) fn has_display(&self) -> bool {
         self.attrs.display.is_some()
             || self.attrs.transparent.is_some()
+            || self.attrs.fmt.is_some()
             || self
                 .variants
                 .iter()
-                .any(|variant| variant.attrs.display.is_some())
+                .any(|variant| variant.attrs.display.is_some() || variant.attrs.fmt.is_some())
             || self
                 .variants
                 .iter()

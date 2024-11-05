@@ -1,6 +1,7 @@
 #![allow(
     clippy::needless_lifetimes,
     clippy::needless_raw_string_hashes,
+    clippy::trivially_copy_pass_by_ref,
     clippy::uninlined_format_args
 )]
 
@@ -369,4 +370,70 @@ fn test_raw_str() {
     assert(r#"raw brace left 2 \x7B"#, Error::BraceLeft2);
     assert(r#"raw brace right }"#, Error::BraceRight);
     assert(r#"raw brace right 2 \x7D"#, Error::BraceRight2);
+}
+
+mod util {
+    use core::fmt::{self, Octal};
+
+    pub fn octal<T: Octal>(value: &T, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "0o{:o}", value)
+    }
+}
+
+#[test]
+fn test_fmt_path() {
+    fn unit(formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("unit=")
+    }
+
+    fn pair(k: &i32, v: &i32, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "pair={k}:{v}")
+    }
+
+    #[derive(Error, Debug)]
+    pub enum Error {
+        #[error(fmt = unit)]
+        Unit,
+        #[error(fmt = pair)]
+        Tuple(i32, i32),
+        #[error(fmt = pair)]
+        Entry { k: i32, v: i32 },
+        #[error(fmt = crate::util::octal)]
+        I16(i16),
+        #[error(fmt = crate::util::octal::<i32>)]
+        I32 { n: i32 },
+        #[error(fmt = core::fmt::Octal::fmt)]
+        I64(i64),
+        #[error("...{0}")]
+        Other(bool),
+    }
+
+    assert("unit=", Error::Unit);
+    assert("pair=10:0", Error::Tuple(10, 0));
+    assert("pair=10:0", Error::Entry { k: 10, v: 0 });
+    assert("0o777", Error::I16(0o777));
+    assert("0o777", Error::I32 { n: 0o777 });
+    assert("777", Error::I64(0o777));
+    assert("...false", Error::Other(false));
+}
+
+#[test]
+fn test_fmt_path_inherited() {
+    #[derive(Error, Debug)]
+    #[error(fmt = crate::util::octal)]
+    pub enum Error {
+        I16(i16),
+        I32 {
+            n: i32,
+        },
+        #[error(fmt = core::fmt::Octal::fmt)]
+        I64(i64),
+        #[error("...{0}")]
+        Other(bool),
+    }
+
+    assert("0o777", Error::I16(0o777));
+    assert("0o777", Error::I32 { n: 0o777 });
+    assert("777", Error::I64(0o777));
+    assert("...false", Error::Other(false));
 }
