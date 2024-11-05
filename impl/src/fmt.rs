@@ -4,7 +4,7 @@ use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
-use std::collections::{BTreeSet as Set, HashMap as Map};
+use std::collections::{BTreeSet, HashMap as Map, HashSet};
 use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
@@ -33,7 +33,7 @@ impl Display<'_> {
         let mut out = String::new();
         let mut args = self.args.clone();
         let mut has_bonus_display = false;
-        let mut implied_bounds = Set::new();
+        let mut implied_bounds = BTreeSet::new();
 
         let mut has_trailing_comma = false;
         if let Some(TokenTree::Punct(punct)) = args.clone().into_iter().last() {
@@ -85,7 +85,7 @@ impl Display<'_> {
                 MemberUnraw::Named(ident) => ident.clone(),
             };
             out += &formatvar.to_string();
-            if !named_args.insert(formatvar.clone()) {
+            if !named_args.insert(member.clone()) {
                 // Already specified in the format argument list.
                 continue;
             }
@@ -130,7 +130,7 @@ impl Display<'_> {
 }
 
 struct FmtArguments {
-    named: Set<IdentUnraw>,
+    named: HashSet<MemberUnraw>,
     first_unnamed: Option<TokenStream>,
 }
 
@@ -150,7 +150,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
     input.parse::<TokenStream>().unwrap();
     Ok(FmtArguments {
-        named: Set::new(),
+        named: HashSet::new(),
         first_unnamed: None,
     })
 }
@@ -158,7 +158,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut syn_full = None;
     let mut args = FmtArguments {
-        named: Set::new(),
+        named: HashSet::new(),
         first_unnamed: None,
     };
 
@@ -172,7 +172,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
         if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
-            args.named.insert(ident);
+            args.named.insert(MemberUnraw::Named(ident));
         } else {
             begin_unnamed = Some(input.fork());
         }
@@ -196,7 +196,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
 fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut args = FmtArguments {
-        named: Set::new(),
+        named: HashSet::new(),
         first_unnamed: None,
     };
 
@@ -209,7 +209,7 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             input.parse::<Token![,]>()?;
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
-            args.named.insert(ident);
+            args.named.insert(MemberUnraw::Named(ident));
         }
     }
 
