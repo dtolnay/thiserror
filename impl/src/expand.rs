@@ -2,7 +2,7 @@ use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
 use crate::generics::InferredBounds;
 use crate::unraw::MemberUnraw;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
@@ -191,15 +191,17 @@ fn impl_struct(input: Struct) -> TokenStream {
     });
 
     let from_impl = input.from_field().map(|from_field| {
+        let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = input.distinct_backtrace_field();
         let from = unoptional_type(from_field.ty);
-        let body = from_initializer(from_field, backtrace_field);
-        quote! {
+        let source_var = Ident::new("source", span);
+        let body = from_initializer(from_field, backtrace_field, &source_var);
+        quote_spanned! {span=>
             #[allow(unused_qualifications)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
-                fn from(source: #from) -> Self {
+                fn from(#source_var: #from) -> Self {
                     #ty #body
                 }
             }
@@ -449,16 +451,18 @@ fn impl_enum(input: Enum) -> TokenStream {
 
     let from_impls = input.variants.iter().filter_map(|variant| {
         let from_field = variant.from_field()?;
+        let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = variant.distinct_backtrace_field();
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
-        let body = from_initializer(from_field, backtrace_field);
-        Some(quote! {
+        let source_var = Ident::new("source", span);
+        let body = from_initializer(from_field, backtrace_field, &source_var);
+        Some(quote_spanned! {span=>
             #[allow(unused_qualifications)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
-                fn from(source: #from) -> Self {
+                fn from(#source_var: #from) -> Self {
                     #ty::#variant #body
                 }
             }
@@ -509,12 +513,16 @@ fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
     }
 }
 
-fn from_initializer(from_field: &Field, backtrace_field: Option<&Field>) -> TokenStream {
+fn from_initializer(
+    from_field: &Field,
+    backtrace_field: Option<&Field>,
+    source_var: &Ident,
+) -> TokenStream {
     let from_member = &from_field.member;
     let some_source = if type_is_option(from_field.ty) {
-        quote!(::core::option::Option::Some(source))
+        quote!(::core::option::Option::Some(#source_var))
     } else {
-        quote!(source)
+        quote!(#source_var)
     };
     let backtrace = backtrace_field.map(|backtrace_field| {
         let backtrace_member = &backtrace_field.member;
