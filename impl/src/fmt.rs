@@ -37,9 +37,7 @@ impl Display<'_> {
 
         let mut has_trailing_comma = false;
         if let Some(TokenTree::Punct(punct)) = args.clone().into_iter().last() {
-            if punct.as_char() == ',' {
-                has_trailing_comma = true;
-            }
+            has_trailing_comma = punct.as_char() == ',';
         }
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
