@@ -2,6 +2,7 @@ use crate::attr::{self, Attrs};
 use crate::generics::ParamsInScope;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::Span;
+use std::fmt::{self, Display};
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Ident, Index, Result, Type,
 };
@@ -40,6 +41,16 @@ pub struct Field<'a> {
     pub contains_generic: bool,
 }
 
+#[derive(Copy, Clone)]
+pub enum ContainerKind {
+    Struct,
+    TupleStruct,
+    UnitStruct,
+    StructVariant,
+    TupleVariant,
+    UnitVariant,
+}
+
 impl<'a> Input<'a> {
     pub fn from_syn(node: &'a DeriveInput) -> Result<Self> {
         match &node.data {
@@ -60,7 +71,8 @@ impl<'a> Struct<'a> {
         let span = attrs.span().unwrap_or_else(Span::call_site);
         let fields = Field::multiple_from_syn(&data.fields, &scope, span)?;
         if let Some(display) = &mut attrs.display {
-            display.expand_shorthand(&fields)?;
+            let container = ContainerKind::from_struct(data);
+            display.expand_shorthand(&fields, container)?;
         }
         Ok(Struct {
             attrs,
@@ -85,7 +97,8 @@ impl<'a> Enum<'a> {
                     display.clone_from(&attrs.display);
                 }
                 if let Some(display) = &mut variant.attrs.display {
-                    display.expand_shorthand(&variant.fields)?;
+                    let container = ContainerKind::from_variant(node);
+                    display.expand_shorthand(&variant.fields, container)?;
                 } else if variant.attrs.transparent.is_none() {
                     variant.attrs.transparent = attrs.transparent;
                 }
@@ -145,6 +158,37 @@ impl<'a> Field<'a> {
             },
             ty: &node.ty,
             contains_generic: scope.intersects(&node.ty),
+        })
+    }
+}
+
+impl ContainerKind {
+    fn from_struct(node: &DataStruct) -> Self {
+        match node.fields {
+            Fields::Named(_) => ContainerKind::Struct,
+            Fields::Unnamed(_) => ContainerKind::TupleStruct,
+            Fields::Unit => ContainerKind::UnitStruct,
+        }
+    }
+
+    fn from_variant(node: &syn::Variant) -> Self {
+        match node.fields {
+            Fields::Named(_) => ContainerKind::StructVariant,
+            Fields::Unnamed(_) => ContainerKind::TupleVariant,
+            Fields::Unit => ContainerKind::UnitVariant,
+        }
+    }
+}
+
+impl Display for ContainerKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str(match self {
+            ContainerKind::Struct => "struct",
+            ContainerKind::TupleStruct => "tuple struct",
+            ContainerKind::UnitStruct => "unit struct",
+            ContainerKind::StructVariant => "struct variant",
+            ContainerKind::TupleVariant => "tuple variant",
+            ContainerKind::UnitVariant => "unit variant",
         })
     }
 }
