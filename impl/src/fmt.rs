@@ -2,9 +2,9 @@ use crate::ast::{ContainerKind, Field};
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
-use proc_macro2::{Delimiter, TokenStream, TokenTree};
-use quote::{format_ident, quote, quote_spanned};
-use std::collections::{BTreeSet, HashMap as Map, HashSet};
+use proc_macro2::{Delimiter, TokenStream};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
@@ -12,15 +12,14 @@ use syn::parse::{Error, ParseStream, Parser, Result};
 use syn::{Expr, Ident, Index, LitStr, Token};
 
 impl Display<'_> {
-    // Transform `"error {var}"` to `"error {}", var`.
     pub fn expand_shorthand(&mut self, fields: &[Field], container: ContainerKind) -> Result<()> {
         let raw_args = self.args.clone();
         let FmtArguments {
-            named: mut named_args,
+            named: user_named_args,
             first_unnamed,
         } = explicit_named_args.parse2(raw_args).unwrap();
 
-        let mut member_index = Map::new();
+        let mut member_index = HashMap::new();
         let mut extra_positional_arguments_allowed = true;
         for (i, field) in fields.iter().enumerate() {
             member_index.insert(&field.member, i);
@@ -31,14 +30,10 @@ impl Display<'_> {
         let fmt = self.fmt.value();
         let mut read = fmt.as_str();
         let mut out = String::new();
-        let mut args = self.args.clone();
         let mut has_bonus_display = false;
         let mut implied_bounds = BTreeSet::new();
-
-        let mut has_trailing_comma = false;
-        if let Some(TokenTree::Punct(punct)) = args.clone().into_iter().last() {
-            has_trailing_comma = punct.as_char() == ',';
-        }
+        let mut bindings = Vec::new();
+        let mut macro_named_args = HashSet::new();
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
 
@@ -75,25 +70,35 @@ impl Display<'_> {
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
+                    if read.starts_with("r#") {
+                        continue;
+                    }
                     let ident = Ident::new(take_ident(&mut read), span);
                     MemberUnraw::Named(IdentUnraw::new(ident))
                 }
                 _ => continue,
             };
             let formatvar = match &member {
-                MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("_{}", index)),
-                MemberUnraw::Named(ident) => ident.clone(),
+                MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("__field{}", index)),
+                MemberUnraw::Named(ident) => {
+                    if user_named_args.contains(ident) || ident == "_" {
+                        // Refers to a named argument written by the user, not to field.
+                        out += &ident.to_string();
+                        continue;
+                    }
+                    IdentUnraw::new(format_ident!("__field_{}", ident.to_string()))
+                }
             };
             out += &formatvar.to_string();
-            if !named_args.insert(member.clone()) {
-                // Already specified in the format argument list.
+            if !macro_named_args.insert(member.clone()) {
+                // Already added to scope by a previous use.
                 continue;
             }
-            if !has_trailing_comma {
-                args.extend(quote_spanned!(span=> ,));
-            }
             let local = formatvar.to_local();
-            args.extend(quote_spanned!(span=> #formatvar = #local));
+            let mut binding_value = ToTokens::into_token_stream(match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+                MemberUnraw::Named(ident) => ident.to_local(),
+            });
             if let Some(&field) = member_index.get(&member) {
                 let end_spec = match read.find('}') {
                     Some(end_spec) => end_spec,
@@ -111,26 +116,26 @@ impl Display<'_> {
                     Some(_) => Trait::Display,
                     None => {
                         has_bonus_display = true;
-                        args.extend(quote_spanned!(span=> .as_display()));
+                        binding_value.extend(quote_spanned!(span=> .as_display()));
                         Trait::Display
                     }
                 };
                 implied_bounds.insert((field, bound));
             }
-            has_trailing_comma = false;
+            bindings.push((local, binding_value));
         }
 
         out += read;
         self.fmt = LitStr::new(&out, self.fmt.span());
-        self.args = args;
         self.has_bonus_display = has_bonus_display;
         self.implied_bounds = implied_bounds;
+        self.bindings = bindings;
         Ok(())
     }
 }
 
 struct FmtArguments {
-    named: HashSet<MemberUnraw>,
+    named: BTreeSet<IdentUnraw>,
     first_unnamed: Option<TokenStream>,
 }
 
@@ -150,7 +155,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
     input.parse::<TokenStream>().unwrap();
     Ok(FmtArguments {
-        named: HashSet::new(),
+        named: BTreeSet::new(),
         first_unnamed: None,
     })
 }
@@ -158,7 +163,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut syn_full = None;
     let mut args = FmtArguments {
-        named: HashSet::new(),
+        named: BTreeSet::new(),
         first_unnamed: None,
     };
 
@@ -172,7 +177,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
         if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
-            args.named.insert(MemberUnraw::Named(ident));
+            args.named.insert(ident);
         } else {
             begin_unnamed = Some(input.fork());
         }
@@ -196,7 +201,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
 fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut args = FmtArguments {
-        named: HashSet::new(),
+        named: BTreeSet::new(),
         first_unnamed: None,
     };
 
@@ -209,7 +214,7 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             input.parse::<Token![,]>()?;
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
-            args.named.insert(MemberUnraw::Named(ident));
+            args.named.insert(ident);
         }
     }
 

@@ -24,6 +24,7 @@ pub struct Display<'a> {
     pub requires_fmt_machinery: bool,
     pub has_bonus_display: bool,
     pub implied_bounds: Set<(usize, Trait)>,
+    pub bindings: Vec<(Ident, TokenStream)>,
 }
 
 #[derive(Copy, Clone)]
@@ -127,6 +128,7 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             requires_fmt_machinery,
             has_bonus_display: false,
             implied_bounds: Set::new(),
+            bindings: Vec::new(),
         };
         if attrs.display.is_some() {
             return Err(Error::new_spanned(
@@ -253,13 +255,25 @@ impl ToTokens for Display<'_> {
         // Currently `write!(f, "text")` produces less efficient code than
         // `f.write_str("text")`. We recognize the case when the format string
         // has no braces and no interpolated values, and generate simpler code.
-        tokens.extend(if self.requires_fmt_machinery {
+        let write = if self.requires_fmt_machinery {
             quote! {
                 ::core::write!(__formatter, #fmt #args)
             }
         } else {
             quote! {
                 __formatter.write_str(#fmt)
+            }
+        };
+
+        tokens.extend(if self.bindings.is_empty() {
+            write
+        } else {
+            let locals = self.bindings.iter().map(|(local, _value)| local);
+            let values = self.bindings.iter().map(|(_local, value)| value);
+            quote! {
+                match (#(#values,)*) {
+                    (#(#locals,)*) => #write
+                }
             }
         });
     }
