@@ -10,9 +10,9 @@ use syn::{
 
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
-    pub source: Option<&'a Attribute>,
+    pub source: Option<Source<'a>>,
     pub backtrace: Option<&'a Attribute>,
-    pub from: Option<&'a Attribute>,
+    pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
 }
 
@@ -25,6 +25,18 @@ pub struct Display<'a> {
     pub has_bonus_display: bool,
     pub implied_bounds: Set<(usize, Trait)>,
     pub bindings: Vec<(Ident, TokenStream)>,
+}
+
+#[derive(Copy, Clone)]
+pub struct Source<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
+}
+
+#[derive(Copy, Clone)]
+pub struct From<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
 }
 
 #[derive(Copy, Clone)]
@@ -63,7 +75,10 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.source.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
-            attrs.source = Some(attr);
+            attrs.source = Some(Source {
+                original: attr,
+                span: attr.path().get_ident().unwrap().span(),
+            });
         } else if attr.path().is_ident("backtrace") {
             attr.meta.require_path_only()?;
             if attrs.backtrace.is_some() {
@@ -81,7 +96,10 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.from.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[from] attribute"));
             }
-            attrs.from = Some(attr);
+            attrs.from = Some(From {
+                original: attr,
+                span: attr.path().get_ident().unwrap().span(),
+            });
         }
     }
 

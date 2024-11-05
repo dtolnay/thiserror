@@ -25,7 +25,7 @@ impl Struct<'_> {
             }
             if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
-                    source,
+                    source.original,
                     "transparent error struct can't contain #[source]",
                 ));
             }
@@ -80,7 +80,7 @@ impl Variant<'_> {
             }
             if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
-                    source,
+                    source.original,
                     "transparent variant can't contain #[source]",
                 ));
             }
@@ -108,13 +108,13 @@ impl Field<'_> {
 fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
     if let Some(from) = &attrs.from {
         return Err(Error::new_spanned(
-            from,
+            from.original,
             "not expected here; the #[from] attribute belongs on a specific field",
         ));
     }
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
-            source,
+            source.original,
             "not expected here; the #[source] attribute belongs on a specific field",
         ));
     }
@@ -143,13 +143,19 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
-                return Err(Error::new_spanned(from, "duplicate #[from] attribute"));
+                return Err(Error::new_spanned(
+                    from.original,
+                    "duplicate #[from] attribute",
+                ));
             }
             from_field = Some(field);
         }
         if let Some(source) = field.attrs.source {
             if source_field.is_some() {
-                return Err(Error::new_spanned(source, "duplicate #[source] attribute"));
+                return Err(Error::new_spanned(
+                    source.original,
+                    "duplicate #[source] attribute",
+                ));
             }
             source_field = Some(field);
         }
@@ -174,7 +180,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
         if from_field.member != source_field.member {
             return Err(Error::new_spanned(
-                from_field.attrs.from,
+                from_field.attrs.from.unwrap().original,
                 "#[from] is only supported on the source field, not any other field",
             ));
         }
@@ -186,7 +192,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         };
         if fields.len() > max_expected_fields {
             return Err(Error::new_spanned(
-                from_field.attrs.from,
+                from_field.attrs.from.unwrap().original,
                 "deriving From requires no fields other than source and backtrace",
             ));
         }
