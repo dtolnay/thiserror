@@ -1,4 +1,4 @@
-use crate::ast::Field;
+use crate::ast::{ContainerKind, Field};
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
@@ -13,7 +13,7 @@ use syn::{Expr, Ident, Index, LitStr, Token};
 
 impl Display<'_> {
     // Transform `"error {var}"` to `"error {}", var`.
-    pub fn expand_shorthand(&mut self, fields: &[Field]) -> Result<()> {
+    pub fn expand_shorthand(&mut self, fields: &[Field], container: ContainerKind) -> Result<()> {
         let raw_args = self.args.clone();
         let FmtArguments {
             named: mut named_args,
@@ -62,7 +62,7 @@ impl Display<'_> {
                     let int = take_int(&mut read);
                     if !extra_positional_arguments_allowed {
                         if let Some(first_unnamed) = &first_unnamed {
-                            let msg = "ambiguous reference to positional arguments by number in a tuple struct; change this to a named argument";
+                            let msg = format!("ambiguous reference to positional arguments by number in a {container}; change this to a named argument");
                             return Err(Error::new_spanned(first_unnamed, msg));
                         }
                     }
