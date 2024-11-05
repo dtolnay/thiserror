@@ -68,8 +68,7 @@ impl<'a> Struct<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataStruct) -> Result<Self> {
         let mut attrs = attr::get(&node.attrs)?;
         let scope = ParamsInScope::new(&node.generics);
-        let span = attrs.span().unwrap_or_else(Span::call_site);
-        let fields = Field::multiple_from_syn(&data.fields, &scope, span)?;
+        let fields = Field::multiple_from_syn(&data.fields, &scope)?;
         if let Some(display) = &mut attrs.display {
             let container = ContainerKind::from_struct(data);
             display.expand_shorthand(&fields, container)?;
@@ -87,12 +86,11 @@ impl<'a> Enum<'a> {
     fn from_syn(node: &'a DeriveInput, data: &'a DataEnum) -> Result<Self> {
         let attrs = attr::get(&node.attrs)?;
         let scope = ParamsInScope::new(&node.generics);
-        let span = attrs.span().unwrap_or_else(Span::call_site);
         let variants = data
             .variants
             .iter()
             .map(|node| {
-                let mut variant = Variant::from_syn(node, &scope, span)?;
+                let mut variant = Variant::from_syn(node, &scope)?;
                 if let display @ None = &mut variant.attrs.display {
                     display.clone_from(&attrs.display);
                 }
@@ -115,37 +113,27 @@ impl<'a> Enum<'a> {
 }
 
 impl<'a> Variant<'a> {
-    fn from_syn(node: &'a syn::Variant, scope: &ParamsInScope<'a>, span: Span) -> Result<Self> {
+    fn from_syn(node: &'a syn::Variant, scope: &ParamsInScope<'a>) -> Result<Self> {
         let attrs = attr::get(&node.attrs)?;
-        let span = attrs.span().unwrap_or(span);
         Ok(Variant {
             original: node,
             attrs,
             ident: node.ident.clone(),
-            fields: Field::multiple_from_syn(&node.fields, scope, span)?,
+            fields: Field::multiple_from_syn(&node.fields, scope)?,
         })
     }
 }
 
 impl<'a> Field<'a> {
-    fn multiple_from_syn(
-        fields: &'a Fields,
-        scope: &ParamsInScope<'a>,
-        span: Span,
-    ) -> Result<Vec<Self>> {
+    fn multiple_from_syn(fields: &'a Fields, scope: &ParamsInScope<'a>) -> Result<Vec<Self>> {
         fields
             .iter()
             .enumerate()
-            .map(|(i, field)| Field::from_syn(i, field, scope, span))
+            .map(|(i, field)| Field::from_syn(i, field, scope))
             .collect()
     }
 
-    fn from_syn(
-        i: usize,
-        node: &'a syn::Field,
-        scope: &ParamsInScope<'a>,
-        span: Span,
-    ) -> Result<Self> {
+    fn from_syn(i: usize, node: &'a syn::Field, scope: &ParamsInScope<'a>) -> Result<Self> {
         Ok(Field {
             original: node,
             attrs: attr::get(&node.attrs)?,
@@ -153,7 +141,7 @@ impl<'a> Field<'a> {
                 Some(name) => MemberUnraw::Named(IdentUnraw::new(name.clone())),
                 None => MemberUnraw::Unnamed(Index {
                     index: i as u32,
-                    span,
+                    span: Span::call_site(),
                 }),
             },
             ty: &node.ty,
@@ -190,17 +178,5 @@ impl Display for ContainerKind {
             ContainerKind::TupleVariant => "tuple variant",
             ContainerKind::UnitVariant => "unit variant",
         })
-    }
-}
-
-impl Attrs<'_> {
-    pub fn span(&self) -> Option<Span> {
-        if let Some(display) = &self.display {
-            Some(display.fmt.span())
-        } else if let Some(transparent) = &self.transparent {
-            Some(transparent.span)
-        } else {
-            None
-        }
     }
 }
