@@ -91,9 +91,13 @@ impl<'a> Enum<'a> {
             .iter()
             .map(|node| {
                 let mut variant = Variant::from_syn(node, &scope)?;
-                if variant.attrs.display.is_none() && variant.attrs.transparent.is_none() {
+                if variant.attrs.display.is_none()
+                    && variant.attrs.transparent.is_none()
+                    && variant.attrs.fmt.is_none()
+                {
                     variant.attrs.display.clone_from(&attrs.display);
                     variant.attrs.transparent = attrs.transparent;
+                    variant.attrs.fmt.clone_from(&attrs.fmt);
                 }
                 if let Some(display) = &mut variant.attrs.display {
                     let container = ContainerKind::from_variant(node);

@@ -404,19 +404,23 @@ fn impl_enum(input: Enum) -> TokenStream {
         };
         let arms = input.variants.iter().map(|variant| {
             let mut display_implied_bounds = Set::new();
-            let display = match &variant.attrs.display {
-                Some(display) => {
-                    display_implied_bounds.clone_from(&display.implied_bounds);
-                    display.to_token_stream()
-                }
-                None => {
-                    let only_field = match &variant.fields[0].member {
-                        MemberUnraw::Named(ident) => ident.to_local(),
-                        MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
-                    };
-                    display_implied_bounds.insert((0, Trait::Display));
-                    quote!(::core::fmt::Display::fmt(#only_field, __formatter))
-                }
+            let display = if let Some(display) = &variant.attrs.display {
+                display_implied_bounds.clone_from(&display.implied_bounds);
+                display.to_token_stream()
+            } else if let Some(fmt) = &variant.attrs.fmt {
+                let fmt_path = &fmt.path;
+                let vars = variant.fields.iter().map(|field| match &field.member {
+                    MemberUnraw::Named(ident) => ident.to_local(),
+                    MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+                });
+                quote!(#fmt_path(#(#vars,)* __formatter))
+            } else {
+                let only_field = match &variant.fields[0].member {
+                    MemberUnraw::Named(ident) => ident.to_local(),
+                    MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+                };
+                display_implied_bounds.insert((0, Trait::Display));
+                quote!(::core::fmt::Display::fmt(#only_field, __formatter))
             };
             for (field, bound) in display_implied_bounds {
                 let field = &variant.fields[field];
@@ -494,7 +498,7 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
         Some(MemberUnraw::Named(_)) => quote!({ #(#members),* }),
         Some(MemberUnraw::Unnamed(_)) => {
             let vars = members.map(|member| match member {
-                MemberUnraw::Unnamed(member) => format_ident!("_{}", member),
+                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 MemberUnraw::Named(_) => unreachable!(),
             });
             quote!((#(#vars),*))

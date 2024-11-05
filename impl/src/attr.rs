@@ -4,8 +4,8 @@ use std::collections::BTreeSet as Set;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitFloat, LitInt,
-    LitStr, Meta, Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
+    LitInt, LitStr, Meta, Result, Token,
 };
 
 pub struct Attrs<'a> {
@@ -14,6 +14,7 @@ pub struct Attrs<'a> {
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
+    pub fmt: Option<Fmt<'a>>,
 }
 
 #[derive(Clone)]
@@ -45,6 +46,12 @@ pub struct Transparent<'a> {
     pub span: Span,
 }
 
+#[derive(Clone)]
+pub struct Fmt<'a> {
+    pub original: &'a Attribute,
+    pub path: ExprPath,
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Trait {
     Debug,
@@ -65,6 +72,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         backtrace: None,
         from: None,
         transparent: None,
+        fmt: None,
     };
 
     for attr in input {
@@ -113,14 +121,17 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 }
 
 fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
-    syn::custom_keyword!(transparent);
+    mod kw {
+        syn::custom_keyword!(transparent);
+        syn::custom_keyword!(fmt);
+    }
 
     attr.parse_args_with(|input: ParseStream| {
         let lookahead = input.lookahead1();
         let fmt = if lookahead.peek(LitStr) {
             input.parse::<LitStr>()?
-        } else if lookahead.peek(transparent) {
-            let kw: transparent = input.parse()?;
+        } else if lookahead.peek(kw::transparent) {
+            let kw: kw::transparent = input.parse()?;
             if attrs.transparent.is_some() {
                 return Err(Error::new_spanned(
                     attr,
@@ -130,6 +141,21 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             attrs.transparent = Some(Transparent {
                 original: attr,
                 span: kw.span,
+            });
+            return Ok(());
+        } else if lookahead.peek(kw::fmt) {
+            input.parse::<kw::fmt>()?;
+            input.parse::<Token![=]>()?;
+            let path: ExprPath = input.parse()?;
+            if attrs.fmt.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(fmt = ...)] attribute",
+                ));
+            }
+            attrs.fmt = Some(Fmt {
+                original: attr,
+                path,
             });
             return Ok(());
         } else {
