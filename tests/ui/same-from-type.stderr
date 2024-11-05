@@ -1,0 +1,5 @@
+error: cannot derive From because another variant has the same source type
+ --> tests/ui/same-from-type.rs:8:15
+  |
+8 |     CloseFIle(#[from] std::io::Error),
+  |               ^^^^^^^^^^^^^^^^^^^^^^
