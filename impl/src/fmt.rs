@@ -78,7 +78,7 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let formatvar = match &member {
+            let mut formatvar = match &member {
                 MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("__field{}", index)),
                 MemberUnraw::Named(ident) => {
                     if user_named_args.contains(ident) || ident == "_" {
@@ -89,6 +89,9 @@ impl Display<'_> {
                     IdentUnraw::new(format_ident!("__field_{}", ident.to_string()))
                 }
             };
+            while user_named_args.contains(&formatvar) {
+                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
+            }
             out += &formatvar.to_string();
             if !macro_named_args.insert(member.clone()) {
                 // Already added to scope by a previous use.
