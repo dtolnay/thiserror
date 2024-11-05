@@ -179,11 +179,8 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             begin_unnamed = Some(input.fork());
         }
 
-        let ahead;
-        if *syn_full.get_or_insert_with(is_syn_full) && {
-            ahead = input.fork();
-            ahead.parse::<Expr>().is_ok()
-        } {
+        let ahead = input.fork();
+        if *syn_full.get_or_insert_with(is_syn_full) && ahead.parse::<Expr>().is_ok() {
             input.advance_to(&ahead);
         } else {
             scan_expr(input)?;
