@@ -70,6 +70,9 @@ impl Display<'_> {
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
+                    if read.starts_with("r#") {
+                        continue;
+                    }
                     let ident = Ident::new(take_ident(&mut read), span);
                     MemberUnraw::Named(IdentUnraw::new(ident))
                 }

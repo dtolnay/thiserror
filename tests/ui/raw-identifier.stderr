@@ -1,10 +1,13 @@
-error: invalid format string: expected `}`, found `#`
- --> tests/ui/raw-identifier.rs:4:9
+error: invalid format string: raw identifiers are not supported
+ --> tests/ui/raw-identifier.rs:4:18
   |
 4 | #[error("error: {r#fn}")]
-  |         ^^^^^^^^^^^^^^^ expected `}` in format string
+  |                  --^^
+  |                  |
+  |                  raw identifier used here in format string
+  |                  help: remove the `r#`
   |
-  = note: if you intended to print `{`, you can escape it using `{{`
+  = note: identifiers in format strings can be keywords and don't need to be prefixed with `r#`
 
 error: invalid format string: raw identifiers are not supported
   --> tests/ui/raw-identifier.rs:11:30
@@ -16,9 +19,3 @@ error: invalid format string: raw identifiers are not supported
    |                              help: remove the `r#`
    |
    = note: identifiers in format strings can be keywords and don't need to be prefixed with `r#`
-
-error[E0425]: cannot find value `r` in this scope
- --> tests/ui/raw-identifier.rs:4:9
-  |
-4 | #[error("error: {r#fn}")]
-  |         ^^^^^^^^^^^^^^^ not found in this scope
