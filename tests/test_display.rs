@@ -1,6 +1,7 @@
 #![allow(
     clippy::needless_lifetimes,
     clippy::needless_raw_string_hashes,
+    clippy::trivially_copy_pass_by_ref,
     clippy::uninlined_format_args
 )]
 
