@@ -75,9 +75,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.source.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
+            let span = (attr.pound_token.span)
+                .join(attr.bracket_token.span.join())
+                .unwrap_or(attr.path().get_ident().unwrap().span());
             attrs.source = Some(Source {
                 original: attr,
-                span: attr.path().get_ident().unwrap().span(),
+                span,
             });
         } else if attr.path().is_ident("backtrace") {
             attr.meta.require_path_only()?;
@@ -96,9 +99,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.from.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[from] attribute"));
             }
+            let span = (attr.pound_token.span)
+                .join(attr.bracket_token.span.join())
+                .unwrap_or(attr.path().get_ident().unwrap().span());
             attrs.from = Some(From {
                 original: attr,
-                span: attr.path().get_ident().unwrap().span(),
+                span,
             });
         }
     }
