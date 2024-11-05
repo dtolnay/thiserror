@@ -74,6 +74,7 @@ impl ToTokens for IdentUnraw {
     }
 }
 
+#[derive(Clone)]
 pub enum MemberUnraw {
     Named(IdentUnraw),
     Unnamed(Index),
