@@ -1,6 +1,5 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
-use crate::unraw::MemberUnraw;
 use quote::ToTokens;
 use std::collections::BTreeSet as Set;
 use syn::{Error, GenericArgument, PathArguments, Result, Type};
@@ -173,7 +172,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         has_backtrace |= field.is_backtrace();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
-        if !same_member(from_field, source_field) {
+        if from_field.member != source_field.member {
             return Err(Error::new_spanned(
                 from_field.attrs.from,
                 "#[from] is only supported on the source field, not any other field",
@@ -182,7 +181,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     }
     if let Some(from_field) = from_field {
         let max_expected_fields = match backtrace_field {
-            Some(backtrace_field) => 1 + !same_member(from_field, backtrace_field) as usize,
+            Some(backtrace_field) => 1 + (from_field.member != backtrace_field.member) as usize,
             None => 1 + has_backtrace as usize,
         };
         if fields.len() > max_expected_fields {
@@ -201,14 +200,6 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn same_member(one: &Field, two: &Field) -> bool {
-    match (&one.member, &two.member) {
-        (MemberUnraw::Named(one), MemberUnraw::Named(two)) => one == two,
-        (MemberUnraw::Unnamed(one), MemberUnraw::Unnamed(two)) => one.index == two.index,
-        _ => unreachable!(),
-    }
 }
 
 fn contains_non_static_lifetime(ty: &Type) -> bool {
