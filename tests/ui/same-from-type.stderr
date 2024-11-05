@@ -1,5 +1,10 @@
-error: cannot derive From because another variant has the same source type
- --> tests/ui/same-from-type.rs:8:15
+error[E0119]: conflicting implementations of trait `From<std::io::Error>` for type `Error`
+ --> tests/ui/same-from-type.rs:3:10
   |
-8 |     CloseFIle(#[from] std::io::Error),
-  |               ^^^^^^^^^^^^^^^^^^^^^^
+3 | #[derive(Error, Debug)]
+  |          ^^^^^
+  |          |
+  |          first implementation here
+  |          conflicting implementation for `Error`
+  |
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
