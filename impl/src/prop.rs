@@ -75,9 +75,9 @@ impl Field<'_> {
 
     pub(crate) fn source_span(&self) -> Span {
         if let Some(source_attr) = &self.attrs.source {
-            source_attr.path().get_ident().unwrap().span()
+            source_attr.span
         } else if let Some(from_attr) = &self.attrs.from {
-            from_attr.path().get_ident().unwrap().span()
+            from_attr.span
         } else {
             self.member.span()
         }
