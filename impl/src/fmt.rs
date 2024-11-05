@@ -78,7 +78,7 @@ impl Display<'_> {
             let formatvar = match &member {
                 MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("__field{}", index)),
                 MemberUnraw::Named(ident) => {
-                    if user_named_args.contains(ident) {
+                    if user_named_args.contains(ident) || ident == "_" {
                         // Refers to a named argument written by the user, not to field.
                         out += &ident.to_string();
                         continue;
