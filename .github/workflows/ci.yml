@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly, beta, stable, 1.70.0, 1.61.0]
+        rust: [nightly, beta, stable, 1.70.0]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -39,12 +39,24 @@ jobs:
         run: echo RUSTFLAGS=${RUSTFLAGS}\ --cfg=thiserror_nightly_testing >> $GITHUB_ENV
         if: matrix.rust == 'nightly'
       - run: cargo test --all
-        if: matrix.rust != '1.61.0'
       - uses: actions/upload-artifact@v4
         if: matrix.rust == 'nightly' && always()
         with:
           name: Cargo.lock
           path: Cargo.lock
+
+  msrv:
+    name: Rust 1.61.0
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.61.0
+        with:
+          components: rust-src
+      - run: cargo check
 
   minimal:
     name: Minimal versions
