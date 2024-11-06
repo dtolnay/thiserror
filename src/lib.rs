@@ -287,6 +287,9 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+    #[cfg(not(thiserror_no_backtrace_type))]
+    #[doc(hidden)]
+    pub use std::backtrace::Backtrace;
     #[doc(hidden)]
     pub use std::error::Error;
 }

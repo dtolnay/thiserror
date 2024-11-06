@@ -118,12 +118,12 @@ fn impl_struct(input: Struct) -> TokenStream {
             } else if type_is_option(backtrace_field.ty) {
                 Some(quote! {
                     if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                        #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                        #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                     }
                 })
             } else {
                 Some(quote! {
-                    #request.provide_ref::<::std::backtrace::Backtrace>(&self.#backtrace);
+                    #request.provide_ref::<::thiserror::__private::Backtrace>(&self.#backtrace);
                 })
             };
             quote! {
@@ -134,12 +134,12 @@ fn impl_struct(input: Struct) -> TokenStream {
         } else if type_is_option(backtrace_field.ty) {
             quote! {
                 if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                    #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                    #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                 }
             }
         } else {
             quote! {
-                #request.provide_ref::<::std::backtrace::Backtrace>(&self.#backtrace);
+                #request.provide_ref::<::thiserror::__private::Backtrace>(&self.#backtrace);
             }
         };
         quote! {
@@ -309,12 +309,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let self_provide = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                                #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                            #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -357,12 +357,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let body = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                                #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<::std::backtrace::Backtrace>(backtrace);
+                            #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -532,11 +532,11 @@ fn from_initializer(
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
             quote! {
-                #backtrace_member: ::core::option::Option::Some(::std::backtrace::Backtrace::capture()),
+                #backtrace_member: ::core::option::Option::Some(::thiserror::__private::Backtrace::capture()),
             }
         } else {
             quote! {
-                #backtrace_member: ::core::convert::From::from(::std::backtrace::Backtrace::capture()),
+                #backtrace_member: ::core::convert::From::from(::thiserror::__private::Backtrace::capture()),
             }
         }
     });
