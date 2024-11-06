@@ -5,12 +5,14 @@ use std::io::ErrorKind;
 use std::iter;
 use std::path::Path;
 use std::process::{self, Command, Stdio};
+use std::str;
 
 fn main() {
     println!("cargo:rerun-if-changed=build/probe.rs");
 
     println!("cargo:rustc-check-cfg=cfg(error_generic_member_access)");
     println!("cargo:rustc-check-cfg=cfg(thiserror_nightly_testing)");
+    println!("cargo:rustc-check-cfg=cfg(thiserror_no_backtrace_type)");
 
     let error_generic_member_access;
     let consider_rustc_bootstrap;
@@ -53,6 +55,17 @@ fn main() {
 
     if consider_rustc_bootstrap {
         println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
+    }
+
+    let rustc = match rustc_minor_version() {
+        Some(rustc) => rustc,
+        None => return,
+    };
+
+    // std::backtrace::Backtrace stabilized in Rust 1.65
+    // https://blog.rust-lang.org/2022/11/03/Rust-1.65.0.html#stabilized-apis
+    if rustc < 65 {
+        println!("cargo:rustc-cfg=thiserror_no_backtrace_type");
     }
 }
 
@@ -133,6 +146,17 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
     }
 
     success
+}
+
+fn rustc_minor_version() -> Option<u32> {
+    let rustc = cargo_env_var("RUSTC");
+    let output = Command::new(rustc).arg("--version").output().ok()?;
+    let version = str::from_utf8(&output.stdout).ok()?;
+    let mut pieces = version.split('.');
+    if pieces.next() != Some("rustc 1") {
+        return None;
+    }
+    pieces.next()?.parse().ok()
 }
 
 fn cargo_env_var(key: &str) -> OsString {
