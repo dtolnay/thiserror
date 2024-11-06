@@ -143,7 +143,7 @@ fn impl_struct(input: Struct) -> TokenStream {
             }
         };
         quote! {
-            fn provide<'_request>(&'_request self, #request: &mut ::std::error::Request<'_request>) {
+            fn provide<'_request>(&'_request self, #request: &mut ::core::error::Request<'_request>) {
                 #body
             }
         }
@@ -377,7 +377,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         Some(quote! {
-            fn provide<'_request>(&'_request self, #request: &mut ::std::error::Request<'_request>) {
+            fn provide<'_request>(&'_request self, #request: &mut ::core::error::Request<'_request>) {
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
