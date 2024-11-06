@@ -91,7 +91,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let source_method = source_body.map(|body| {
         quote! {
             fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
+                use ::thiserror::__private::AsDynError as _;
                 #body
             }
         }
@@ -127,7 +127,7 @@ fn impl_struct(input: Struct) -> TokenStream {
                 })
             };
             quote! {
-                use thiserror::__private::ThiserrorProvide as _;
+                use ::thiserror::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
             }
@@ -273,7 +273,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         });
         Some(quote! {
             fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
-                use thiserror::__private::AsDynError as _;
+                use ::thiserror::__private::AsDynError as _;
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
@@ -323,7 +323,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #source: #varsource,
                             ..
                         } => {
-                            use thiserror::__private::ThiserrorProvide as _;
+                            use ::thiserror::__private::ThiserrorProvide as _;
                             #source_provide
                             #self_provide
                         }
@@ -347,7 +347,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     };
                     quote! {
                         #ty::#ident {#backtrace: #varsource, ..} => {
-                            use thiserror::__private::ThiserrorProvide as _;
+                            use ::thiserror::__private::ThiserrorProvide as _;
                             #source_provide
                         }
                     }
@@ -510,7 +510,7 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
 fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
     if needs_as_display {
         Some(quote! {
-            use thiserror::__private::AsDisplay as _;
+            use ::thiserror::__private::AsDisplay as _;
         })
     } else {
         None
