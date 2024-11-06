@@ -258,6 +258,7 @@
 //!
 //!   [`anyhow`]: https://github.com/dtolnay/anyhow
 
+#![no_std]
 #![doc(html_root_url = "https://docs.rs/thiserror/1.0.68")]
 #![allow(
     clippy::module_name_repetitions,
@@ -269,6 +270,11 @@
 
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
+
+#[cfg(feature = "std")]
+extern crate std;
+#[cfg(feature = "std")]
+extern crate std as core;
 
 mod aserror;
 mod display;
@@ -287,9 +293,9 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
-    #[cfg(not(thiserror_no_backtrace_type))]
+    #[doc(hidden)]
+    pub use core::error::Error;
+    #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
     #[doc(hidden)]
     pub use std::backtrace::Backtrace;
-    #[doc(hidden)]
-    pub use std::error::Error;
 }

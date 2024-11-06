@@ -2,6 +2,7 @@
 // member access API. If the current toolchain is able to compile it, then
 // thiserror is able to provide backtrace support.
 
+#![no_std]
 #![feature(error_generic_member_access)]
 
 use core::error::{Error, Request};

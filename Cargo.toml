@@ -11,6 +11,22 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
 rust-version = "1.61"
 
+[features]
+default = ["std"]
+
+# Std feature enables support for formatting std::path::{Path, PathBuf}
+# conveniently in an error message.
+#
+#     #[derive(Error, Debug)]
+#     #[error("failed to create configuration file {path}")]
+#     pub struct MyError {
+#         pub path: PathBuf,
+#         pub source: std::io::Error,
+#     }
+#
+# Without std, this would need to be written #[error("... {}", path.display())].
+std = []
+
 [dependencies]
 thiserror-impl = { version = "=1.0.68", path = "impl" }
 
@@ -21,7 +37,7 @@ rustversion = "1.0.13"
 trybuild = { version = "1.0.81", features = ["diff"] }
 
 [workspace]
-members = ["impl"]
+members = ["impl", "tests/no-std"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

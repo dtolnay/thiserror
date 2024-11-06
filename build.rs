@@ -57,7 +57,14 @@ fn main() {
         println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
     }
 
-    let rustc = match rustc_minor_version() {
+    // core::error::Error stabilized in Rust 1.81
+    // https://blog.rust-lang.org/2024/09/05/Rust-1.81.0.html#coreerrorerror
+    let rustc = rustc_minor_version();
+    if cfg!(not(feature = "std")) && rustc.map_or(false, |rustc| rustc < 81) {
+        println!("cargo:rustc-cfg=feature=\"std\"");
+    }
+
+    let rustc = match rustc {
         Some(rustc) => rustc,
         None => return,
     };
