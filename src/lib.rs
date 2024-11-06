@@ -287,4 +287,6 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+    #[doc(hidden)]
+    pub use std::error::Error;
 }
