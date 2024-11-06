@@ -1,0 +1,12 @@
+[package]
+name = "thiserror_no_std_test"
+version = "0.0.0"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+edition = "2021"
+publish = false
+
+[lib]
+path = "test.rs"
+
+[dependencies]
+thiserror = { path = "../..", default-features = false }
