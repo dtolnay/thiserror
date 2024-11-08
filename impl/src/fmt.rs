@@ -116,6 +116,7 @@ impl Display<'_> {
                     Trait::Display
                 }
             };
+            infinite_recursive |= member == *"self" && bound == Trait::Display;
             if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
             }
@@ -128,7 +129,6 @@ impl Display<'_> {
             }
             out += &formatvar.to_string();
             let local = formatvar.to_local();
-            infinite_recursive |= member == *"self" && bound == Trait::Display;
             if macro_named_args.insert(member) {
                 bindings.push((local, binding_value));
             } else {
