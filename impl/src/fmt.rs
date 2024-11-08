@@ -73,19 +73,25 @@ impl Display<'_> {
                     if read.starts_with("r#") {
                         continue;
                     }
-                    let ident = Ident::new(take_ident(&mut read), span);
-                    MemberUnraw::Named(IdentUnraw::new(ident))
+                    let repr = take_ident(&mut read);
+                    if repr == "_" {
+                        // Invalid. Let rustc produce the diagnostic.
+                        out += repr;
+                        continue;
+                    }
+                    let ident = IdentUnraw::new(Ident::new(repr, span));
+                    if user_named_args.contains(&ident) {
+                        // Refers to a named argument written by the user, not to field.
+                        out += repr;
+                        continue;
+                    }
+                    MemberUnraw::Named(ident)
                 }
                 _ => continue,
             };
             let mut formatvar = match &member {
                 MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("__field{}", index)),
                 MemberUnraw::Named(ident) => {
-                    if user_named_args.contains(ident) || ident == "_" {
-                        // Refers to a named argument written by the user, not to field.
-                        out += &ident.to_string();
-                        continue;
-                    }
                     IdentUnraw::new(format_ident!("__field_{}", ident.to_string()))
                 }
             };
