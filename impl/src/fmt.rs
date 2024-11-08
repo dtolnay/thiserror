@@ -60,11 +60,10 @@ impl Display<'_> {
                             return Err(Error::new_spanned(first_unnamed, msg));
                         }
                     }
-                    let member = match int.parse::<u32>() {
+                    match int.parse::<u32>() {
                         Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
                         Err(_) => return Ok(()),
-                    };
-                    member
+                    }
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     if read.starts_with("r#") {
