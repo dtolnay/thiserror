@@ -172,3 +172,15 @@ fn test_no_bound_on_named_fmt() {
     let error = Error { thing: DebugOnly };
     assert_eq!(error.to_string(), "...");
 }
+
+#[test]
+fn test_multiple_bound() {
+    #[derive(Error, Debug)]
+    #[error("0x{thing:x} 0x{thing:X}")]
+    pub struct Error<T> {
+        thing: T,
+    }
+
+    let error = Error { thing: 0xFFi32 };
+    assert_eq!(error.to_string(), "0xff 0xFF");
+}
