@@ -90,12 +90,10 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let mut formatvar = match &member {
-                MemberUnraw::Unnamed(index) => IdentUnraw::new(format_ident!("__field{}", index)),
-                MemberUnraw::Named(ident) => {
-                    IdentUnraw::new(format_ident!("__field_{}", ident.to_string()))
-                }
-            };
+            let mut formatvar = IdentUnraw::new(match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
+                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
+            });
             while user_named_args.contains(&formatvar) {
                 formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
