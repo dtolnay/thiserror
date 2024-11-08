@@ -99,10 +99,6 @@ impl Display<'_> {
                 formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
             out += &formatvar.to_string();
-            if !macro_named_args.insert(member.clone()) {
-                // Already added to scope by a previous use.
-                continue;
-            }
             let local = formatvar.to_local();
             let mut binding_value = ToTokens::into_token_stream(match &member {
                 MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
@@ -142,7 +138,11 @@ impl Display<'_> {
                     }
                 );
             }
-            bindings.push((local, binding_value));
+            if macro_named_args.insert(member) {
+                bindings.push((local, binding_value));
+            } else {
+                // Already added to bindings by a previous use.
+            }
         }
 
         out += read;
