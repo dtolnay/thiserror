@@ -31,6 +31,7 @@ impl Display<'_> {
         let mut read = fmt.as_str();
         let mut out = String::new();
         let mut has_bonus_display = false;
+        let mut infinite_recursive = false;
         let mut implied_bounds = BTreeSet::new();
         let mut bindings = Vec::new();
         let mut macro_named_args = HashSet::new();
@@ -129,15 +130,7 @@ impl Display<'_> {
             if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
             }
-            if member == *"self" && bound == Trait::Display {
-                binding_value = quote_spanned!(member.span()=>
-                    {
-                        #[warn(unconditional_recursion)]
-                        fn _fmt() { _fmt() }
-                        #member
-                    }
-                );
-            }
+            infinite_recursive |= member == *"self" && bound == Trait::Display;
             if macro_named_args.insert(member) {
                 bindings.push((local, binding_value));
             } else {
@@ -148,6 +141,7 @@ impl Display<'_> {
         out += read;
         self.fmt = LitStr::new(&out, self.fmt.span());
         self.has_bonus_display = has_bonus_display;
+        self.infinite_recursive = infinite_recursive;
         self.implied_bounds = implied_bounds;
         self.bindings = bindings;
         Ok(())
