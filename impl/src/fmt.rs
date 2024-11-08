@@ -3,7 +3,7 @@ use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter;
 use syn::ext::IdentExt;
@@ -85,10 +85,11 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let mut binding_value = ToTokens::into_token_stream(match &member {
+            let binding_value = match &member {
                 MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 MemberUnraw::Named(ident) => ident.to_local(),
-            });
+            };
+            let mut wrapped_binding_value = quote!(::thiserror::__private::Var(#binding_value));
             let end_spec = match read.find('}') {
                 Some(end_spec) => end_spec,
                 None => return Ok(()),
@@ -105,7 +106,9 @@ impl Display<'_> {
                 Some(_) => Trait::Display,
                 None => {
                     has_bonus_display = true;
-                    binding_value.extend(quote_spanned!(span=> .as_display()));
+                    wrapped_binding_value = quote_spanned! {span=>
+                        #binding_value.as_display()
+                    };
                     Trait::Display
                 }
             };
@@ -126,7 +129,7 @@ impl Display<'_> {
             out += &formatvar.to_string();
             let local = formatvar.to_local();
             if macro_named_args.insert(member) {
-                bindings.push((local, binding_value));
+                bindings.push((local, wrapped_binding_value));
             } else {
                 // Already added to bindings by a previous use.
             }

@@ -280,6 +280,7 @@ mod aserror;
 mod display;
 #[cfg(error_generic_member_access)]
 mod provide;
+mod var;
 
 pub use thiserror_impl::*;
 
@@ -293,6 +294,8 @@ pub mod __private {
     #[cfg(error_generic_member_access)]
     #[doc(hidden)]
     pub use crate::provide::ThiserrorProvide;
+    #[doc(hidden)]
+    pub use crate::var::Var;
     #[doc(hidden)]
     pub use core::error::Error;
     #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
