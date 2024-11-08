@@ -22,6 +22,13 @@ enum EnumPathBuf {
     Read(PathBuf),
 }
 
+#[derive(Error, Debug)]
+#[error("{tail}")]
+pub struct UnsizedError {
+    pub head: i32,
+    pub tail: str,
+}
+
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }

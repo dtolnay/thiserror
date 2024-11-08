@@ -13,7 +13,7 @@ pub trait AsDisplay<'a>: Sealed {
 
 impl<'a, T> AsDisplay<'a> for &T
 where
-    T: Display + 'a,
+    T: Display + ?Sized + 'a,
 {
     type Target = &'a T;
 
@@ -44,7 +44,7 @@ impl<'a> AsDisplay<'a> for PathBuf {
 
 #[doc(hidden)]
 pub trait Sealed {}
-impl<T: Display> Sealed for &T {}
+impl<T: Display + ?Sized> Sealed for &T {}
 #[cfg(feature = "std")]
 impl Sealed for Path {}
 #[cfg(feature = "std")]
