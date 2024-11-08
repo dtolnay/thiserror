@@ -64,10 +64,6 @@ impl Display<'_> {
                         Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
                         Err(_) => return Ok(()),
                     };
-                    if !member_index.contains_key(&member) {
-                        out += int;
-                        continue;
-                    }
                     member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
@@ -109,16 +105,17 @@ impl Display<'_> {
                 Some('E') => Trait::UpperExp,
                 Some(_) => Trait::Display,
                 None => {
-                    if member_index.contains_key(&member) {
-                        has_bonus_display = true;
-                        binding_value.extend(quote_spanned!(span=> .as_display()));
-                    }
+                    has_bonus_display = true;
+                    binding_value.extend(quote_spanned!(span=> .as_display()));
                     Trait::Display
                 }
             };
             infinite_recursive |= member == *"self" && bound == Trait::Display;
             if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
+            } else {
+                out += &member.to_string();
+                continue;
             }
             let mut formatvar = IdentUnraw::new(match &member {
                 MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
