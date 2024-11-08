@@ -127,9 +127,8 @@ impl Display<'_> {
                 formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
             out += &formatvar.to_string();
-            let local = formatvar.to_local();
             if macro_named_args.insert(member) {
-                bindings.push((local, wrapped_binding_value));
+                bindings.push((formatvar.to_local(), wrapped_binding_value));
             } else {
                 // Already added to bindings by a previous use.
             }
