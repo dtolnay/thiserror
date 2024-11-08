@@ -1,5 +1,5 @@
 use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
-use quote::{format_ident, quote, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
@@ -24,6 +24,7 @@ pub struct Display<'a> {
     pub args: TokenStream,
     pub requires_fmt_machinery: bool,
     pub has_bonus_display: bool,
+    pub infinite_recursive: bool,
     pub implied_bounds: Set<(usize, Trait)>,
     pub bindings: Vec<(Ident, TokenStream)>,
 }
@@ -177,6 +178,7 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             args,
             requires_fmt_machinery,
             has_bonus_display: false,
+            infinite_recursive: false,
             implied_bounds: Set::new(),
             bindings: Vec::new(),
         };
@@ -299,6 +301,14 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
 
 impl ToTokens for Display<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
+        if self.infinite_recursive {
+            let span = self.fmt.span();
+            tokens.extend(quote_spanned! {span=>
+                #[warn(unconditional_recursion)]
+                fn _fmt() { _fmt() }
+            });
+        }
+
         let fmt = &self.fmt;
         let args = &self.args;
 
