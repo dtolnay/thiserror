@@ -60,15 +60,10 @@ impl Display<'_> {
                             return Err(Error::new_spanned(first_unnamed, msg));
                         }
                     }
-                    let member = match int.parse::<u32>() {
+                    match int.parse::<u32>() {
                         Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
                         Err(_) => return Ok(()),
-                    };
-                    if !member_index.contains_key(&member) {
-                        out += int;
-                        continue;
                     }
-                    member
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     if read.starts_with("r#") {
@@ -90,15 +85,6 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let mut formatvar = IdentUnraw::new(match &member {
-                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
-                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
-            });
-            while user_named_args.contains(&formatvar) {
-                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
-            }
-            out += &formatvar.to_string();
-            let local = formatvar.to_local();
             let mut binding_value = ToTokens::into_token_stream(match &member {
                 MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 MemberUnraw::Named(ident) => ident.to_local(),
@@ -118,17 +104,27 @@ impl Display<'_> {
                 Some('E') => Trait::UpperExp,
                 Some(_) => Trait::Display,
                 None => {
-                    if member_index.contains_key(&member) {
-                        has_bonus_display = true;
-                        binding_value.extend(quote_spanned!(span=> .as_display()));
-                    }
+                    has_bonus_display = true;
+                    binding_value.extend(quote_spanned!(span=> .as_display()));
                     Trait::Display
                 }
             };
+            infinite_recursive |= member == *"self" && bound == Trait::Display;
             if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
+            } else {
+                out += &member.to_string();
+                continue;
             }
-            infinite_recursive |= member == *"self" && bound == Trait::Display;
+            let mut formatvar = IdentUnraw::new(match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
+                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
+            });
+            while user_named_args.contains(&formatvar) {
+                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
+            }
+            out += &formatvar.to_string();
+            let local = formatvar.to_local();
             if macro_named_args.insert(member) {
                 bindings.push((local, binding_value));
             } else {
