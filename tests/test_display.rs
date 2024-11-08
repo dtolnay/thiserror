@@ -252,6 +252,20 @@ fn test_nested_tuple_field() {
 }
 
 #[test]
+fn test_pointer() {
+    #[derive(Error, Debug)]
+    #[error("{field:p}")]
+    pub struct Struct {
+        field: Box<i32>,
+    }
+
+    let s = Struct {
+        field: Box::new(-1),
+    };
+    assert_eq!(s.to_string(), format!("{:p}", s.field));
+}
+
+#[test]
 fn test_macro_rules() {
     // Regression test for https://github.com/dtolnay/thiserror/issues/86
 
