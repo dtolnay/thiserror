@@ -90,15 +90,6 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let mut formatvar = IdentUnraw::new(match &member {
-                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
-                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
-            });
-            while user_named_args.contains(&formatvar) {
-                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
-            }
-            out += &formatvar.to_string();
-            let local = formatvar.to_local();
             let mut binding_value = ToTokens::into_token_stream(match &member {
                 MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 MemberUnraw::Named(ident) => ident.to_local(),
@@ -128,6 +119,15 @@ impl Display<'_> {
             if let Some(&field) = member_index.get(&member) {
                 implied_bounds.insert((field, bound));
             }
+            let mut formatvar = IdentUnraw::new(match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
+                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
+            });
+            while user_named_args.contains(&formatvar) {
+                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
+            }
+            out += &formatvar.to_string();
+            let local = formatvar.to_local();
             infinite_recursive |= member == *"self" && bound == Trait::Display;
             if macro_named_args.insert(member) {
                 bindings.push((local, binding_value));
