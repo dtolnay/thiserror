@@ -85,15 +85,11 @@ impl Display<'_> {
                 }
                 _ => continue,
             };
-            let binding_value = match &member {
-                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
-                MemberUnraw::Named(ident) => ident.to_local(),
-            };
-            let mut wrapped_binding_value = quote!(::thiserror::__private::Var(#binding_value));
             let end_spec = match read.find('}') {
                 Some(end_spec) => end_spec,
                 None => return Ok(()),
             };
+            let mut bonus_display = false;
             let bound = match read[..end_spec].chars().next_back() {
                 Some('?') => Trait::Debug,
                 Some('o') => Trait::Octal,
@@ -105,10 +101,7 @@ impl Display<'_> {
                 Some('E') => Trait::UpperExp,
                 Some(_) => Trait::Display,
                 None => {
-                    has_bonus_display = true;
-                    wrapped_binding_value = quote_spanned! {span=>
-                        #binding_value.as_display()
-                    };
+                    bonus_display = true;
                     Trait::Display
                 }
             };
@@ -127,11 +120,21 @@ impl Display<'_> {
                 formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
             out += &formatvar.to_string();
-            if macro_named_args.insert(member) {
-                bindings.push((formatvar.to_local(), wrapped_binding_value));
-            } else {
+            if !macro_named_args.insert(member.clone()) {
                 // Already added to bindings by a previous use.
+                continue;
             }
+            let binding_value = match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+                MemberUnraw::Named(ident) => ident.to_local(),
+            };
+            let wrapped_binding_value = if bonus_display {
+                quote_spanned!(span=> #binding_value.as_display())
+            } else {
+                quote!(::thiserror::__private::Var(#binding_value))
+            };
+            has_bonus_display |= bonus_display;
+            bindings.push((formatvar.to_local(), wrapped_binding_value));
         }
 
         out += read;
