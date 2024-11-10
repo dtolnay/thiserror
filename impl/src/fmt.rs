@@ -193,6 +193,8 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             let ident = input.call(Ident::parse_any)?;
             input.parse::<Token![=]>()?;
             args.named.insert(ident);
+        } else {
+            input.parse::<TokenTree>()?;
         }
     }
 
