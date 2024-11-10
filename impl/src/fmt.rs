@@ -2,7 +2,7 @@ use crate::ast::{ContainerKind, Field};
 use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
-use proc_macro2::{Delimiter, TokenStream};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter;
@@ -225,6 +225,8 @@ fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
             let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
             args.named.insert(ident);
+        } else {
+            input.parse::<TokenTree>()?;
         }
     }
 
