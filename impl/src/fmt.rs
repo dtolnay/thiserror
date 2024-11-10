@@ -3,7 +3,7 @@ use crate::attr::{Display, Trait};
 use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned, ToTokens as _};
 use std::collections::{BTreeSet, HashMap};
 use std::iter;
 use syn::ext::IdentExt;
@@ -114,6 +114,8 @@ impl Display<'_> {
             }
             let formatvar_prefix = if bonus_display {
                 "__display"
+            } else if bound == Trait::Pointer {
+                "__pointer"
             } else {
                 "__field"
             };
@@ -137,8 +139,10 @@ impl Display<'_> {
             };
             let wrapped_binding_value = if bonus_display {
                 quote_spanned!(span=> #binding_value.as_display())
-            } else {
+            } else if bound == Trait::Pointer {
                 quote!(::thiserror::__private::Var(#binding_value))
+            } else {
+                binding_value.into_token_stream()
             };
             has_bonus_display |= bonus_display;
             bindings.push((formatvar.to_local(), wrapped_binding_value));
