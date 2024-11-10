@@ -9,4 +9,10 @@ pub struct Error {
     thread: NoDisplay,
 }
 
+#[derive(Error, Debug)]
+#[error("thread: {thread:o}")]
+pub struct ErrorOctal {
+    thread: NoDisplay,
+}
+
 fn main() {}
