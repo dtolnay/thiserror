@@ -4,7 +4,7 @@ use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
@@ -34,7 +34,7 @@ impl Display<'_> {
         let mut infinite_recursive = false;
         let mut implied_bounds = BTreeSet::new();
         let mut bindings = Vec::new();
-        let mut macro_named_args = HashSet::new();
+        let mut macro_named_args = BTreeSet::new();
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
 
@@ -112,15 +112,22 @@ impl Display<'_> {
                 out += &member.to_string();
                 continue;
             }
+            let formatvar_prefix = if bonus_display {
+                "__display"
+            } else {
+                "__field"
+            };
             let mut formatvar = IdentUnraw::new(match &member {
-                MemberUnraw::Unnamed(index) => format_ident!("__field{}", index),
-                MemberUnraw::Named(ident) => format_ident!("__field_{}", ident.to_string()),
+                MemberUnraw::Unnamed(index) => format_ident!("{}{}", formatvar_prefix, index),
+                MemberUnraw::Named(ident) => {
+                    format_ident!("{}_{}", formatvar_prefix, ident.to_string())
+                }
             });
             while user_named_args.contains(&formatvar) {
                 formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
             out += &formatvar.to_string();
-            if !macro_named_args.insert(member.clone()) {
+            if !macro_named_args.insert(formatvar.clone()) {
                 // Already added to bindings by a previous use.
                 continue;
             }
