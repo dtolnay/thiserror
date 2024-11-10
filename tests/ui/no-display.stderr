@@ -18,3 +18,29 @@ note: the trait `std::fmt::Display` must be implemented
   = help: items from traits can only be used if the trait is implemented and in scope
   = note: the following trait defines an item `as_display`, perhaps you need to implement it:
           candidate #1: `AsDisplay`
+
+error[E0277]: the trait bound `NoDisplay: Octal` is not satisfied
+  --> tests/ui/no-display.rs:13:9
+   |
+12 | #[derive(Error, Debug)]
+   |          ----- in this derive macro expansion
+13 | #[error("thread: {thread:o}")]
+   |         ^^^^^^^^^^^^^^^^^^^^ the trait `Octal` is not implemented for `NoDisplay`
+   |
+   = help: the following other types implement trait `Octal`:
+             &T
+             &mut T
+             NonZero<T>
+             Saturating<T>
+             Wrapping<T>
+             i128
+             i16
+             i32
+           and $N others
+   = note: required for `&NoDisplay` to implement `Octal`
+note: required by a bound in `core::fmt::rt::Argument::<'_>::new_octal`
+  --> $RUST/core/src/fmt/rt.rs
+   |
+   |     pub fn new_octal<T: Octal>(x: &T) -> Argument<'_> {
+   |                         ^^^^^ required by this bound in `Argument::<'_>::new_octal`
+   = note: this error originates in the macro `$crate::format_args` which comes from the expansion of the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
