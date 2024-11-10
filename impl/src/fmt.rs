@@ -102,6 +102,7 @@ impl Display<'_> {
                 Some(_) => Trait::Display,
                 None => {
                     bonus_display = true;
+                    has_bonus_display = true;
                     Trait::Display
                 }
             };
@@ -144,7 +145,6 @@ impl Display<'_> {
             } else {
                 binding_value.into_token_stream()
             };
-            has_bonus_display |= bonus_display;
             bindings.push((formatvar.to_local(), wrapped_binding_value));
         }
 
