@@ -1,8 +1,8 @@
-error: expected expression, found `@`
+error[E0425]: cannot find value `__FAIL__` in this scope
  --> tests/ui/unconditional-recursion.rs:8:5
   |
-8 |     @//fail
-  |     ^ expected expression
+8 |     __FAIL__;
+  |     ^^^^^^^^ not found in this scope
 
 warning: function cannot return without recursing
  --> tests/ui/unconditional-recursion.rs:4:9

@@ -5,5 +5,5 @@ use thiserror::Error;
 pub struct Error;
 
 fn main() {
-    @//fail
+    __FAIL__;
 }
