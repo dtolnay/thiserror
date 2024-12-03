@@ -18,3 +18,18 @@ fn test_unused_qualifications() {
 
     let _: MyError;
 }
+
+#[test]
+fn test_needless_lifetimes() {
+    #![allow(dead_code)]
+    #![deny(clippy::needless_lifetimes)]
+
+    #[derive(Debug, Error)]
+    #[error("...")]
+    pub enum MyError<'a> {
+        A(#[from] std::io::Error),
+        B(&'a ()),
+    }
+
+    let _: MyError;
+}
