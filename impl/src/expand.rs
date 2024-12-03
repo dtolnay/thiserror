@@ -197,7 +197,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         quote_spanned! {span=>
-            #[allow(unused_qualifications)]
+            #[allow(unused_qualifications, clippy::needless_lifetimes)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
@@ -462,7 +462,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         Some(quote_spanned! {span=>
-            #[allow(unused_qualifications)]
+            #[allow(unused_qualifications, clippy::needless_lifetimes)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #[allow(deprecated)]
