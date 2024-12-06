@@ -15,6 +15,7 @@ pub struct Attrs<'a> {
     pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
     pub fmt: Option<Fmt<'a>>,
+    pub allows: Option<&'a Attribute>,
 }
 
 #[derive(Clone)]
@@ -74,6 +75,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         from: None,
         transparent: None,
         fmt: None,
+        allows: None,
     };
 
     for attr in input {
@@ -115,6 +117,30 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 original: attr,
                 span,
             });
+        } else if attr.path().is_ident("allow") {
+            // Save `allow`s in order to put them on all `impl`s of the decorated type,
+            // similarly to what the Debug derive macro does.
+            //
+            // More specifically, this code:
+            // ```rust
+            // #[allow(deprecated, never_type_fallback_flowing_into_unsafe)]
+            // #[derive(Debug)]
+            // pub struct B;
+            // ```
+            // gets expanded into:
+            // ```rust
+            // #[allow(deprecated, never_type_fallback_flowing_into_unsafe)]
+            // pub struct B;
+            // #[automatically_derived]
+            // #[allow(deprecated, never_type_fallback_flowing_into_unsafe)]
+            // impl ::core::fmt::Debug for B {
+            //     #[inline]
+            //     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+            //         ::core::fmt::Formatter::write_str(f, "B")
+            //     }
+            // }
+            // ```
+            attrs.allows = Some(attr);
         }
     }
 

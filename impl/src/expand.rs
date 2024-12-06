@@ -57,6 +57,7 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
 fn impl_struct(input: Struct) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let allows = input.attrs.allows;
     let mut error_inferred_bounds = InferredBounds::new();
 
     let source_body = if let Some(transparent_attr) = &input.attrs.transparent {
@@ -179,6 +180,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
         let display_where_clause = display_inferred_bounds.augment_where_clause(input.generics);
         quote! {
+            #allows
             #[allow(unused_qualifications)]
             #[automatically_derived]
             impl #impl_generics ::core::fmt::Display for #ty #ty_generics #display_where_clause {
@@ -197,6 +199,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         quote_spanned! {span=>
+            #allows
             #[allow(unused_qualifications, clippy::needless_lifetimes)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
@@ -216,6 +219,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
     quote! {
+        #allows
         #[allow(unused_qualifications)]
         #[automatically_derived]
         impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #error_where_clause {
@@ -230,6 +234,7 @@ fn impl_struct(input: Struct) -> TokenStream {
 fn impl_enum(input: Enum) -> TokenStream {
     let ty = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let allows = input.attrs.allows;
     let mut error_inferred_bounds = InferredBounds::new();
 
     let source_method = if input.has_source() {
@@ -436,7 +441,9 @@ fn impl_enum(input: Enum) -> TokenStream {
         });
         let arms = arms.collect::<Vec<_>>();
         let display_where_clause = display_inferred_bounds.augment_where_clause(input.generics);
+
         Some(quote! {
+            #allows
             #[allow(unused_qualifications)]
             #[automatically_derived]
             impl #impl_generics ::core::fmt::Display for #ty #ty_generics #display_where_clause {
@@ -462,6 +469,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         Some(quote_spanned! {span=>
+            #allows
             #[allow(unused_qualifications, clippy::needless_lifetimes)]
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
