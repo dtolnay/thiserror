@@ -1,5 +1,6 @@
 use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
+use crate::fallback;
 use crate::generics::InferredBounds;
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
@@ -13,7 +14,7 @@ pub fn derive(input: &DeriveInput) -> TokenStream {
         // If there are invalid attributes in the input, expand to an Error impl
         // anyway to minimize spurious knock-on errors in other code that uses
         // this type as an Error.
-        Err(error) => fallback(input, error),
+        Err(error) => fallback::expand(input, error),
     }
 }
 
@@ -24,34 +25,6 @@ fn try_expand(input: &DeriveInput) -> Result<TokenStream> {
         Input::Struct(input) => impl_struct(input),
         Input::Enum(input) => impl_enum(input),
     })
-}
-
-fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
-    let ty = call_site_ident(&input.ident);
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-
-    let error = error.to_compile_error();
-
-    quote! {
-        #error
-
-        #[allow(unused_qualifications)]
-        #[automatically_derived]
-        impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #where_clause
-        where
-            // Work around trivial bounds being unstable.
-            // https://github.com/rust-lang/rust/issues/48214
-            for<'workaround> #ty #ty_generics: ::core::fmt::Debug,
-        {}
-
-        #[allow(unused_qualifications)]
-        #[automatically_derived]
-        impl #impl_generics ::core::fmt::Display for #ty #ty_generics #where_clause {
-            fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                ::core::unreachable!()
-            }
-        }
-    }
 }
 
 fn impl_struct(input: Struct) -> TokenStream {
@@ -494,7 +467,7 @@ fn impl_enum(input: Enum) -> TokenStream {
 
 // Create an ident with which we can expand `impl Trait for #ident {}` on a
 // deprecated type without triggering deprecation warning on the generated impl.
-fn call_site_ident(ident: &Ident) -> Ident {
+pub(crate) fn call_site_ident(ident: &Ident) -> Ident {
     let mut ident = ident.clone();
     ident.set_span(ident.span().resolved_at(Span::call_site()));
     ident
