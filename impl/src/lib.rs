@@ -21,6 +21,7 @@ extern crate proc_macro;
 mod ast;
 mod attr;
 mod expand;
+mod fallback;
 mod fmt;
 mod generics;
 mod prop;
