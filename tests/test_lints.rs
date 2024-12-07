@@ -12,7 +12,7 @@ fn test_unused_qualifications() {
     // std::error::Error is already imported in the caller's scope so it must
     // suppress unused_qualifications.
 
-    #[derive(Debug, Error)]
+    #[derive(Error, Debug)]
     #[error("...")]
     pub struct MyError;
 
@@ -24,7 +24,7 @@ fn test_needless_lifetimes() {
     #![allow(dead_code)]
     #![deny(clippy::needless_lifetimes)]
 
-    #[derive(Debug, Error)]
+    #[derive(Error, Debug)]
     #[error("...")]
     pub enum MyError<'a> {
         A(#[from] std::io::Error),
