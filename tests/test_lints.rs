@@ -39,12 +39,37 @@ fn test_deprecated() {
     #![deny(deprecated)]
 
     #[derive(Error, Debug)]
-    pub enum MyError {
+    #[deprecated]
+    #[error("...")]
+    pub struct DeprecatedStruct;
+
+    #[derive(Error, Debug)]
+    #[error("{message} {}", .message)]
+    pub struct DeprecatedStructField {
+        #[deprecated]
+        message: String,
+    }
+
+    #[derive(Error, Debug)]
+    #[deprecated]
+    pub enum DeprecatedEnum {
+        #[error("...")]
+        Variant,
+    }
+
+    #[derive(Error, Debug)]
+    pub enum DeprecatedVariant {
         #[deprecated]
         #[error("...")]
-        Deprecated,
+        Variant,
     }
 
     #[allow(deprecated)]
-    let _ = MyError::Deprecated;
+    let _: DeprecatedStruct;
+    #[allow(deprecated)]
+    let _: DeprecatedStructField;
+    #[allow(deprecated)]
+    let _ = DeprecatedEnum::Variant;
+    #[allow(deprecated)]
+    let _ = DeprecatedVariant::Variant;
 }
