@@ -496,7 +496,7 @@ fn impl_enum(input: Enum) -> TokenStream {
 // deprecated type without triggering deprecation warning on the generated impl.
 fn call_site_ident(ident: &Ident) -> Ident {
     let mut ident = ident.clone();
-    ident.set_span(Span::call_site());
+    ident.set_span(ident.span().resolved_at(Span::call_site()));
     ident
 }
 
