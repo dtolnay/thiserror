@@ -33,3 +33,18 @@ fn test_needless_lifetimes() {
 
     let _: MyError;
 }
+
+#[test]
+fn test_deprecated() {
+    #![deny(deprecated)]
+
+    #[derive(Error, Debug)]
+    pub enum MyError {
+        #[deprecated]
+        #[error("...")]
+        Deprecated,
+    }
+
+    #[allow(deprecated)]
+    let _ = MyError::Deprecated;
+}
