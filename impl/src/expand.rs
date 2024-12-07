@@ -2,7 +2,7 @@ use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
 use crate::generics::InferredBounds;
 use crate::unraw::MemberUnraw;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
@@ -27,7 +27,7 @@ fn try_expand(input: &DeriveInput) -> Result<TokenStream> {
 }
 
 fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
-    let ty = &input.ident;
+    let ty = call_site_ident(&input.ident);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let error = error.to_compile_error();
@@ -55,7 +55,7 @@ fn fallback(input: &DeriveInput, error: syn::Error) -> TokenStream {
 }
 
 fn impl_struct(input: Struct) -> TokenStream {
-    let ty = &input.ident;
+    let ty = call_site_ident(&input.ident);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
@@ -228,7 +228,7 @@ fn impl_struct(input: Struct) -> TokenStream {
 }
 
 fn impl_enum(input: Enum) -> TokenStream {
-    let ty = &input.ident;
+    let ty = call_site_ident(&input.ident);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
@@ -490,6 +490,14 @@ fn impl_enum(input: Enum) -> TokenStream {
         #display_impl
         #(#from_impls)*
     }
+}
+
+// Create an ident with which we can expand `impl Trait for #ident {}` on a
+// deprecated type without triggering deprecation warning on the generated impl.
+fn call_site_ident(ident: &Ident) -> Ident {
+    let mut ident = ident.clone();
+    ident.set_span(ident.span().resolved_at(Span::call_site()));
+    ident
 }
 
 fn fields_pat(fields: &[Field]) -> TokenStream {
