@@ -12,7 +12,7 @@ pub fn derive(input: &DeriveInput) -> TokenStream {
     match try_expand(input) {
         Ok(expanded) => expanded,
         // If there are invalid attributes in the input, expand to an Error impl
-        // anyway to minimize spurious knock-on errors in other code that uses
+        // anyway to minimize spurious secondary errors in other code that uses
         // this type as an Error.
         Err(error) => fallback::expand(input, error),
     }
