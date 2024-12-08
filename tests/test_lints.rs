@@ -64,6 +64,16 @@ fn test_deprecated() {
         Variant,
     }
 
+    #[derive(Error, Debug)]
+    pub enum DeprecatedFrom {
+        #[error(transparent)]
+        Variant(
+            #[from]
+            #[allow(deprecated)]
+            DeprecatedStruct,
+        ),
+    }
+
     #[allow(deprecated)]
     let _: DeprecatedStruct;
     #[allow(deprecated)]
