@@ -5,6 +5,17 @@ use thiserror::Error;
 pub use std::error::Error;
 
 #[test]
+fn test_allow_attributes() {
+    #![deny(clippy::allow_attributes)]
+
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct MyError(#[from] anyhow::Error);
+
+    let _: MyError;
+}
+
+#[test]
 fn test_unused_qualifications() {
     #![deny(unused_qualifications)]
 
