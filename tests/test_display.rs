@@ -266,7 +266,7 @@ fn test_pointer() {
 }
 
 #[test]
-fn test_macro_rules() {
+fn test_macro_rules_variant_from_call_site() {
     // Regression test for https://github.com/dtolnay/thiserror/issues/86
 
     macro_rules! decl_error {
@@ -289,6 +289,30 @@ fn test_macro_rules() {
 
     assert("0", Error0::Repro(0));
     assert("0", Error1::Repro(0));
+}
+
+#[test]
+fn test_macro_rules_message_from_call_site() {
+    // Regression test for https://github.com/dtolnay/thiserror/issues/398
+
+    macro_rules! decl_error {
+        ($($errors:tt)*) => {
+            #[derive(Error, Debug)]
+            pub enum Error {
+                $($errors)*
+            }
+        };
+    }
+
+    decl_error! {
+        #[error("{0}")]
+        Unnamed(u8),
+        #[error("{x}")]
+        Named { x: u8 },
+    }
+
+    assert("0", Error::Unnamed(0));
+    assert("0", Error::Named { x: 0 });
 }
 
 #[test]

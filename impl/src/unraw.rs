@@ -28,6 +28,10 @@ impl IdentUnraw {
         }
         unraw
     }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.0.set_span(span);
+    }
 }
 
 impl Display for IdentUnraw {
