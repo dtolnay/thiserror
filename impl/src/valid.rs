@@ -125,6 +125,12 @@ fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
             "not expected here; the #[backtrace] attribute belongs on a specific field",
         ));
     }
+    if let Some(implicit) = &attrs.implicit {
+        return Err(Error::new_spanned(
+            implicit,
+            "not expected here; the #[implicit] attribute belongs on a specific field",
+        ));
+    }
     if attrs.transparent.is_some() {
         if let Some(display) = &attrs.display {
             return Err(Error::new_spanned(
@@ -152,7 +158,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut from_field = None;
     let mut source_field = None;
     let mut backtrace_field = None;
-    let mut has_backtrace = false;
+    let mut first_implicit_field = None;
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
@@ -180,7 +186,6 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
                 ));
             }
             backtrace_field = Some(field);
-            has_backtrace = true;
         }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
@@ -188,7 +193,9 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
                 "#[error(transparent)] needs to go outside the enum or struct, not on an individual field",
             ));
         }
-        has_backtrace |= field.is_backtrace();
+        if field.attrs.implicit.is_some() && first_implicit_field.is_none() {
+            first_implicit_field = Some(field);
+        }
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
         if from_field.member != source_field.member {
@@ -199,14 +206,17 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     if let Some(from_field) = from_field {
-        let max_expected_fields = match backtrace_field {
-            Some(backtrace_field) => 1 + (from_field.member != backtrace_field.member) as usize,
-            None => 1 + has_backtrace as usize,
-        };
-        if fields.len() > max_expected_fields {
+        let has_unexpected_fields = fields.iter().any(|field| {
+            field.attrs.from.is_none()
+                && field.attrs.source.is_none()
+                && field.attrs.backtrace.is_none()
+                && !field.is_backtrace()
+                && !field.is_implicit()
+        });
+        if has_unexpected_fields {
             return Err(Error::new_spanned(
                 from_field.attrs.from.unwrap().original,
-                "deriving From requires no fields other than source and backtrace",
+                "deriving From requires no fields other than source, backtrace, and implicit",
             ));
         }
     }
@@ -215,6 +225,14 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             return Err(Error::new_spanned(
                 &source_field.original.ty,
                 "non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static",
+            ));
+        }
+    }
+    if let Some(first_implicit_field) = first_implicit_field {
+        if from_field.is_none() {
+            return Err(Error::new_spanned(
+                first_implicit_field.original,
+                "implicit fields require a #[from] field",
             ));
         }
     }

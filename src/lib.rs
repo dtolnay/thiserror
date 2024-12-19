@@ -278,10 +278,12 @@ extern crate std as core;
 
 mod aserror;
 mod display;
+mod implicit;
 #[cfg(error_generic_member_access)]
 mod provide;
 mod var;
 
+pub use implicit::ImplicitField;
 pub use thiserror_impl::*;
 
 // Not public API.
