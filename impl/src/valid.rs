@@ -152,7 +152,9 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut from_field = None;
     let mut source_field = None;
     let mut backtrace_field = None;
+    let mut span_trace_field = None;
     let mut has_backtrace = false;
+    let mut has_span_trace = false;
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
@@ -182,6 +184,16 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             backtrace_field = Some(field);
             has_backtrace = true;
         }
+        if let Some(span_trace) = field.attrs.span_trace {
+            if span_trace_field.is_some() {
+                return Err(Error::new_spanned(
+                    span_trace,
+                    "duplicate #[span_trace] attribute",
+                ));
+            }
+            span_trace_field = Some(field);
+            has_span_trace = true;
+        }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
                 transparent.original,
@@ -189,6 +201,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
         has_backtrace |= field.is_backtrace();
+        has_span_trace |= field.is_span_trace();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
         if from_field.member != source_field.member {
@@ -199,14 +212,18 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     if let Some(from_field) = from_field {
-        let max_expected_fields = match backtrace_field {
-            Some(backtrace_field) => 1 + (from_field.member != backtrace_field.member) as usize,
-            None => 1 + has_backtrace as usize,
+        let max_backtrace_fields = match backtrace_field {
+            Some(backtrace_field) => (from_field.member != backtrace_field.member) as usize,
+            None => has_backtrace as usize,
         };
-        if fields.len() > max_expected_fields {
+        let max_span_trace_fields = match span_trace_field {
+            Some(span_trace_field) => (from_field.member != span_trace_field.member) as usize,
+            None => has_span_trace as usize,
+        };
+        if fields.len() > 1 + max_backtrace_fields + max_span_trace_fields {
             return Err(Error::new_spanned(
                 from_field.attrs.from.unwrap().original,
-                "deriving From requires no fields other than source and backtrace",
+                "deriving From requires no fields other than source, backtrace, and span_trace",
             ));
         }
     }
