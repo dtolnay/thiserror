@@ -166,9 +166,10 @@ fn impl_struct(input: Struct) -> TokenStream {
     let from_impl = input.from_field().map(|from_field| {
         let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = input.distinct_backtrace_field();
+        let span_trace_field = input.distinct_span_trace_field();
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, span_trace_field, &source_var);
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
@@ -432,10 +433,11 @@ fn impl_enum(input: Enum) -> TokenStream {
         let from_field = variant.from_field()?;
         let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = variant.distinct_backtrace_field();
+        let span_trace_field = variant.distinct_span_trace_field();
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, span_trace_field, &source_var);
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
@@ -505,6 +507,7 @@ fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
 fn from_initializer(
     from_field: &Field,
     backtrace_field: Option<&Field>,
+    span_trace_field: Option<&Field>,
     source_var: &Ident,
 ) -> TokenStream {
     let from_member = &from_field.member;
@@ -525,9 +528,22 @@ fn from_initializer(
             }
         }
     });
+    let spantrace = span_trace_field.map(|span_trace_field| {
+        let span_trace_member = &span_trace_field.member;
+        if type_is_option(span_trace_field.ty) {
+            quote! {
+                #span_trace_member: ::core::option::Option::Some(::thiserror::__private::SpanTrace::capture()),
+            }
+        } else {
+            quote! {
+                #span_trace_member: ::core::convert::From::from(::thiserror::__private::SpanTrace::capture()),
+            }
+        }
+    });
     quote!({
         #from_member: #some_source,
         #backtrace
+        #spantrace
     })
 }
 

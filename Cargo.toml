@@ -26,14 +26,19 @@ default = ["std"]
 #
 # Without std, this would need to be written #[error("... {}", path.display())].
 std = []
+span_trace = ["dep:tracing-error"]
 
 [dependencies]
 thiserror-impl = { version = "=2.0.8", path = "impl" }
+tracing-error = { version = "0.2.1", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0.73"
 ref-cast = "1.0.18"
 rustversion = "1.0.13"
+tracing = { version = "0.1.27" }
+tracing-error = { version = "0.2.1" }
+tracing-subscriber = { version = "0.3.19" }
 trybuild = { version = "1.0.81", features = ["diff"] }
 
 [workspace]
@@ -42,3 +47,8 @@ members = ["impl", "tests/no-std"]
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
+
+[[example]]
+name = "spantrace"
+path = "examples/spantrace.rs"
+required-features = ["span_trace"]

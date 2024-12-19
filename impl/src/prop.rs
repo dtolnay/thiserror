@@ -16,9 +16,18 @@ impl Struct<'_> {
         backtrace_field(&self.fields)
     }
 
+    pub(crate) fn span_trace_field(&self) -> Option<&Field> {
+        span_trace_field(&self.fields)
+    }
+
     pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
+    }
+
+    pub(crate) fn distinct_span_trace_field(&self) -> Option<&Field> {
+        let span_trace_field = self.span_trace_field()?;
+        distinct_span_trace_field(span_trace_field, self.from_field())
     }
 }
 
@@ -63,15 +72,28 @@ impl Variant<'_> {
         backtrace_field(&self.fields)
     }
 
+    pub(crate) fn span_trace_field(&self) -> Option<&Field> {
+        span_trace_field(&self.fields)
+    }
+
     pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
+    }
+
+    pub(crate) fn distinct_span_trace_field(&self) -> Option<&Field> {
+        let span_trace_field = self.span_trace_field()?;
+        distinct_span_trace_field(span_trace_field, self.from_field())
     }
 }
 
 impl Field<'_> {
     pub(crate) fn is_backtrace(&self) -> bool {
         type_is_backtrace(self.ty)
+    }
+
+    pub(crate) fn is_span_trace(&self) -> bool {
+        type_is_span_trace(self.ty)
     }
 
     pub(crate) fn source_span(&self) -> Span {
@@ -123,6 +145,20 @@ fn backtrace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     None
 }
 
+fn span_trace_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
+    for field in fields {
+        if field.attrs.span_trace.is_some() {
+            return Some(field);
+        }
+    }
+    for field in fields {
+        if field.is_span_trace() {
+            return Some(field);
+        }
+    }
+    None
+}
+
 // The #[backtrace] field, if it is not the same as the #[from] field.
 fn distinct_backtrace_field<'a, 'b>(
     backtrace_field: &'a Field<'b>,
@@ -137,6 +173,20 @@ fn distinct_backtrace_field<'a, 'b>(
     }
 }
 
+// The #[span_trace] field, if it is not the same as the #[from] field.
+fn distinct_span_trace_field<'a, 'b>(
+    span_trace_field: &'a Field<'b>,
+    from_field: Option<&Field>,
+) -> Option<&'a Field<'b>> {
+    if from_field.map_or(false, |from_field| {
+        from_field.member == span_trace_field.member
+    }) {
+        None
+    } else {
+        Some(span_trace_field)
+    }
+}
+
 fn type_is_backtrace(ty: &Type) -> bool {
     let path = match ty {
         Type::Path(ty) => &ty.path,
@@ -145,4 +195,14 @@ fn type_is_backtrace(ty: &Type) -> bool {
 
     let last = path.segments.last().unwrap();
     last.ident == "Backtrace" && last.arguments.is_empty()
+}
+
+fn type_is_span_trace(ty: &Type) -> bool {
+    let path = match ty {
+        Type::Path(ty) => &ty.path,
+        _ => return false,
+    };
+
+    let last = path.segments.last().unwrap();
+    last.ident == "SpanTrace" && last.arguments.is_empty()
 }

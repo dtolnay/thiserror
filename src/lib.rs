@@ -301,4 +301,7 @@ pub mod __private {
     #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
     #[doc(hidden)]
     pub use std::backtrace::Backtrace;
+    #[cfg(all(feature = "std", feature = "span_trace"))]
+    #[doc(hidden)]
+    pub use tracing_error::SpanTrace;
 }

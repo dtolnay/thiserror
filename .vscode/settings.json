@@ -1,0 +1,4 @@
+{
+  "rust-analyzer.cargo.features": ["span_trace"]
+}
+
