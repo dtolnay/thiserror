@@ -166,12 +166,14 @@ fn impl_struct(input: Struct) -> TokenStream {
     let from_impl = input.from_field().map(|from_field| {
         let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = input.distinct_backtrace_field();
+        let implicit_fields = input.implicit_fields();
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, implicit_fields, &source_var);
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
+                #[track_caller]
                 fn from(#source_var: #from) -> Self {
                     #ty #body
                 }
@@ -432,13 +434,15 @@ fn impl_enum(input: Enum) -> TokenStream {
         let from_field = variant.from_field()?;
         let span = from_field.attrs.from.unwrap().span;
         let backtrace_field = variant.distinct_backtrace_field();
+        let implicit_fields = variant.implicit_fields();
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, implicit_fields, &source_var);
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
+                #[track_caller]
                 fn from(#source_var: #from) -> Self {
                     #ty::#variant #body
                 }
@@ -505,6 +509,7 @@ fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
 fn from_initializer(
     from_field: &Field,
     backtrace_field: Option<&Field>,
+    implicit_fields: Vec<&Field>,
     source_var: &Ident,
 ) -> TokenStream {
     let from_member = &from_field.member;
@@ -525,7 +530,17 @@ fn from_initializer(
             }
         }
     });
+    let implicit = implicit_fields
+        .iter()
+        .map(|field| {
+            let member = &field.member;
+            quote! {
+                #member: ::thiserror::ImplicitField::generate_with_source(&#source_var),
+            }
+        })
+        .collect::<TokenStream>();
     quote!({
+        #implicit
         #from_member: #some_source,
         #backtrace
     })

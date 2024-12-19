@@ -20,6 +20,10 @@ impl Struct<'_> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
     }
+
+    pub(crate) fn implicit_fields(&self) -> Vec<&Field> {
+        implicit_fields(&self.fields)
+    }
 }
 
 impl Enum<'_> {
@@ -67,11 +71,19 @@ impl Variant<'_> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
     }
+
+    pub(crate) fn implicit_fields(&self) -> Vec<&Field> {
+        implicit_fields(&self.fields)
+    }
 }
 
 impl Field<'_> {
     pub(crate) fn is_backtrace(&self) -> bool {
         type_is_backtrace(self.ty)
+    }
+
+    pub(crate) fn is_implicit(&self) -> bool {
+        self.attrs.implicit.is_some()
     }
 
     pub(crate) fn source_span(&self) -> Span {
@@ -145,4 +157,11 @@ fn type_is_backtrace(ty: &Type) -> bool {
 
     let last = path.segments.last().unwrap();
     last.ident == "Backtrace" && last.arguments.is_empty()
+}
+
+fn implicit_fields<'a, 'b>(fields: &'a [Field<'b>]) -> Vec<&'a Field<'b>> {
+    fields
+        .iter()
+        .filter(|field| field.attrs.implicit.is_some())
+        .collect()
 }
