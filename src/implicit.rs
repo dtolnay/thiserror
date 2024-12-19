@@ -1,13 +1,12 @@
 use core::error::Error;
+use core::panic::Location;
 #[cfg(feature = "std")]
 use std::sync::Arc;
 
 pub trait ImplicitField {
-    // Required method
     #[track_caller]
     fn generate() -> Self;
 
-    // Provided method
     #[track_caller]
     fn generate_with_source(source: &dyn Error) -> Self
     where
@@ -15,6 +14,13 @@ pub trait ImplicitField {
     {
         let _ = source;
         Self::generate()
+    }
+}
+
+impl ImplicitField for &'static Location<'static> {
+    #[track_caller]
+    fn generate() -> Self {
+        Location::caller()
     }
 }
 
