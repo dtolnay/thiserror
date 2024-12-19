@@ -159,6 +159,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     let mut source_field = None;
     let mut backtrace_field = None;
     let mut first_implicit_field = None;
+    let mut backtrace_type_field = None;
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
@@ -187,6 +188,15 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             }
             backtrace_field = Some(field);
         }
+        if field.is_backtrace() {
+            if backtrace_type_field.is_some() {
+                return Err(Error::new_spanned(
+                    field.original,
+                    "duplicate field having type: `Backtrace`",
+                ));
+            }
+            backtrace_type_field = Some(field);
+        }
         if let Some(transparent) = field.attrs.transparent {
             return Err(Error::new_spanned(
                 transparent.original,
@@ -202,6 +212,14 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             return Err(Error::new_spanned(
                 from_field.attrs.from.unwrap().original,
                 "#[from] is only supported on the source field, not any other field",
+            ));
+        }
+    }
+    if let (Some(a), Some(b)) = (backtrace_field, backtrace_type_field) {
+        if a.member != b.member {
+            return Err(Error::new_spanned(
+                a.original,
+                "only one backtrace field is allowed; found field with #[backtrace] and field with type `Backtrace`",
             ));
         }
     }

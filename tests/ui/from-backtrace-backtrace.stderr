@@ -1,5 +1,7 @@
-error: deriving From requires no fields other than source and backtrace
- --> tests/ui/from-backtrace-backtrace.rs:9:5
-  |
-9 |     #[from]
-  |     ^^^^^^^
+error: only one backtrace field is allowed; found field with #[backtrace] and field with type `Backtrace`
+  --> tests/ui/from-backtrace-backtrace.rs:9:5
+   |
+9  | /     #[from]
+10 | |     #[backtrace]
+11 | |     std::io::Error,
+   | |__________________^
