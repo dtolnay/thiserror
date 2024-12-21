@@ -5,7 +5,7 @@ pub enum Error {
     #[error("failed to open")]
     OpenFile(#[from] std::io::Error),
     #[error("failed to close")]
-    CloseFIle(#[from] std::io::Error),
+    CloseFile(#[from] std::io::Error),
 }
 
 fn main() {}
