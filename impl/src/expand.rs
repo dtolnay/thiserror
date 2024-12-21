@@ -169,12 +169,15 @@ fn impl_struct(input: Struct) -> TokenStream {
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
+        let from_function = quote! {
+            fn from(#source_var: #from) -> Self {
+                #ty #body
+            }
+        };
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
-                fn from(#source_var: #from) -> Self {
-                    #ty #body
-                }
+                #from_function
             }
         };
         Some(quote! {
@@ -436,12 +439,15 @@ fn impl_enum(input: Enum) -> TokenStream {
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
+        let from_function = quote! {
+            fn from(#source_var: #from) -> Self {
+                #ty::#variant #body
+            }
+        };
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
-                fn from(#source_var: #from) -> Self {
-                    #ty::#variant #body
-                }
+                #from_function
             }
         };
         Some(quote! {
