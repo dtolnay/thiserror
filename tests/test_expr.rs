@@ -1,6 +1,7 @@
 #![allow(clippy::iter_cloned_collect, clippy::uninlined_format_args)]
 
 use core::fmt::Display;
+#[cfg(feature = "std")]
 use std::path::PathBuf;
 use thiserror::Error;
 
