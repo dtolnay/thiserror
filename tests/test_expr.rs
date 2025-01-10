@@ -90,6 +90,7 @@ fn test_rustup() {
 }
 
 // Regression test for https://github.com/dtolnay/thiserror/issues/335
+#[cfg(feature = "std")]
 #[test]
 #[allow(non_snake_case)]
 fn test_assoc_type_equality_constraint() {
