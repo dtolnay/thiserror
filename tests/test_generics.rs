@@ -1,6 +1,7 @@
 #![allow(clippy::needless_late_init, clippy::uninlined_format_args)]
 
 use core::fmt::{self, Debug, Display};
+use core::str::FromStr;
 use thiserror::Error;
 
 pub struct NoFormat;
@@ -159,3 +160,46 @@ pub struct StructFromGeneric<E> {
 #[derive(Error, Debug)]
 #[error(transparent)]
 pub struct StructTransparentGeneric<E>(pub E);
+
+// Should expand to:
+//
+//     impl<T: FromStr> Display for AssociatedTypeError<T>
+//     where
+//         T::Err: Display;
+//
+//     impl<T: FromStr> Error for AssociatedTypeError<T>
+//     where
+//         Self: Debug + Display;
+//
+#[derive(Error, Debug)]
+pub enum AssociatedTypeError<T: FromStr> {
+    #[error("couldn't parse matrix")]
+    Other,
+    #[error("couldn't parse entry: {0}")]
+    EntryParseError(T::Err),
+}
+
+// Regression test for https://github.com/dtolnay/thiserror/issues/345
+#[test]
+fn test_no_bound_on_named_fmt() {
+    #[derive(Error, Debug)]
+    #[error("{thing}", thing = "...")]
+    struct Error<T> {
+        thing: T,
+    }
+
+    let error = Error { thing: DebugOnly };
+    assert_eq!(error.to_string(), "...");
+}
+
+#[test]
+fn test_multiple_bound() {
+    #[derive(Error, Debug)]
+    #[error("0x{thing:x} 0x{thing:X}")]
+    pub struct Error<T> {
+        thing: T,
+    }
+
+    let error = Error { thing: 0xFFi32 };
+    assert_eq!(error.to_string(), "0xff 0xFF");
+}

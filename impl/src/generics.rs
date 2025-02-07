@@ -25,11 +25,12 @@ impl<'a> ParamsInScope<'a> {
 
 fn crawl(in_scope: &ParamsInScope, ty: &Type, found: &mut bool) {
     if let Type::Path(ty) = ty {
-        if ty.qself.is_none() {
-            if let Some(ident) = ty.path.get_ident() {
-                if in_scope.names.contains(ident) {
-                    *found = true;
-                }
+        if let Some(qself) = &ty.qself {
+            crawl(in_scope, &qself.ty, found);
+        } else {
+            let front = ty.path.segments.first().unwrap();
+            if front.arguments.is_none() && in_scope.names.contains(&front.ident) {
+                *found = true;
             }
         }
         for segment in &ty.path.segments {
@@ -57,7 +58,6 @@ impl InferredBounds {
         }
     }
 
-    #[allow(clippy::type_repetition_in_bounds, clippy::trait_duplication_in_bounds)] // clippy bug: https://github.com/rust-lang/rust-clippy/issues/8771
     pub fn insert(&mut self, ty: impl ToTokens, bound: impl ToTokens) {
         let ty = ty.to_token_stream();
         let bound = bound.to_token_stream();

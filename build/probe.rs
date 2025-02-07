@@ -2,10 +2,11 @@
 // member access API. If the current toolchain is able to compile it, then
 // thiserror is able to provide backtrace support.
 
+#![no_std]
 #![feature(error_generic_member_access)]
 
+use core::error::{Error, Request};
 use core::fmt::{self, Debug, Display};
-use std::error::{Error, Request};
 
 struct MyError(Thing);
 struct Thing;

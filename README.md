@@ -13,10 +13,10 @@ This library provides a convenient derive macro for the standard library's
 
 ```toml
 [dependencies]
-thiserror = "1.0"
+thiserror = "2"
 ```
 
-*Compiler support: requires rustc 1.56+*
+*Compiler support: requires rustc 1.61+*
 
 <br>
 
@@ -70,7 +70,7 @@ pub enum DataStoreError {
   ```rust
   #[derive(Error, Debug)]
   pub enum Error {
-      #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::MAX)]
+      #[error("invalid rdo_lookahead_frames {0} (expected < {max})", max = i32::MAX)]
       InvalidLookahead(u32),
   }
   ```

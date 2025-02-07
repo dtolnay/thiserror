@@ -1,6 +1,8 @@
 #![allow(clippy::iter_cloned_collect, clippy::uninlined_format_args)]
 
 use core::fmt::Display;
+#[cfg(feature = "std")]
+use std::path::PathBuf;
 use thiserror::Error;
 
 // Some of the elaborate cases from the rcc codebase, which is a C compiler in
@@ -50,6 +52,7 @@ pub enum RustupError {
     },
 }
 
+#[track_caller]
 fn assert<T: Display>(expected: &str, value: T) {
     assert_eq!(expected, value.to_string());
 }
@@ -83,6 +86,33 @@ fn test_rustup() {
             name: "nightly".to_owned(),
             component: "clipy".to_owned(),
             suggestion: Some("clippy".to_owned()),
+        },
+    );
+}
+
+// Regression test for https://github.com/dtolnay/thiserror/issues/335
+#[cfg(feature = "std")]
+#[test]
+#[allow(non_snake_case)]
+fn test_assoc_type_equality_constraint() {
+    pub trait Trait<T>: Display {
+        type A;
+    }
+
+    impl<T> Trait<T> for i32 {
+        type A = i32;
+    }
+
+    #[derive(Error, Debug)]
+    #[error("{A} {b}", b = &0 as &dyn Trait<i32, A = i32>)]
+    pub struct Error {
+        pub A: PathBuf,
+    }
+
+    assert(
+        "... 0",
+        Error {
+            A: PathBuf::from("..."),
         },
     );
 }

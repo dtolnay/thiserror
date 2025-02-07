@@ -1,9 +1,9 @@
 use crate::ast::{Enum, Field, Struct, Variant};
-use crate::span::MemberSpan;
+use crate::unraw::MemberUnraw;
 use proc_macro2::Span;
+use syn::Type;
 use syn::{
-    AngleBracketedGenericArguments, GenericArgument, Lifetime, Member, PathArguments, Type,
-    TypeReference,
+    AngleBracketedGenericArguments, GenericArgument, Lifetime, PathArguments, TypeReference,
 };
 
 impl Struct<'_> {
@@ -45,10 +45,11 @@ impl Enum<'_> {
     pub(crate) fn has_display(&self) -> bool {
         self.attrs.display.is_some()
             || self.attrs.transparent.is_some()
+            || self.attrs.fmt.is_some()
             || self
                 .variants
                 .iter()
-                .any(|variant| variant.attrs.display.is_some())
+                .any(|variant| variant.attrs.display.is_some() || variant.attrs.fmt.is_some())
             || self
                 .variants
                 .iter()
@@ -90,11 +91,11 @@ impl Field<'_> {
 
     pub(crate) fn source_span(&self) -> Span {
         if let Some(source_attr) = &self.attrs.source {
-            source_attr.path().get_ident().unwrap().span()
+            source_attr.span
         } else if let Some(from_attr) = &self.attrs.from {
-            from_attr.path().get_ident().unwrap().span()
+            from_attr.span
         } else {
-            self.member.member_span()
+            self.member.span()
         }
     }
 }
@@ -116,7 +117,7 @@ fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     }
     for field in fields {
         match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(field),
+            MemberUnraw::Named(ident) if ident == "source" => return Some(field),
             _ => {}
         }
     }

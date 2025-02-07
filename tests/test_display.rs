@@ -1,4 +1,9 @@
-#![allow(clippy::needless_raw_string_hashes, clippy::uninlined_format_args)]
+#![allow(
+    clippy::needless_lifetimes,
+    clippy::needless_raw_string_hashes,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::uninlined_format_args
+)]
 
 use core::fmt::{self, Display};
 use thiserror::Error;
@@ -127,7 +132,7 @@ fn test_nested() {
 #[test]
 fn test_match() {
     #[derive(Error, Debug)]
-    #[error("{}: {0}", match .1 {
+    #[error("{intro}: {0}", intro = match .1 {
         Some(n) => format!("error occurred with {}", n),
         None => "there was an empty error".to_owned(),
     })]
@@ -247,18 +252,32 @@ fn test_nested_tuple_field() {
 }
 
 #[test]
-fn test_macro_rules() {
+fn test_pointer() {
+    #[derive(Error, Debug)]
+    #[error("{field:p}")]
+    pub struct Struct {
+        field: Box<i32>,
+    }
+
+    let s = Struct {
+        field: Box::new(-1),
+    };
+    assert_eq!(s.to_string(), format!("{:p}", s.field));
+}
+
+#[test]
+fn test_macro_rules_variant_from_call_site() {
     // Regression test for https://github.com/dtolnay/thiserror/issues/86
 
     macro_rules! decl_error {
         ($variant:ident($value:ident)) => {
-            #[derive(Debug, Error)]
+            #[derive(Error, Debug)]
             pub enum Error0 {
                 #[error("{0:?}")]
                 $variant($value),
             }
 
-            #[derive(Debug, Error)]
+            #[derive(Error, Debug)]
             #[error("{0:?}")]
             pub enum Error1 {
                 $variant($value),
@@ -273,9 +292,33 @@ fn test_macro_rules() {
 }
 
 #[test]
+fn test_macro_rules_message_from_call_site() {
+    // Regression test for https://github.com/dtolnay/thiserror/issues/398
+
+    macro_rules! decl_error {
+        ($($errors:tt)*) => {
+            #[derive(Error, Debug)]
+            pub enum Error {
+                $($errors)*
+            }
+        };
+    }
+
+    decl_error! {
+        #[error("{0}")]
+        Unnamed(u8),
+        #[error("{x}")]
+        Named { x: u8 },
+    }
+
+    assert("0", Error::Unnamed(0));
+    assert("0", Error::Named { x: 0 });
+}
+
+#[test]
 fn test_raw() {
     #[derive(Error, Debug)]
-    #[error("braced raw error: {r#fn}")]
+    #[error("braced raw error: {fn}")]
     struct Error {
         r#fn: &'static str,
     }
@@ -287,22 +330,11 @@ fn test_raw() {
 fn test_raw_enum() {
     #[derive(Error, Debug)]
     enum Error {
-        #[error("braced raw error: {r#fn}")]
+        #[error("braced raw error: {fn}")]
         Braced { r#fn: &'static str },
     }
 
     assert("braced raw error: T", Error::Braced { r#fn: "T" });
-}
-
-#[test]
-fn test_raw_conflict() {
-    #[derive(Error, Debug)]
-    enum Error {
-        #[error("braced raw error: {r#func}, {func}", func = "U")]
-        Braced { r#func: &'static str },
-    }
-
-    assert("braced raw error: T, U", Error::Braced { r#func: "T" });
 }
 
 #[test]
@@ -312,6 +344,15 @@ fn test_keyword() {
     struct Error;
 
     assert("error: 1", Error);
+}
+
+#[test]
+fn test_self() {
+    #[derive(Error, Debug)]
+    #[error("error: {self:?}")]
+    struct Error;
+
+    assert("error: Error", Error);
 }
 
 #[test]
@@ -367,4 +408,70 @@ fn test_raw_str() {
     assert(r#"raw brace left 2 \x7B"#, Error::BraceLeft2);
     assert(r#"raw brace right }"#, Error::BraceRight);
     assert(r#"raw brace right 2 \x7D"#, Error::BraceRight2);
+}
+
+mod util {
+    use core::fmt::{self, Octal};
+
+    pub fn octal<T: Octal>(value: &T, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "0o{:o}", value)
+    }
+}
+
+#[test]
+fn test_fmt_path() {
+    fn unit(formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("unit=")
+    }
+
+    fn pair(k: &i32, v: &i32, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "pair={k}:{v}")
+    }
+
+    #[derive(Error, Debug)]
+    pub enum Error {
+        #[error(fmt = unit)]
+        Unit,
+        #[error(fmt = pair)]
+        Tuple(i32, i32),
+        #[error(fmt = pair)]
+        Entry { k: i32, v: i32 },
+        #[error(fmt = crate::util::octal)]
+        I16(i16),
+        #[error(fmt = crate::util::octal::<i32>)]
+        I32 { n: i32 },
+        #[error(fmt = core::fmt::Octal::fmt)]
+        I64(i64),
+        #[error("...{0}")]
+        Other(bool),
+    }
+
+    assert("unit=", Error::Unit);
+    assert("pair=10:0", Error::Tuple(10, 0));
+    assert("pair=10:0", Error::Entry { k: 10, v: 0 });
+    assert("0o777", Error::I16(0o777));
+    assert("0o777", Error::I32 { n: 0o777 });
+    assert("777", Error::I64(0o777));
+    assert("...false", Error::Other(false));
+}
+
+#[test]
+fn test_fmt_path_inherited() {
+    #[derive(Error, Debug)]
+    #[error(fmt = crate::util::octal)]
+    pub enum Error {
+        I16(i16),
+        I32 {
+            n: i32,
+        },
+        #[error(fmt = core::fmt::Octal::fmt)]
+        I64(i64),
+        #[error("...{0}")]
+        Other(bool),
+    }
+
+    assert("0o777", Error::I16(0o777));
+    assert("0o777", Error::I32 { n: 0o777 });
+    assert("777", Error::I64(0o777));
+    assert("...false", Error::Other(false));
 }
