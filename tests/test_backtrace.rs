@@ -1,3 +1,4 @@
+#![cfg(feature = "std")]
 #![cfg_attr(thiserror_nightly_testing, feature(error_generic_member_access))]
 
 use thiserror::Error;
@@ -21,6 +22,11 @@ pub mod structs {
     use std::sync::Arc;
     use thiserror::Error;
 
+    mod not_backtrace {
+        #[derive(Debug)]
+        pub struct Backtrace;
+    }
+
     #[derive(Error, Debug)]
     #[error("...")]
     pub struct PlainBacktrace {
@@ -32,6 +38,12 @@ pub mod structs {
     pub struct ExplicitBacktrace {
         #[backtrace]
         backtrace: Backtrace,
+    }
+
+    #[derive(Error, Debug)]
+    #[error("...")]
+    pub struct NotBacktrace {
+        backtrace: crate::structs::not_backtrace::r#Backtrace,
     }
 
     #[derive(Error, Debug)]

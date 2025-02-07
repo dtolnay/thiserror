@@ -2,6 +2,7 @@
     clippy::blocks_in_conditions,
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
+    clippy::enum_glob_use,
     clippy::manual_find,
     clippy::manual_let_else,
     clippy::manual_map,
@@ -20,10 +21,12 @@ extern crate proc_macro;
 mod ast;
 mod attr;
 mod expand;
+mod fallback;
 mod fmt;
 mod generics;
 mod prop;
-mod span;
+mod scan_expr;
+mod unraw;
 mod valid;
 
 use proc_macro::TokenStream;

@@ -1,8 +1,6 @@
 use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
-use quote::ToTokens;
-use std::collections::BTreeSet as Set;
-use syn::{Error, GenericArgument, Member, PathArguments, Result, Type};
+use syn::{Error, GenericArgument, PathArguments, Result, Type};
 
 impl Input<'_> {
     pub(crate) fn validate(&self) -> Result<()> {
@@ -25,10 +23,16 @@ impl Struct<'_> {
             }
             if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
-                    source,
+                    source.original,
                     "transparent error struct can't contain #[source]",
                 ));
             }
+        }
+        if let Some(fmt) = &self.attrs.fmt {
+            return Err(Error::new_spanned(
+                fmt.original,
+                "#[error(fmt = ...)] is only supported in enums; for a struct, handwrite your own Display impl",
+            ));
         }
         check_field_attrs(&self.fields)?;
         for field in &self.fields {
@@ -44,24 +48,15 @@ impl Enum<'_> {
         let has_display = self.has_display();
         for variant in &self.variants {
             variant.validate()?;
-            if has_display && variant.attrs.display.is_none() && variant.attrs.transparent.is_none()
+            if has_display
+                && variant.attrs.display.is_none()
+                && variant.attrs.transparent.is_none()
+                && variant.attrs.fmt.is_none()
             {
                 return Err(Error::new_spanned(
                     variant.original,
                     "missing #[error(\"...\")] display attribute",
                 ));
-            }
-        }
-        let mut from_types = Set::new();
-        for variant in &self.variants {
-            if let Some(from_field) = variant.from_field() {
-                let repr = from_field.ty.to_token_stream().to_string();
-                if !from_types.insert(repr) {
-                    return Err(Error::new_spanned(
-                        from_field.original,
-                        "cannot derive From because another variant has the same source type",
-                    ));
-                }
             }
         }
         Ok(())
@@ -80,7 +75,7 @@ impl Variant<'_> {
             }
             if let Some(source) = self.fields.iter().find_map(|f| f.attrs.source) {
                 return Err(Error::new_spanned(
-                    source,
+                    source.original,
                     "transparent variant can't contain #[source]",
                 ));
             }
@@ -95,9 +90,15 @@ impl Variant<'_> {
 
 impl Field<'_> {
     fn validate(&self) -> Result<()> {
-        if let Some(display) = &self.attrs.display {
+        if let Some(unexpected_display_attr) = if let Some(display) = &self.attrs.display {
+            Some(display.original)
+        } else if let Some(fmt) = &self.attrs.fmt {
+            Some(fmt.original)
+        } else {
+            None
+        } {
             return Err(Error::new_spanned(
-                display.original,
+                unexpected_display_attr,
                 "not expected here; the #[error(...)] attribute belongs on top of a struct or an enum variant",
             ));
         }
@@ -108,13 +109,13 @@ impl Field<'_> {
 fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
     if let Some(from) = &attrs.from {
         return Err(Error::new_spanned(
-            from,
+            from.original,
             "not expected here; the #[from] attribute belongs on a specific field",
         ));
     }
     if let Some(source) = &attrs.source {
         return Err(Error::new_spanned(
-            source,
+            source.original,
             "not expected here; the #[source] attribute belongs on a specific field",
         ));
     }
@@ -124,14 +125,26 @@ fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
             "not expected here; the #[backtrace] attribute belongs on a specific field",
         ));
     }
-    if let Some(display) = &attrs.display {
-        if attrs.transparent.is_some() {
+    if attrs.transparent.is_some() {
+        if let Some(display) = &attrs.display {
             return Err(Error::new_spanned(
                 display.original,
                 "cannot have both #[error(transparent)] and a display attribute",
             ));
         }
+        if let Some(fmt) = &attrs.fmt {
+            return Err(Error::new_spanned(
+                fmt.original,
+                "cannot have both #[error(transparent)] and #[error(fmt = ...)]",
+            ));
+        }
+    } else if let (Some(display), Some(_)) = (&attrs.display, &attrs.fmt) {
+        return Err(Error::new_spanned(
+            display.original,
+            "cannot have both #[error(fmt = ...)] and a format arguments attribute",
+        ));
     }
+
     Ok(())
 }
 
@@ -145,13 +158,19 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     for field in fields {
         if let Some(from) = field.attrs.from {
             if from_field.is_some() {
-                return Err(Error::new_spanned(from, "duplicate #[from] attribute"));
+                return Err(Error::new_spanned(
+                    from.original,
+                    "duplicate #[from] attribute",
+                ));
             }
             from_field = Some(field);
         }
         if let Some(source) = field.attrs.source {
             if source_field.is_some() {
-                return Err(Error::new_spanned(source, "duplicate #[source] attribute"));
+                return Err(Error::new_spanned(
+                    source.original,
+                    "duplicate #[source] attribute",
+                ));
             }
             source_field = Some(field);
         }
@@ -186,9 +205,9 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         has_location |= field.is_location();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
-        if !same_member(from_field, source_field) {
+        if from_field.member != source_field.member {
             return Err(Error::new_spanned(
-                from_field.attrs.from,
+                from_field.attrs.from.unwrap().original,
                 "#[from] is only supported on the source field, not any other field",
             ));
         }
@@ -196,14 +215,18 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
     if let Some(from_field) = from_field {
         let extra_fields = has_backtrace as usize + has_location as usize;
         let max_expected_fields = match (backtrace_field, location_field) {
-            (Some(backtrace), Some(_)) => 2 + !same_member(from_field, backtrace) as usize,
-            (Some(backtrace_field), None) => 1 + !same_member(from_field, backtrace_field) as usize,
+            (Some(backtrace_field), Some(_)) => {
+                2 + (from_field.member != backtrace_field.member) as usize
+            }
+            (Some(backtrace_field), None) => {
+                1 + (from_field.member != backtrace_field.member) as usize
+            }
             (None, Some(_)) => 1 + extra_fields,
             (None, None) => 1 + extra_fields,
         };
         if fields.len() > max_expected_fields {
             return Err(Error::new_spanned(
-                from_field.attrs.from,
+                from_field.attrs.from.unwrap().original,
                 "deriving From requires no fields other than source, backtrace, and location",
             ));
         }
@@ -217,14 +240,6 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn same_member(one: &Field, two: &Field) -> bool {
-    match (&one.member, &two.member) {
-        (Member::Named(one), Member::Named(two)) => one == two,
-        (Member::Unnamed(one), Member::Unnamed(two)) => one.index == two.index,
-        _ => unreachable!(),
-    }
 }
 
 fn contains_non_static_lifetime(ty: &Type) -> bool {

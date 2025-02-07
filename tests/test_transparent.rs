@@ -46,6 +46,24 @@ fn test_transparent_enum() {
 }
 
 #[test]
+fn test_transparent_enum_with_default_message() {
+    #[derive(Error, Debug)]
+    #[error("this failed: {0}_{1}")]
+    enum Error {
+        This(i32, i32),
+        #[error(transparent)]
+        Other(anyhow::Error),
+    }
+
+    let error = Error::This(-1, -1);
+    assert_eq!("this failed: -1_-1", error.to_string());
+
+    let error = Error::Other(anyhow!("inner").context("outer"));
+    assert_eq!("outer", error.to_string());
+    assert_eq!("inner", error.source().unwrap().to_string());
+}
+
+#[test]
 fn test_anyhow() {
     #[derive(Error, Debug)]
     #[error(transparent)]

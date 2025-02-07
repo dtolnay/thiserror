@@ -1,36 +1,40 @@
-use crate::ast::Field;
+use crate::ast::{ContainerKind, Field};
 use crate::attr::{Display, Trait};
-use proc_macro2::TokenTree;
-use quote::{format_ident, quote_spanned};
-use std::collections::{BTreeSet as Set, HashMap as Map};
+use crate::scan_expr::scan_expr;
+use crate::unraw::{IdentUnraw, MemberUnraw};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
+use quote::{format_ident, quote, quote_spanned, ToTokens as _};
+use std::collections::{BTreeSet, HashMap};
+use std::iter;
 use syn::ext::IdentExt;
-use syn::parse::{ParseStream, Parser};
-use syn::{Ident, Index, LitStr, Member, Result, Token};
+use syn::parse::discouraged::Speculative;
+use syn::parse::{Error, ParseStream, Parser, Result};
+use syn::{Expr, Ident, Index, LitStr, Token};
 
 impl Display<'_> {
-    // Transform `"error {var}"` to `"error {}", var`.
-    pub fn expand_shorthand(&mut self, fields: &[Field]) {
+    pub fn expand_shorthand(&mut self, fields: &[Field], container: ContainerKind) -> Result<()> {
         let raw_args = self.args.clone();
-        let mut named_args = explicit_named_args.parse2(raw_args).unwrap();
-        let mut member_index = Map::new();
+        let FmtArguments {
+            named: user_named_args,
+            first_unnamed,
+        } = explicit_named_args.parse2(raw_args).unwrap();
+
+        let mut member_index = HashMap::new();
+        let mut extra_positional_arguments_allowed = true;
         for (i, field) in fields.iter().enumerate() {
             member_index.insert(&field.member, i);
+            extra_positional_arguments_allowed &= matches!(&field.member, MemberUnraw::Named(_));
         }
 
         let span = self.fmt.span();
         let fmt = self.fmt.value();
         let mut read = fmt.as_str();
         let mut out = String::new();
-        let mut args = self.args.clone();
         let mut has_bonus_display = false;
-        let mut implied_bounds = Set::new();
-
-        let mut has_trailing_comma = false;
-        if let Some(TokenTree::Punct(punct)) = args.clone().into_iter().last() {
-            if punct.as_char() == ',' {
-                has_trailing_comma = true;
-            }
-        }
+        let mut infinite_recursive = false;
+        let mut implied_bounds = BTreeSet::new();
+        let mut bindings = Vec::new();
+        let mut macro_named_args = BTreeSet::new();
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
 
@@ -45,129 +49,274 @@ impl Display<'_> {
             }
             let next = match read.chars().next() {
                 Some(next) => next,
-                None => return,
+                None => return Ok(()),
             };
             let member = match next {
                 '0'..='9' => {
                     let int = take_int(&mut read);
-                    let member = match int.parse::<u32>() {
-                        Ok(index) => Member::Unnamed(Index { index, span }),
-                        Err(_) => return,
-                    };
-                    if !member_index.contains_key(&member) {
-                        out += &int;
-                        continue;
+                    if !extra_positional_arguments_allowed {
+                        if let Some(first_unnamed) = &first_unnamed {
+                            let msg = format!("ambiguous reference to positional arguments by number in a {container}; change this to a named argument");
+                            return Err(Error::new_spanned(first_unnamed, msg));
+                        }
                     }
-                    member
+                    match int.parse::<u32>() {
+                        Ok(index) => MemberUnraw::Unnamed(Index { index, span }),
+                        Err(_) => return Ok(()),
+                    }
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    let mut ident = take_ident(&mut read);
-                    ident.set_span(span);
-                    Member::Named(ident)
+                    if read.starts_with("r#") {
+                        continue;
+                    }
+                    let repr = take_ident(&mut read);
+                    if repr == "_" {
+                        // Invalid. Let rustc produce the diagnostic.
+                        out += repr;
+                        continue;
+                    }
+                    let ident = IdentUnraw::new(Ident::new(repr, span));
+                    if user_named_args.contains(&ident) {
+                        // Refers to a named argument written by the user, not to field.
+                        out += repr;
+                        continue;
+                    }
+                    MemberUnraw::Named(ident)
                 }
                 _ => continue,
             };
-            if let Some(&field) = member_index.get(&member) {
-                let end_spec = match read.find('}') {
-                    Some(end_spec) => end_spec,
-                    None => return,
-                };
-                let bound = match read[..end_spec].chars().next_back() {
-                    Some('?') => Trait::Debug,
-                    Some('o') => Trait::Octal,
-                    Some('x') => Trait::LowerHex,
-                    Some('X') => Trait::UpperHex,
-                    Some('p') => Trait::Pointer,
-                    Some('b') => Trait::Binary,
-                    Some('e') => Trait::LowerExp,
-                    Some('E') => Trait::UpperExp,
-                    Some(_) | None => Trait::Display,
-                };
-                implied_bounds.insert((field, bound));
-            }
-            let local = match &member {
-                Member::Unnamed(index) => format_ident!("_{}", index),
-                Member::Named(ident) => ident.clone(),
+            let end_spec = match read.find('}') {
+                Some(end_spec) => end_spec,
+                None => return Ok(()),
             };
-            let mut formatvar = local.clone();
-            if formatvar.to_string().starts_with("r#") {
-                formatvar = format_ident!("r_{}", formatvar);
+            let mut bonus_display = false;
+            let bound = match read[..end_spec].chars().next_back() {
+                Some('?') => Trait::Debug,
+                Some('o') => Trait::Octal,
+                Some('x') => Trait::LowerHex,
+                Some('X') => Trait::UpperHex,
+                Some('p') => Trait::Pointer,
+                Some('b') => Trait::Binary,
+                Some('e') => Trait::LowerExp,
+                Some('E') => Trait::UpperExp,
+                Some(_) => Trait::Display,
+                None => {
+                    bonus_display = true;
+                    has_bonus_display = true;
+                    Trait::Display
+                }
+            };
+            infinite_recursive |= member == *"self" && bound == Trait::Display;
+            let field = match member_index.get(&member) {
+                Some(&field) => field,
+                None => {
+                    out += &member.to_string();
+                    continue;
+                }
+            };
+            implied_bounds.insert((field, bound));
+            let formatvar_prefix = if bonus_display {
+                "__display"
+            } else if bound == Trait::Pointer {
+                "__pointer"
+            } else {
+                "__field"
+            };
+            let mut formatvar = IdentUnraw::new(match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("{}{}", formatvar_prefix, index),
+                MemberUnraw::Named(ident) => {
+                    format_ident!("{}_{}", formatvar_prefix, ident.to_string())
+                }
+            });
+            while user_named_args.contains(&formatvar) {
+                formatvar = IdentUnraw::new(format_ident!("_{}", formatvar.to_string()));
             }
-            if formatvar.to_string().starts_with('_') {
-                // Work around leading underscore being rejected by 1.40 and
-                // older compilers. https://github.com/rust-lang/rust/pull/66847
-                formatvar = format_ident!("field_{}", formatvar);
-            }
+            formatvar.set_span(span);
             out += &formatvar.to_string();
-            if !named_args.insert(formatvar.clone()) {
-                // Already specified in the format argument list.
+            if !macro_named_args.insert(formatvar.clone()) {
+                // Already added to bindings by a previous use.
                 continue;
             }
-            if !has_trailing_comma {
-                args.extend(quote_spanned!(span=> ,));
-            }
-            args.extend(quote_spanned!(span=> #formatvar = #local));
-            if read.starts_with('}') && member_index.contains_key(&member) {
-                has_bonus_display = true;
-                args.extend(quote_spanned!(span=> .as_display()));
-            }
-            has_trailing_comma = false;
+            let mut binding_value = match &member {
+                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+                MemberUnraw::Named(ident) => ident.to_local(),
+            };
+            binding_value.set_span(span.resolved_at(fields[field].member.span()));
+            let wrapped_binding_value = if bonus_display {
+                quote_spanned!(span=> #binding_value.as_display())
+            } else if bound == Trait::Pointer {
+                quote!(::thiserror::__private::Var(#binding_value))
+            } else {
+                binding_value.into_token_stream()
+            };
+            bindings.push((formatvar.to_local(), wrapped_binding_value));
         }
 
         out += read;
         self.fmt = LitStr::new(&out, self.fmt.span());
-        self.args = args;
         self.has_bonus_display = has_bonus_display;
+        self.infinite_recursive = infinite_recursive;
         self.implied_bounds = implied_bounds;
+        self.bindings = bindings;
+        Ok(())
     }
 }
 
-fn explicit_named_args(input: ParseStream) -> Result<Set<Ident>> {
-    let mut named_args = Set::new();
+struct FmtArguments {
+    named: BTreeSet<IdentUnraw>,
+    first_unnamed: Option<TokenStream>,
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
+    let ahead = input.fork();
+    if let Ok(set) = try_explicit_named_args(&ahead) {
+        input.advance_to(&ahead);
+        return Ok(set);
+    }
+
+    let ahead = input.fork();
+    if let Ok(set) = fallback_explicit_named_args(&ahead) {
+        input.advance_to(&ahead);
+        return Ok(set);
+    }
+
+    input.parse::<TokenStream>().unwrap();
+    Ok(FmtArguments {
+        named: BTreeSet::new(),
+        first_unnamed: None,
+    })
+}
+
+fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
+    let mut syn_full = None;
+    let mut args = FmtArguments {
+        named: BTreeSet::new(),
+        first_unnamed: None,
+    };
 
     while !input.is_empty() {
-        if input.peek(Token![,]) && input.peek2(Ident::peek_any) && input.peek3(Token![=]) {
-            input.parse::<Token![,]>()?;
-            let ident = input.call(Ident::parse_any)?;
+        input.parse::<Token![,]>()?;
+        if input.is_empty() {
+            break;
+        }
+
+        let mut begin_unnamed = None;
+        if input.peek(Ident::peek_any) && input.peek2(Token![=]) && !input.peek2(Token![==]) {
+            let ident: IdentUnraw = input.parse()?;
             input.parse::<Token![=]>()?;
-            named_args.insert(ident);
+            args.named.insert(ident);
+        } else {
+            begin_unnamed = Some(input.fork());
+        }
+
+        let ahead = input.fork();
+        if *syn_full.get_or_insert_with(is_syn_full) && ahead.parse::<Expr>().is_ok() {
+            input.advance_to(&ahead);
+        } else {
+            scan_expr(input)?;
+        }
+
+        if let Some(begin_unnamed) = begin_unnamed {
+            if args.first_unnamed.is_none() {
+                args.first_unnamed = Some(between(&begin_unnamed, input));
+            }
+        }
+    }
+
+    Ok(args)
+}
+
+fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
+    let mut args = FmtArguments {
+        named: BTreeSet::new(),
+        first_unnamed: None,
+    };
+
+    while !input.is_empty() {
+        if input.peek(Token![,])
+            && input.peek2(Ident::peek_any)
+            && input.peek3(Token![=])
+            && !input.peek3(Token![==])
+        {
+            input.parse::<Token![,]>()?;
+            let ident: IdentUnraw = input.parse()?;
+            input.parse::<Token![=]>()?;
+            args.named.insert(ident);
         } else {
             input.parse::<TokenTree>()?;
         }
     }
 
-    Ok(named_args)
+    Ok(args)
 }
 
-fn take_int(read: &mut &str) -> String {
-    let mut int = String::new();
-    for (i, ch) in read.char_indices() {
+fn is_syn_full() -> bool {
+    // Expr::Block contains syn::Block which contains Vec<syn::Stmt>. In the
+    // current version of Syn, syn::Stmt is exhaustive and could only plausibly
+    // represent `trait Trait {}` in Stmt::Item which contains syn::Item. Most
+    // of the point of syn's non-"full" mode is to avoid compiling Item and the
+    // entire expansive syntax tree it comprises. So the following expression
+    // being parsed to Expr::Block is a reliable indication that "full" is
+    // enabled.
+    let test = quote!({
+        trait Trait {}
+    });
+    match syn::parse2(test) {
+        Ok(Expr::Verbatim(_)) | Err(_) => false,
+        Ok(Expr::Block(_)) => true,
+        Ok(_) => unreachable!(),
+    }
+}
+
+fn take_int<'a>(read: &mut &'a str) -> &'a str {
+    let mut int_len = 0;
+    for ch in read.chars() {
         match ch {
-            '0'..='9' => int.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
+            '0'..='9' => int_len += 1,
+            _ => break,
         }
     }
+    let (int, rest) = read.split_at(int_len);
+    *read = rest;
     int
 }
 
-fn take_ident(read: &mut &str) -> Ident {
-    let mut ident = String::new();
-    let raw = read.starts_with("r#");
-    if raw {
-        ident.push_str("r#");
-        *read = &read[2..];
-    }
-    for (i, ch) in read.char_indices() {
+fn take_ident<'a>(read: &mut &'a str) -> &'a str {
+    let mut ident_len = 0;
+    for ch in read.chars() {
         match ch {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident.push(ch),
-            _ => {
-                *read = &read[i..];
-                break;
-            }
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => ident_len += 1,
+            _ => break,
         }
     }
-    Ident::parse_any.parse_str(&ident).unwrap()
+    let (ident, rest) = read.split_at(ident_len);
+    *read = rest;
+    ident
+}
+
+fn between<'a>(begin: ParseStream<'a>, end: ParseStream<'a>) -> TokenStream {
+    let end = end.cursor();
+    let mut cursor = begin.cursor();
+    let mut tokens = TokenStream::new();
+
+    while cursor < end {
+        let (tt, next) = cursor.token_tree().unwrap();
+
+        if end < next {
+            if let Some((inside, _span, _after)) = cursor.group(Delimiter::None) {
+                cursor = inside;
+                continue;
+            }
+            if tokens.is_empty() {
+                tokens.extend(iter::once(tt));
+            }
+            break;
+        }
+
+        tokens.extend(iter::once(tt));
+        cursor = next;
+    }
+
+    tokens
 }

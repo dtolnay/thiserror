@@ -1,6 +1,8 @@
 error[E0277]: `MyError` doesn't implement `std::fmt::Display`
  --> tests/ui/missing-display.rs:4:10
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro expansion
 4 | pub enum MyError {
   |          ^^^^^^^ `MyError` cannot be formatted with the default formatter
   |
@@ -11,3 +13,4 @@ note: required by a bound in `std::error::Error`
   |
   | pub trait Error: Debug + Display {
   |                          ^^^^^^^ required by this bound in `Error`
+  = note: this error originates in the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)

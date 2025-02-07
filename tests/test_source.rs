@@ -63,3 +63,20 @@ error_from_macro! {
     #[error("Something")]
     Variant(#[from] io::Error)
 }
+
+#[test]
+fn test_not_source() {
+    #[derive(Error, Debug)]
+    #[error("{source} ==> {destination}")]
+    pub struct NotSource {
+        r#source: char,
+        destination: char,
+    }
+
+    let error = NotSource {
+        source: 'S',
+        destination: 'D',
+    };
+    assert_eq!(error.to_string(), "S ==> D");
+    assert!(error.source().is_none());
+}
