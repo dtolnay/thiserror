@@ -44,7 +44,7 @@ impl<'a> AsDynError<'a> for dyn Error + Send + Sync + UnwindSafe + 'a {
 #[doc(hidden)]
 pub trait Sealed {}
 impl<T: Error> Sealed for T {}
-impl<'a> Sealed for dyn Error + 'a {}
-impl<'a> Sealed for dyn Error + Send + 'a {}
-impl<'a> Sealed for dyn Error + Send + Sync + 'a {}
-impl<'a> Sealed for dyn Error + Send + Sync + UnwindSafe + 'a {}
+impl Sealed for dyn Error + '_ {}
+impl Sealed for dyn Error + Send + '_ {}
+impl Sealed for dyn Error + Send + Sync + '_ {}
+impl Sealed for dyn Error + Send + Sync + UnwindSafe + '_ {}
