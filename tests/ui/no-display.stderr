@@ -41,6 +41,6 @@ error[E0277]: the trait bound `NoDisplay: Octal` is not satisfied
 note: required by a bound in `core::fmt::rt::Argument::<'_>::new_octal`
   --> $RUST/core/src/fmt/rt.rs
    |
-   |     pub fn new_octal<T: Octal>(x: &T) -> Argument<'_> {
-   |                         ^^^^^ required by this bound in `Argument::<'_>::new_octal`
+   |     pub const fn new_octal<T: Octal>(x: &T) -> Argument<'_> {
+   |                               ^^^^^ required by this bound in `Argument::<'_>::new_octal`
    = note: this error originates in the macro `$crate::format_args` which comes from the expansion of the derive macro `Error` (in Nightly builds, run with -Z macro-backtrace for more info)
