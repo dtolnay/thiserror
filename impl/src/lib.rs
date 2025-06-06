@@ -15,6 +15,7 @@
     clippy::too_many_lines,
     clippy::wrong_self_convention
 )]
+#![allow(unknown_lints, mismatched_lifetime_syntaxes)]
 
 extern crate proc_macro;
 
