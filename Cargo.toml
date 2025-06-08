@@ -1,6 +1,6 @@
 [package]
 name = "thiserror"
-version = "2.0.12"
+version = "2.0.13"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["rust-patterns"]
 description = "derive(Error)"
@@ -13,6 +13,7 @@ rust-version = "1.61"
 
 [features]
 default = ["std"]
+autobox = ["std", "thiserror-impl/autobox"]
 
 # Std feature enables support for formatting std::path::{Path, PathBuf}
 # conveniently in an error message.
@@ -28,7 +29,7 @@ default = ["std"]
 std = []
 
 [dependencies]
-thiserror-impl = { version = "=2.0.12", path = "impl" }
+thiserror-impl = { version = "=2.0.13", path = "impl" }
 
 [dev-dependencies]
 anyhow = "1.0.73"

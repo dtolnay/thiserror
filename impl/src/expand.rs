@@ -449,22 +449,45 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#variant #body
             }
         };
+
         let from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #from_function
             }
+
         };
-        Some(quote! {
-            #[allow(
-                deprecated,
-                unused_qualifications,
-                clippy::elidable_lifetime_names,
-                clippy::needless_lifetimes,
-            )]
-            #from_impl
-        })
-    });
+
+        #[cfg(feature = "autobox")]
+        let from_impl_for_box = quote_spanned! {span=>
+            #[automatically_derived]
+            impl #impl_generics ::core::convert::From<#from> for ::std::boxed::Box< #ty #ty_generics > #where_clause {
+                fn from(#source_var: #from) -> Self {
+                    ::std::boxed::Box::new(#ty::#variant #body)
+                }
+            }
+        };
+
+        Some([quote! {
+              #[allow(
+                  deprecated,
+                  unused_qualifications,
+                  clippy::elidable_lifetime_names,
+                  clippy::needless_lifetimes,
+              )]
+              #from_impl
+            },
+            #[cfg(feature = "autobox")]
+            quote! {
+              #[allow(
+                  deprecated,
+                  unused_qualifications,
+                  clippy::elidable_lifetime_names,
+                  clippy::needless_lifetimes,
+              )]
+              #from_impl_for_box
+        }])
+    }).flatten();
 
     if input.generics.type_params().next().is_some() {
         let self_token = <Token![Self]>::default();

@@ -1,6 +1,6 @@
 [package]
 name = "thiserror-impl"
-version = "2.0.12"
+version = "2.0.13"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Implementation detail of the `thiserror` crate"
 edition = "2021"
@@ -10,6 +10,10 @@ rust-version = "1.61"
 
 [lib]
 proc-macro = true
+
+[features]
+default = []
+autobox = []
 
 [dependencies]
 proc-macro2 = "1.0.74"
