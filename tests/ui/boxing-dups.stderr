@@ -1,0 +1,5 @@
+error: duplicate #[boxing] attribute
+ --> tests/ui/boxing-dups.rs:6:21
+  |
+6 |     Twice(#[boxing] #[boxing] #[from] std::io::Error),
+  |                     ^^^^^^^^^

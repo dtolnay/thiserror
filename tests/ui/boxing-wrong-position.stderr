@@ -1,0 +1,5 @@
+error: attribute #[boxing] expected on a specific field also having #[from] attribute
+ --> tests/ui/boxing-wrong-position.rs:5:1
+  |
+5 | #[boxing]
+  | ^^^^^^^^^
