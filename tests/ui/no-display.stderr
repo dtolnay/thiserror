@@ -13,8 +13,8 @@ error[E0599]: the method `as_display` exists for reference `&NoDisplay`, but its
 note: the trait `std::fmt::Display` must be implemented
  --> $RUST/core/src/fmt/mod.rs
   |
-  | pub trait Display {
-  | ^^^^^^^^^^^^^^^^^
+  | pub trait Display: PointeeSized {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = help: items from traits can only be used if the trait is implemented and in scope
   = note: the following trait defines an item `as_display`, perhaps you need to implement it:
           candidate #1: `AsDisplay`
