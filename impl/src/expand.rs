@@ -191,6 +191,32 @@ fn impl_struct(input: Struct) -> TokenStream {
         })
     });
 
+    let boxing_impl = input.boxing_field().map(|from_field| {
+        let span = from_field.attrs.from.unwrap().span;
+        let from = unoptional_type(from_field.ty);
+        let source_var = Ident::new("source", span);
+        let from_function = quote! {
+            fn from(#source_var: #from) -> Self {
+                ::std::boxed::Box::new(From::from(#source_var))
+            }
+        };
+        let boxing_impl = quote_spanned! {span=>
+            #[automatically_derived]
+            impl #impl_generics ::core::convert::From<#from> for ::std::boxed::Box < #ty #ty_generics > #where_clause {
+                #from_function
+            }
+        };
+        Some(quote! {
+            #[allow(
+                deprecated,
+                unused_qualifications,
+                clippy::elidable_lifetime_names,
+                clippy::needless_lifetimes,
+            )]
+            #boxing_impl
+        })
+    });
+
     if input.generics.type_params().next().is_some() {
         let self_token = <Token![Self]>::default();
         error_inferred_bounds.insert(self_token, Trait::Debug);
@@ -207,6 +233,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
         #display_impl
         #from_impl
+        #boxing_impl
     }
 }
 
@@ -466,6 +493,33 @@ fn impl_enum(input: Enum) -> TokenStream {
         })
     });
 
+    let boxing_impls = input.variants.iter().filter_map(|variant| {
+        let from_field = variant.boxing_field()?;
+        let span = from_field.attrs.boxing.unwrap().span;
+        let from = unoptional_type(from_field.ty);
+        let source_var = Ident::new("source", span);
+        let from_function = quote! {
+            fn from(#source_var: #from) -> Self {
+                ::std::boxed::Box::new(From::from(#source_var))
+            }
+        };
+        let from_impl = quote_spanned! {span=>
+            #[automatically_derived]
+            impl #impl_generics ::core::convert::From<#from> for ::std::boxed::Box < #ty #ty_generics > #where_clause {
+                #from_function
+            }
+        };
+        Some(quote! {
+            #[allow(
+                deprecated,
+                unused_qualifications,
+                clippy::elidable_lifetime_names,
+                clippy::needless_lifetimes,
+            )]
+            #from_impl
+        })
+    });
+
     if input.generics.type_params().next().is_some() {
         let self_token = <Token![Self]>::default();
         error_inferred_bounds.insert(self_token, Trait::Debug);
@@ -482,6 +536,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         }
         #display_impl
         #(#from_impls)*
+        #(#boxing_impls)*
     }
 }
 

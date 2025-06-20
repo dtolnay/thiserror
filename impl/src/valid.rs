@@ -107,6 +107,13 @@ impl Field<'_> {
 }
 
 fn check_non_field_attrs(attrs: &Attrs) -> Result<()> {
+    if let Some(boxing) = &attrs.boxing {
+        return Err(Error::new_spanned(
+            boxing.original,
+            "not expected here; attribute #[from(boxing)] expected on a specific field",
+        ));
+    }
+
     if let Some(from) = &attrs.from {
         return Err(Error::new_spanned(
             from.original,
@@ -218,6 +225,7 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
     }
+
     Ok(())
 }
 

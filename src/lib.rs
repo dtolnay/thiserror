@@ -251,6 +251,41 @@
 //!   }
 //!   ```
 //!
+//! - Additionally, the `#[from(boxing)]` also derives an implementation of `From` for the boxed error.
+//!   This is especially useful for ensuring large source errors do not needlessly enlarge every stack frame in which they may be used.
+//!   See also: <https://rust-lang.github.io/rust-clippy/master/index.html#result_large_err>.
+//!
+//!   ```
+//!   # use thiserror::Error;
+//!   #
+//!   #[derive(Error, Debug)]
+//!   #[error("...")]
+//!   pub struct ExternalError([u8; 2048]);
+//!
+//!   #[derive(Error, Debug)]
+//!   pub enum MyError {
+//!       #[error(transparent)]
+//!       ExternalCause(#[from(boxing)] ExternalError),
+//!
+//!       #[error("other")]
+//!       Other,
+//!   }
+//!
+//!   pub fn do_something() -> Result<(), ExternalError> {
+//!       # /*
+//!       ...
+//!       # */
+//!       # Ok(())
+//!   }
+//!
+//!   // Automatically boxed
+//!   pub fn something_else() -> Result<(), Box<MyError>> {
+//!       do_something()?;
+//!
+//!       Ok(())
+//!   }
+//!   ```
+//!
 //! - See also the [`anyhow`] library for a convenient single error type to use
 //!   in application code.
 //!
