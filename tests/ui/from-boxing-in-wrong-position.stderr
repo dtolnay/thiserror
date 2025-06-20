@@ -1,0 +1,5 @@
+error: not expected here; attribute #[from(boxing)] expected on a specific field
+ --> tests/ui/from-boxing-in-wrong-position.rs:4:1
+  |
+4 | #[from(boxing)]
+  | ^^^^^^^^^^^^^^^
