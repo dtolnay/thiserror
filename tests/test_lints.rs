@@ -93,4 +93,6 @@ fn test_deprecated() {
     let _ = DeprecatedEnum::Variant;
     #[allow(deprecated)]
     let _ = DeprecatedVariant::Variant;
+    #[allow(deprecated)]
+    let _ = DeprecatedFrom::Variant(DeprecatedStruct);
 }
