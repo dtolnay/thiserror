@@ -1,0 +1,11 @@
+error: attribute #[boxing] requires the field to also have a #[from] attribute
+ --> tests/ui/boxing-missing-from.rs:6:14
+  |
+6 |     NotThere(#[boxing] std::io::Error),
+  |              ^^^^^^^^^
+
+error: attribute #[boxing] requires the field to also have a #[from] attribute
+  --> tests/ui/boxing-missing-from.rs:12:5
+   |
+12 |     #[boxing] err: std::io::Error,
+   |     ^^^^^^^^^
