@@ -15,6 +15,7 @@ pub struct Attrs<'a> {
     pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
     pub fmt: Option<Fmt<'a>>,
+    pub boxing: Option<Boxing<'a>>,
 }
 
 #[derive(Clone)]
@@ -53,6 +54,12 @@ pub struct Fmt<'a> {
     pub path: ExprPath,
 }
 
+#[derive(Copy, Clone)]
+pub struct Boxing<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Trait {
     Debug,
@@ -74,6 +81,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         from: None,
         transparent: None,
         fmt: None,
+        boxing: None,
     };
 
     for attr in input {
@@ -100,7 +108,10 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         } else if attr.path().is_ident("from") {
             match attr.meta {
                 Meta::Path(_) => {}
-                Meta::List(_) | Meta::NameValue(_) => {
+                Meta::List(_) => {
+                    parse_from_list_attribute(&mut attrs, attr)?;
+                }
+                Meta::NameValue(_) => {
                     // Assume this is meant for derive_more crate or something.
                     continue;
                 }
@@ -297,6 +308,21 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
         tokens.push(token);
     }
     Ok(TokenStream::from_iter(tokens))
+}
+
+fn parse_from_list_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
+    mod kw {
+        syn::custom_keyword!(boxing);
+    }
+
+    if let Ok(kw) = attr.parse_args::<kw::boxing>() {
+        attrs.boxing = Some(Boxing {
+            original: attr,
+            span: kw.span,
+        });
+    }
+
+    Ok(())
 }
 
 impl ToTokens for Display<'_> {
