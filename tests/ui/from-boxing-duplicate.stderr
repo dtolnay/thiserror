@@ -1,0 +1,5 @@
+error: duplicate #[from] attribute
+ --> tests/ui/from-boxing-duplicate.rs:8:5
+  |
+8 |     #[from(boxing)]
+  |     ^^^^^^^^^^^^^^^
