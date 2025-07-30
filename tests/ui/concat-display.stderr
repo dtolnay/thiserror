@@ -1,7 +1,7 @@
 error: expected one of: string literal, `transparent`, `fmt`
   --> tests/ui/concat-display.rs:8:17
    |
-8  |         #[error(concat!("invalid ", $what))]
+ 8 |         #[error(concat!("invalid ", $what))]
    |                 ^^^^^^
 ...
 13 | error_type!(Error, "foo");
