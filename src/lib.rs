@@ -38,9 +38,9 @@
 //! # Details
 //!
 //! - Thiserror deliberately does not appear in your public API. You get the
-//!   same thing as if you had written an implementation of [`std::error::Error`]
-//!   by hand, and switching from handwritten impls to thiserror or vice versa
-//!   is not a breaking change.
+//!   same thing as if you had written an implementation of
+//!   [`std::error::Error`] by hand, and switching from handwritten impls to
+//!   thiserror or vice versa is not a breaking change.
 //!
 //! - Errors may be enums, structs with named fields, tuple structs, or unit
 //!   structs.
@@ -175,8 +175,8 @@
 //!
 //! - If a field is both a source (named `source`, or has `#[source]` or
 //!   `#[from]` attribute) *and* is marked `#[backtrace]`, then the Error
-//!   trait's [`provide()`] method is forwarded to the source's `provide` so that
-//!   both layers of the error share the same backtrace. The `#[backtrace]`
+//!   trait's [`provide()`] method is forwarded to the source's `provide` so
+//!   that both layers of the error share the same backtrace. The `#[backtrace]`
 //!   attribute requires a nightly compiler with Rust version 1.73 or newer.
 //!
 //!   ```rust
