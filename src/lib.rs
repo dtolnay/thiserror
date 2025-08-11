@@ -254,10 +254,10 @@
 //! - See also the [`anyhow`] library for a convenient single error type to use
 //!   in application code.
 //!
-//!   [`anyhow`]: https://github.com/dtolnay/anyhow
-//!   [`source()`]: std::error::Error::source
-//!   [`provide()`]: std::error::Error::provide
-//!   [`Display`]: std::fmt::Display
+//! [`anyhow`]: https://github.com/dtolnay/anyhow
+//! [`source()`]: std::error::Error::source
+//! [`provide()`]: std::error::Error::provide
+//! [`Display`]: std::fmt::Display
 
 #![no_std]
 #![doc(html_root_url = "https://docs.rs/thiserror/2.0.12")]
