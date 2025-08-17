@@ -6,7 +6,7 @@ use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
-use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
+use syn::{DeriveInput, GenericArgument, Path, PathArguments, Result, Token, Type};
 
 pub fn derive(input: &DeriveInput) -> TokenStream {
     match try_expand(input) {
@@ -21,6 +21,7 @@ pub fn derive(input: &DeriveInput) -> TokenStream {
 fn try_expand(input: &DeriveInput) -> Result<TokenStream> {
     let input = Input::from_syn(input)?;
     input.validate()?;
+
     Ok(match input {
         Input::Struct(input) => impl_struct(input),
         Input::Enum(input) => impl_enum(input),
@@ -32,20 +33,23 @@ fn impl_struct(input: Struct) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
+    let default_krate = syn::parse_str("::thiserror").unwrap();
+    let krate = input.attrs.krate.clone().unwrap_or(default_krate);
+
     let source_body = if let Some(transparent_attr) = &input.attrs.transparent {
         let only_field = &input.fields[0];
         if only_field.contains_generic {
-            error_inferred_bounds.insert(only_field.ty, quote!(::thiserror::__private::Error));
+            error_inferred_bounds.insert(only_field.ty, quote!(#krate::__private::Error));
         }
         let member = &only_field.member;
         Some(quote_spanned! {transparent_attr.span=>
-            ::thiserror::__private::Error::source(self.#member.as_dyn_error())
+            #krate::__private::Error::source(self.#member.as_dyn_error())
         })
     } else if let Some(source_field) = input.source_field() {
         let source = &source_field.member;
         if source_field.contains_generic {
             let ty = unoptional_type(source_field.ty);
-            error_inferred_bounds.insert(ty, quote!(::thiserror::__private::Error + 'static));
+            error_inferred_bounds.insert(ty, quote!(#krate::__private::Error + 'static));
         }
         let asref = if type_is_option(source_field.ty) {
             Some(quote_spanned!(source.span()=> .as_ref()?))
@@ -63,8 +67,8 @@ fn impl_struct(input: Struct) -> TokenStream {
     };
     let source_method = source_body.map(|body| {
         quote! {
-            fn source(&self) -> ::core::option::Option<&(dyn ::thiserror::__private::Error + 'static)> {
-                use ::thiserror::__private::AsDynError as _;
+            fn source(&self) -> ::core::option::Option<&(dyn #krate::__private::Error + 'static)> {
+                use #krate::__private::AsDynError as _;
                 #body
             }
         }
@@ -91,28 +95,28 @@ fn impl_struct(input: Struct) -> TokenStream {
             } else if type_is_option(backtrace_field.ty) {
                 Some(quote! {
                     if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                        #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                        #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                     }
                 })
             } else {
                 Some(quote! {
-                    #request.provide_ref::<::thiserror::__private::Backtrace>(&self.#backtrace);
+                    #request.provide_ref::<#krate::__private::Backtrace>(&self.#backtrace);
                 })
             };
             quote! {
-                use ::thiserror::__private::ThiserrorProvide as _;
+                use #krate::__private::ThiserrorProvide as _;
                 #source_provide
                 #self_provide
             }
         } else if type_is_option(backtrace_field.ty) {
             quote! {
                 if let ::core::option::Option::Some(backtrace) = &self.#backtrace {
-                    #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                    #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                 }
             }
         } else {
             quote! {
-                #request.provide_ref::<::thiserror::__private::Backtrace>(&self.#backtrace);
+                #request.provide_ref::<#krate::__private::Backtrace>(&self.#backtrace);
             }
         };
         quote! {
@@ -131,7 +135,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         })
     } else if let Some(display) = &input.attrs.display {
         display_implied_bounds.clone_from(&display.implied_bounds);
-        let use_as_display = use_as_display(display.has_bonus_display);
+        let use_as_display = use_as_display(display.has_bonus_display, &krate);
         let pat = fields_pat(&input.fields);
         Some(quote! {
             #use_as_display
@@ -168,7 +172,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let backtrace_field = input.distinct_backtrace_field();
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, &source_var, &krate);
         let from_function = quote! {
             fn from(#source_var: #from) -> Self {
                 #ty #body
@@ -201,7 +205,7 @@ fn impl_struct(input: Struct) -> TokenStream {
     quote! {
         #[allow(unused_qualifications)]
         #[automatically_derived]
-        impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #error_where_clause {
+        impl #impl_generics #krate::__private::Error for #ty #ty_generics #error_where_clause {
             #source_method
             #provide_method
         }
@@ -215,17 +219,20 @@ fn impl_enum(input: Enum) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
+    let default_krate = syn::parse_str("::thiserror").unwrap();
+    let krate = input.attrs.krate.clone().unwrap_or(default_krate);
+
     let source_method = if input.has_source() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
             if let Some(transparent_attr) = &variant.attrs.transparent {
                 let only_field = &variant.fields[0];
                 if only_field.contains_generic {
-                    error_inferred_bounds.insert(only_field.ty, quote!(::thiserror::__private::Error));
+                    error_inferred_bounds.insert(only_field.ty, quote!(#krate::__private::Error));
                 }
                 let member = &only_field.member;
                 let source = quote_spanned! {transparent_attr.span=>
-                    ::thiserror::__private::Error::source(transparent.as_dyn_error())
+                    #krate::__private::Error::source(transparent.as_dyn_error())
                 };
                 quote! {
                     #ty::#ident {#member: transparent} => #source,
@@ -234,7 +241,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 let source = &source_field.member;
                 if source_field.contains_generic {
                     let ty = unoptional_type(source_field.ty);
-                    error_inferred_bounds.insert(ty, quote!(::thiserror::__private::Error + 'static));
+                    error_inferred_bounds.insert(ty, quote!(#krate::__private::Error + 'static));
                 }
                 let asref = if type_is_option(source_field.ty) {
                     Some(quote_spanned!(source.span()=> .as_ref()?))
@@ -255,8 +262,8 @@ fn impl_enum(input: Enum) -> TokenStream {
             }
         });
         Some(quote! {
-            fn source(&self) -> ::core::option::Option<&(dyn ::thiserror::__private::Error + 'static)> {
-                use ::thiserror::__private::AsDynError as _;
+            fn source(&self) -> ::core::option::Option<&(dyn #krate::__private::Error + 'static)> {
+                use #krate::__private::AsDynError as _;
                 #[allow(deprecated)]
                 match self {
                     #(#arms)*
@@ -292,12 +299,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let self_provide = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                                #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                            #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -306,7 +313,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                             #source: #varsource,
                             ..
                         } => {
-                            use ::thiserror::__private::ThiserrorProvide as _;
+                            use #krate::__private::ThiserrorProvide as _;
                             #source_provide
                             #self_provide
                         }
@@ -330,7 +337,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                     };
                     quote! {
                         #ty::#ident {#backtrace: #varsource, ..} => {
-                            use ::thiserror::__private::ThiserrorProvide as _;
+                            use #krate::__private::ThiserrorProvide as _;
                             #source_provide
                         }
                     }
@@ -340,12 +347,12 @@ fn impl_enum(input: Enum) -> TokenStream {
                     let body = if type_is_option(backtrace_field.ty) {
                         quote! {
                             if let ::core::option::Option::Some(backtrace) = backtrace {
-                                #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                                #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                             }
                         }
                     } else {
                         quote! {
-                            #request.provide_ref::<::thiserror::__private::Backtrace>(backtrace);
+                            #request.provide_ref::<#krate::__private::Backtrace>(backtrace);
                         }
                     };
                     quote! {
@@ -379,7 +386,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 .as_ref()
                 .map_or(false, |display| display.has_bonus_display)
         });
-        let use_as_display = use_as_display(has_bonus_display);
+        let use_as_display = use_as_display(has_bonus_display, &krate);
         let void_deref = if input.variants.is_empty() {
             Some(quote!(*))
         } else {
@@ -443,7 +450,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, &source_var, &krate);
         let from_function = quote! {
             fn from(#source_var: #from) -> Self {
                 #ty::#variant #body
@@ -476,7 +483,7 @@ fn impl_enum(input: Enum) -> TokenStream {
     quote! {
         #[allow(unused_qualifications)]
         #[automatically_derived]
-        impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #error_where_clause {
+        impl #impl_generics #krate::__private::Error for #ty #ty_generics #error_where_clause {
             #source_method
             #provide_method
         }
@@ -508,10 +515,10 @@ fn fields_pat(fields: &[Field]) -> TokenStream {
     }
 }
 
-fn use_as_display(needs_as_display: bool) -> Option<TokenStream> {
+fn use_as_display(needs_as_display: bool, krate: &Path) -> Option<TokenStream> {
     if needs_as_display {
         Some(quote! {
-            use ::thiserror::__private::AsDisplay as _;
+            use #krate::__private::AsDisplay as _;
         })
     } else {
         None
@@ -522,6 +529,7 @@ fn from_initializer(
     from_field: &Field,
     backtrace_field: Option<&Field>,
     source_var: &Ident,
+    krate: &Path,
 ) -> TokenStream {
     let from_member = &from_field.member;
     let some_source = if type_is_option(from_field.ty) {
@@ -533,11 +541,11 @@ fn from_initializer(
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
             quote! {
-                #backtrace_member: ::core::option::Option::Some(::thiserror::__private::Backtrace::capture()),
+                #backtrace_member: ::core::option::Option::Some(#krate::__private::Backtrace::capture()),
             }
         } else {
             quote! {
-                #backtrace_member: ::core::convert::From::from(::thiserror::__private::Backtrace::capture()),
+                #backtrace_member: ::core::convert::From::from(#krate::__private::Backtrace::capture()),
             }
         }
     });

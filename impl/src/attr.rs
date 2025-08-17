@@ -5,10 +5,11 @@ use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
-    LitInt, LitStr, Meta, Result, Token,
+    LitInt, LitStr, Meta, Path, Result, Token,
 };
 
 pub struct Attrs<'a> {
+    pub krate: Option<Path>,
     pub display: Option<Display<'a>>,
     pub source: Option<Source<'a>>,
     pub backtrace: Option<&'a Attribute>,
@@ -68,6 +69,7 @@ pub enum Trait {
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
     let mut attrs = Attrs {
+        krate: None,
         display: None,
         source: None,
         backtrace: None,
@@ -158,6 +160,18 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
                 original: attr,
                 path,
             });
+            return Ok(());
+        } else if lookahead.peek(syn::token::Crate) {
+            input.parse::<syn::token::Crate>()?;
+            input.parse::<Token![=]>()?;
+            let path: ExprPath = input.parse()?;
+            if attrs.krate.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(crate = ...)] attribute",
+                ));
+            }
+            attrs.krate = Some(path.path);
             return Ok(());
         } else {
             return Err(lookahead.error());
