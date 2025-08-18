@@ -143,7 +143,6 @@ pub enum DataStoreError {
   share the same backtrace. The `#[backtrace]` attribute requires a nightly
   compiler with Rust version 1.73 or newer.
 
-
   ```rust
   #[derive(Error, Debug)]
   pub enum MyError {
@@ -201,6 +200,21 @@ pub enum DataStoreError {
   enum ErrorRepr {
       ...
   }
+  ```
+
+- If you need to define the location of the `thiserror` crate you can use
+  the `#[error(crate = ::path::to::thiserror)]` attribute to do so.
+  ```rust
+  // In module 'my_module'
+  pub use thiserror;
+  ```
+  ```rust
+  // In module 'my_module2'
+  use my_module::thiserror::Error;
+  #[derive(Error, Debug)]
+  #[error("MyError({0})")]
+  #[error(crate = ::my_module::thiserror)]
+  struct MyError(usize);
   ```
 
 - See also the [`anyhow`] library for a convenient single error type to use in

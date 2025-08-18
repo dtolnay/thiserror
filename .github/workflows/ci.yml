@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-  schedule: [cron: "40 1 * * *"]
+  schedule: [ cron: "40 1 * * *" ]
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly, beta, stable, 1.81.0, 1.70.0]
+        rust: [ nightly, beta, stable, 1.81.0, 1.70.0 ]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +41,7 @@ jobs:
       - run: cargo test --workspace --exclude thiserror_no_std_test
       - run: cargo test --manifest-path tests/no-std/Cargo.toml
         if: matrix.rust != '1.70.0'
+      - run: cargo test --manifest-path tests/reexport/Cargo.toml
       - run: cargo test --no-default-features
       - uses: actions/upload-artifact@v4
         if: matrix.rust == 'nightly' && always()

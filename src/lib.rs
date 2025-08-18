@@ -251,6 +251,27 @@
 //!   }
 //!   ```
 //!
+//! - If you need to define the location of the `thiserror` crate you can use
+//!   the `#[error(crate = ::path::to::thiserror)]` attribute to do so.
+//!
+//!   ```rust
+//!   # pub extern crate thiserror;
+//!   // In module 'my_module'
+//!   pub use thiserror;
+//!   ```
+//!
+//!   ```rust
+//!   # mod my_module {
+//!   #    pub(crate) use thiserror;
+//!   # }
+//!   // In module 'my_module2'
+//!   use my_module::thiserror::Error;
+//!   #[derive(Error, Debug)]
+//!   #[error("MyError({0})")]
+//!   #[error(crate = my_module::thiserror)]
+//!   struct MyError(usize);
+//!   ```
+//!
 //! - See also the [`anyhow`] library for a convenient single error type to use
 //!   in application code.
 //!
@@ -270,13 +291,11 @@
 )]
 #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
 
-#[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
-compile_error!("Build script probe failed to compile.");
-
 #[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "std")]
-extern crate std as core;
+extern crate std as core;#[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
+compile_error!("Build script probe failed to compile.");
 
 mod aserror;
 mod display;

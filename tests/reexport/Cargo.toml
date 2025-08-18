@@ -1,0 +1,11 @@
+[package]
+name = "thiserror_reexport_test"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "test.rs"
+
+[dependencies]
+thiserror_export = { package = "thiserror", path = "../.." }
