@@ -2,7 +2,7 @@
 name = "thiserror"
 version = "2.0.15"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
-categories = ["rust-patterns"]
+categories = ["rust-patterns", "no-std"]
 description = "derive(Error)"
 documentation = "https://docs.rs/thiserror"
 edition = "2021"
