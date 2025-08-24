@@ -25,8 +25,13 @@ error[E0277]: the trait bound `NoDisplay: Octal` is not satisfied
 12 | #[derive(Error, Debug)]
    |          ----- in this derive macro expansion
 13 | #[error("thread: {thread:o}")]
-   |         ^^^^^^^^^^^^^^^^^^^^ the trait `Octal` is not implemented for `NoDisplay`
+   |         ^^^^^^^^^^^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `Octal` is not implemented for `NoDisplay`
+  --> tests/ui/no-display.rs:4:1
+   |
+ 4 | struct NoDisplay;
+   | ^^^^^^^^^^^^^^^^
    = help: the following other types implement trait `Octal`:
              &T
              &mut T
