@@ -5,11 +5,12 @@ use crate::generics::{InferredBounds, ParamsInScope};
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::parse::Parse;
 use std::collections::BTreeSet as Set;
 use std::fmt::Debug;
+use syn::parse::Parse;
 use syn::{
-    Data, DeriveInput, GenericArgument, PathArguments, Result, Token, Type, TypePath, parse, parse_macro_input, parse_quote
+    parse, parse_macro_input, parse_quote, Data, DeriveInput, GenericArgument, PathArguments,
+    Result, Token, Type, TypePath,
 };
 
 pub fn derive(input: &DeriveInput, typical: bool) -> TokenStream {
@@ -32,15 +33,21 @@ fn try_expand(input: &DeriveInput, typical: bool) -> Result<TokenStream> {
 }
 
 /// Modifies the struct and pass the work to derive macro. This is recursive
-pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenStream> {
+pub fn try_expand_to_derive(input: &mut DeriveInput, typical: bool) -> Result<TokenStream> {
     let input = Input::from_syn(input)?;
     input.validate()?;
     Ok(match input {
-        Input::Struct(input) => {
+        Input::Struct(mut input) => {
+            let attrs = &mut input.derive_input.attrs;
+            if attrs.is_empty() {
+                attrs.push(parse_quote! {
+                       #[derive(Error, Debug)]
+                });
+            }
             let attrs = &input.derive_input.attrs;
+
             let ty = call_site_ident(&input.ident);
 
-            let attrs = &input.derive_input.attrs;
             let data_struct = input.node();
             let bt = input.backtrace_field().is_none()
                 && input.from_field().is_none()
@@ -69,14 +76,12 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                     new_fields.push(parse_quote!(crate::backtrace::Backtrace));
 
                     parse_quote!(
-                        #[derive(Error, Debug)]
                         #(#attrs)*
                         pub struct #ty(#(#new_fields),*);
                     )
                 } else {
                     // Handle regular struct
                     parse_quote!(
-                        #[derive(Error, Debug)]
                         #(#attrs)*
                         pub struct #ty {
                             #(#fields_mem,)*
@@ -88,7 +93,6 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
             } else {
                 if is_tuple {
                     parse_quote!(
-                        #[derive(Error, Debug)]
                         #(#attrs)*
                         pub struct #ty (
                             #(#fields_mem,)*
@@ -96,7 +100,6 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                     )
                 } else {
                     parse_quote!(
-                        #[derive(Error, Debug)]
                         #(#attrs)*
                         pub struct #ty {
                             #(#fields_mem,)*
@@ -105,7 +108,7 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                 }
             }
         }
-        Input::Enum(input) => {
+        Input::Enum(mut input) => {
             let mut vars_modified = Vec::new();
             for variant in input.variants {
                 let h = variant.original;
@@ -178,13 +181,15 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                 vars_modified.push(modified);
             }
 
-            let attrs = &input.derive_input.attrs;
+            let attrs = &mut input.derive_input.attrs;
             let ty = call_site_ident(&input.ident);
-
-            let attrs = &input.derive_input.attrs;
+            if attrs.is_empty() {
+                attrs.push(parse_quote! {
+                       #[derive(Error, Debug)]
+                });
+            }
 
             parse_quote!(
-                #[derive(Error, Debug)]
                 #(#attrs)*
                 pub enum #ty {
                     #(#vars_modified,)*
@@ -196,36 +201,13 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
 
 fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
     let attrs = &mut input.derive_input.attrs;
-    attrs.push(parse_quote! {
-        #[derive(Debug)]
-    });
 
     let ty = call_site_ident(&input.ident);
 
-    let attrs = &input.derive_input.attrs;
     let data_struct = input.node();
-    let bt = input.backtrace_field().is_none()
-        && input.from_field().is_none()
-        && input.source_field().is_none();
     let fields = &data_struct.fields;
     let fields_mem = fields.iter();
     let scope = ParamsInScope::new(&input.generics);
-
-    let prepend = if bt {
-        let prepend: TokenStream = parse_quote!(
-            #[derive(Error)]
-            #(#attrs)*
-            pub struct #ty {
-                #(#fields_mem,)*
-                backtrace: ::backtrace::Backtrace
-            }
-        );
-        input.modifier.add_default_backtrace = true;
-
-        Some(prepend)
-    } else {
-        None
-    };
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
@@ -358,7 +340,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
                 }
             }
             // Sane and handy default behavior.
-            None => parse_quote! {std::fmt::Debug::fmt(&self, fmt)},
+            None => parse_quote! {std::fmt::Debug::fmt(&self, __formatter)},
         })
     };
     let display_impl = display_body.map(|body| {
@@ -375,7 +357,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
             #[automatically_derived]
             impl #impl_generics ::core::fmt::Display for #ty #ty_generics #display_where_clause {
                 #[allow(clippy::used_underscore_binding)]
-                fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                     #body
                 }
             }
@@ -418,8 +400,6 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
     let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
 
     Ok(quote! {
-        #prepend
-
         #[allow(unused_qualifications)]
         #[automatically_derived]
         impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #error_where_clause {
