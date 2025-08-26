@@ -13,6 +13,13 @@ struct UpperError {
     src: EmptyError,
 }
 
+// If you write Derive at all, you must derive Error, and Debug by yourself
+#[thiserror]
+#[derive(Error, Debug, Clone)]
+struct Err3 {
+    code: u32,
+}
+
 #[thiserror]
 struct UnhandledException {
     code: u32,
