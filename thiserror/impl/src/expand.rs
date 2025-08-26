@@ -53,7 +53,7 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                     #(#attrs)*
                     pub struct #ty {
                         #(#fields_mem,)*
-                        backtrace: ::backtrace::Backtrace
+                        pub backtrace: ::backtrace::Backtrace
                     }
                 );
                 Some(prepend)
@@ -73,18 +73,22 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                 let mut new_fields = Vec::new();
                 let attrs = &h.attrs;
                 let name = &h.ident;
+
                 variant.backtrace_field();
                 for f in fields {
                     let name = &f.ident;
+                    let fa = &f.attrs;
                     let ty = &f.ty;
                     let f1: TokenStream = match name {
                         Some(id) => {
                             parse_quote!(
+                                #(#fa)*
                                 #id: #ty
                             )
                         }
                         None => {
                             parse_quote!(
+                                #(#fa)*
                                 #ty
                             )
                         }
@@ -100,7 +104,11 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                         )
                     }
                 };
-                new_fields.push(bt);
+
+                if variant.backtrace_field().is_none() && variant.attrs.transparent.is_none() {
+                    new_fields.push(bt);
+                }
+
                 let display_derive: Option<TokenStream> = if variant.attrs.display.is_none() {
                     Some(parse_quote!(
                         #[error("{:?}", self)]

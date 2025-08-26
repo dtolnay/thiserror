@@ -1,4 +1,4 @@
-
+#![feature(decl_macro)]
 #![feature(formatting_options)]
 
 //! [![github]](https://github.com/dtolnay/thiserror)&ensp;[![crates-io]](https://crates.io/crates/thiserror)&ensp;[![docs-rs]](https://docs.rs/thiserror)
@@ -306,4 +306,22 @@ pub mod __private {
     #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
     #[doc(hidden)]
     pub use ::backtrace::Backtrace;
+}
+
+
+pub macro with_backtrace($struct:ident { $($field:ident: $value:expr),* $(,)? }) {
+    $struct {
+        $($field: $value,)*
+        backtrace: ::backtrace::Backtrace::new(),
+    }
+}
+
+#[macro_export]
+macro_rules! capture {
+    ($struct:ident { $($field:ident: $value:expr),* $(,)? }) => {
+        $struct {
+            $($field: $value,)*
+            backtrace: ::backtrace::Backtrace::new(),
+        }
+    };
 }

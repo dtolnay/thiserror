@@ -48,3 +48,4 @@ pub fn thiserror(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
+

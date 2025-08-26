@@ -2,7 +2,7 @@
 
 use backtrace::Backtrace;
 use crossterm::style::Stylize;
-use thiserror::{thiserror, Error};
+use thiserror::{capture, thiserror, with_backtrace, Error};
 
 #[thiserror]
 struct EmptyError;
@@ -20,7 +20,7 @@ struct UnhandledException {
 }
 
 #[thiserror]
-enum Errors {
+pub enum Errors {
     #[error("{:?}", 0)]
     Code(u32),
     #[error("{0}")]
@@ -30,6 +30,12 @@ enum Errors {
     Struct {
         code: u32,
     },
+    StructFrom {
+        #[from]
+        source: UnhandledException,
+    },
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 #[derive(Error, Debug)]
@@ -38,6 +44,9 @@ enum Errors1 {
     Code(u32, u64),
 }
 
+#[thiserror]
+struct WrapAnyhow(#[from] anyhow::Error);
+
 fn main() -> Result<(), EmptyError> {
     small_function()?;
 
@@ -45,11 +54,21 @@ fn main() -> Result<(), EmptyError> {
 }
 
 fn small_function() -> Result<(), EmptyError> {
-    let err = EmptyError {
-        backtrace: Backtrace::new(),
-    };
+    let err = with_backtrace!(EmptyError {});
     let res: Result<(), EmptyError> = Result::Err(err);
     res?;
 
     Ok(())
+}
+
+fn parent() -> Result<(), Errors> {
+    f1()?;
+    Ok(())
+}
+
+fn f1() -> Result<(), UnhandledException> {
+    Err(capture!(UnhandledException {
+        code: 1,
+        more_code: 2
+    }))
 }
