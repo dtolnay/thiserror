@@ -18,6 +18,12 @@ pub struct Struct<'a> {
     pub generics: &'a Generics,
     pub fields: Vec<Field<'a>>,
     pub derive_input: DeriveInput,
+    pub modifier: Modifier,
+}
+
+#[derive(Default)]
+pub struct Modifier {
+    pub has_backtrace: bool,
 }
 
 pub struct Enum<'a> {
@@ -25,6 +31,7 @@ pub struct Enum<'a> {
     pub ident: Ident,
     pub generics: &'a Generics,
     pub variants: Vec<Variant<'a>>,
+    pub modifier: Modifier,
 }
 
 pub struct Variant<'a> {
@@ -83,6 +90,7 @@ impl<'a> Struct<'a> {
             generics: &node.generics,
             fields,
             derive_input, // Just pass it
+            modifier: Default::default(),
         })
     }
     pub fn node(&self) -> &DataStruct {
@@ -122,6 +130,7 @@ impl<'a> Enum<'a> {
             ident: node.ident.clone(),
             generics: &node.generics,
             variants,
+            modifier: Default::default()
         })
     }
 }

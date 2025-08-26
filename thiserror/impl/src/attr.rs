@@ -8,7 +8,7 @@ use syn::{
     LitInt, LitStr, Meta, Result, Token,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
     pub source: Option<Source<'a>>,

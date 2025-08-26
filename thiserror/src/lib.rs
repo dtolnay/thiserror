@@ -305,5 +305,5 @@ pub mod __private {
     pub use core::error::Error;
     #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
     #[doc(hidden)]
-    pub use std::backtrace::Backtrace;
+    pub use ::backtrace::Backtrace;
 }

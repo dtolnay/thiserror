@@ -1,15 +1,27 @@
-use backtrace::{Backtrace, BacktraceFmt};
+#![feature(error_generic_member_access)]
 
+use backtrace::Backtrace;
 use crossterm::style::Stylize;
 use thiserror::{Error, thiserror};
 
 #[thiserror]
 struct EmptyError;
 
-fn main() -> Result<(), EmptyError> {
+#[thiserror]
+struct UpperError {
+    #[from]
+    src: EmptyError,
+}
 
+#[thiserror]
+struct UnhandledException {
+    code: u32,
+    more_code: u64
+}
+
+fn main() -> Result<(), EmptyError> {
     let err = EmptyError {
-        backtrace: Backtrace::new(),
+        backtrace: Backtrace::new()
     };
     let res: Result<(), EmptyError> = Result::Err(err);
     res?;

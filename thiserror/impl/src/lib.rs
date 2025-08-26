@@ -1,3 +1,4 @@
+#![feature(error_generic_member_access)]
 #![allow(
     clippy::blocks_in_conditions,
     clippy::cast_lossless,
@@ -42,8 +43,8 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn thiserror(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the input tokens as a struct or enum
-    let input = parse_macro_input!(item as DeriveInput);
-    let expanded = expand::derive(&input, true);
+    let input: DeriveInput = parse_macro_input!(item as DeriveInput);
+    let expanded = expand::try_expand_to_derive(&input, true).unwrap();
 
     TokenStream::from(expanded)
 }

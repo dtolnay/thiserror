@@ -1,13 +1,16 @@
-use crate::ast::{Enum, Field, Input, Struct};
-use crate::attr::Trait;
+use crate::ast::{Enum, Field, Input, Modifier, Struct};
+use crate::attr::{Attrs, Trait};
 use crate::fallback;
-use crate::generics::InferredBounds;
+use crate::generics::{InferredBounds, ParamsInScope};
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
 use std::fmt::Debug;
-use syn::{parse_quote, Data, DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
+use syn::{
+    parse, parse_macro_input, parse_quote, Data, DeriveInput, GenericArgument, PathArguments,
+    Result, Token, Type,
+};
 
 pub fn derive(input: &DeriveInput, typical: bool) -> TokenStream {
     match try_expand(input, typical) {
@@ -28,14 +31,74 @@ fn try_expand(input: &DeriveInput, typical: bool) -> Result<TokenStream> {
     })
 }
 
+/// Modifies the struct and pass the work to derive macro. This is recursive
+pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenStream> {
+    let input = Input::from_syn(input)?;
+    input.validate()?;
+    Ok(match input {
+        Input::Struct(input) => {
+            let attrs = &input.derive_input.attrs;
+            let ty = call_site_ident(&input.ident);
+
+            let attrs = &input.derive_input.attrs;
+            let data_struct = input.node();
+            let bt = input.backtrace_field().is_none();
+            let fields = &data_struct.fields;
+            let fields_mem = fields.iter();
+            let scope = ParamsInScope::new(&input.generics);
+
+            let prepend = if bt {
+                let prepend: TokenStream = parse_quote!(
+                    #[derive(Error, Debug)]
+                    #(#attrs)*
+                    pub struct #ty {
+                        #(#fields_mem,)*
+                        backtrace: ::backtrace::Backtrace
+                    }
+                );
+                Some(prepend)
+            } else {
+                None
+            };
+
+            prepend.unwrap()
+        }
+        Input::Enum(input) => impl_enum(input, typical),
+    })
+}
+
 fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
     let attrs = &mut input.derive_input.attrs;
     attrs.push(parse_quote! {
         #[derive(Debug)]
     });
-    let attrs = &input.derive_input.attrs;
 
     let ty = call_site_ident(&input.ident);
+
+    // let ty = Ident::new(&format!("{}Error", input.ident), Span::call_site());
+
+    let attrs = &input.derive_input.attrs;
+    let data_struct = input.node();
+    let bt = input.backtrace_field().is_none();
+    let fields = &data_struct.fields;
+    let fields_mem = fields.iter();
+    let scope = ParamsInScope::new(&input.generics);
+
+    let prepend = if bt {
+        let prepend: TokenStream = parse_quote!(
+            #[derive(Error)]
+            #(#attrs)*
+            pub struct #ty {
+                #(#fields_mem,)*
+                backtrace: ::backtrace::Backtrace
+            }
+        );
+        input.modifier.has_backtrace = true;
+
+        Some(prepend)
+    } else {
+        None
+    };
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
@@ -78,28 +141,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
         }
     });
 
-    let data_struct = input.node();
-    let bt = input.backtrace_field().is_none();
-    let fields = &data_struct.fields;
-
-    let bt_field = if bt {
-        Some(quote! {
-            backtrace: backtrace::Backtrace,
-        })
-    } else {
-        None
-    };
-    
-    let prepend: TokenStream = parse_quote!(
-        #(#attrs)*
-        struct #ty {
-            #fields
-            #bt_field
-        }
-    );
-    let input = Struct::from_syn(&input.derive_input, &data_struct)?;
-
-    let provide_method = input.backtrace_field().map(|backtrace_field| {
+    let mut provide_method = input.backtrace_field().map(|backtrace_field| {
         let request = quote!(request);
         let backtrace = &backtrace_field.member;
         let body = if let Some(source_field) = input.source_field() {
@@ -150,6 +192,21 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
             }
         }
     });
+
+    if input.modifier.has_backtrace {
+        let request = quote!(request);
+        let backtrace = "backtrace";
+        let body = quote! {
+            #request.provide_ref::<::thiserror::__private::Backtrace>(&self.#backtrace);
+        };
+        if let Some(_) = &provide_method {
+            provide_method = Some(quote! {
+                fn provide<'_request>(&'_request self, #request: &mut ::core::error::Request<'_request>) {
+                    #body
+                }
+            });
+        }
+    }
 
     let mut display_implied_bounds = Set::new();
     let display_body = if input.attrs.transparent.is_some() {
@@ -203,7 +260,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
         let backtrace_field = input.distinct_backtrace_field();
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, &source_var, &input.modifier);
         let from_function = quote! {
             fn from(#source_var: #from) -> Self {
                 #ty #body
@@ -232,9 +289,6 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
         error_inferred_bounds.insert(self_token, Trait::Display);
     }
     let error_where_clause = error_inferred_bounds.augment_where_clause(input.generics);
-
-    // let attrs = &input.derive_input.attrs;
-    // let fields = &data_struct.fields;
 
     Ok(quote! {
         #prepend
@@ -483,7 +537,7 @@ fn impl_enum(input: Enum, typical: bool) -> TokenStream {
         let variant = &variant.ident;
         let from = unoptional_type(from_field.ty);
         let source_var = Ident::new("source", span);
-        let body = from_initializer(from_field, backtrace_field, &source_var);
+        let body = from_initializer(from_field, backtrace_field, &source_var, &input.modifier);
         let from_function = quote! {
             fn from(#source_var: #from) -> Self {
                 #ty::#variant #body
@@ -562,6 +616,7 @@ fn from_initializer(
     from_field: &Field,
     backtrace_field: Option<&Field>,
     source_var: &Ident,
+    modifier: &Modifier,
 ) -> TokenStream {
     let from_member = &from_field.member;
     let some_source = if type_is_option(from_field.ty) {
@@ -573,14 +628,20 @@ fn from_initializer(
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
             quote! {
-                #backtrace_member: ::core::option::Option::Some(::thiserror::__private::Backtrace::capture()),
+                #backtrace_member: ::core::option::Option::Some(::thiserror::__private::Backtrace::new()),
             }
         } else {
             quote! {
-                #backtrace_member: ::core::convert::From::from(::thiserror::__private::Backtrace::capture()),
+                #backtrace_member: ::core::convert::From::from(::thiserror::__private::Backtrace::new()),
             }
         }
-    });
+    }).or_else(
+        || if modifier.has_backtrace {Some(
+            quote! {
+                backtrace: ::backtrace::Backtrace::new()
+            }
+        )} else {None}
+    );
     quote!({
         #from_member: #some_source,
         #backtrace

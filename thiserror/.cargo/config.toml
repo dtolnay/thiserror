@@ -1,2 +1,2 @@
 [build]
-rustflags = ["--cfg", "thiserror_nightly_testing"]
+rustflags = ["--cfg", "thiserror_nightly_testing", "-Z", "proc-macro-backtrace"]
