@@ -1,0 +1,3 @@
+[submodule "backtrace-rs"]
+	path = backtrace-rs
+	url = https://github.com/ple1n/backtrace-rs

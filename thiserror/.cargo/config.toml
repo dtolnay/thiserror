@@ -1,0 +1,2 @@
+[build]
+rustflags = ["--cfg", "thiserror_nightly_testing"]
