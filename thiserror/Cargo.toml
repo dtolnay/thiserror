@@ -28,8 +28,7 @@ default = ["std"]
 std = []
 
 [dependencies]
-backtrace = { path = "../backtrace" }
-color-backtrace = "0.5.1"
+backtrace = { path = "../backtrace-rs/" }
 crossterm = "0.27.0"
 thiserror-impl = { version = "=2.0.16", path = "impl" }
 

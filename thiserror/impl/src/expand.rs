@@ -84,7 +84,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
 
     let bt_field = if bt {
         Some(quote! {
-            backtrace: thiserror::pretty_bt::PrettyBacktrace,
+            backtrace: backtrace::Backtrace,
         })
     } else {
         None

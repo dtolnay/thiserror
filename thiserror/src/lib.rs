@@ -289,8 +289,6 @@ mod var;
 
 pub use thiserror_impl::*;
 
-pub mod pretty_bt;
-
 // Not public API.
 #[doc(hidden)]
 pub mod __private {
