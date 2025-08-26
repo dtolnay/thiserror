@@ -317,12 +317,6 @@ pub macro with_backtrace($struct:ident { $($field:ident: $value:expr),* $(,)? })
     }
 }
 
-#[macro_export]
-macro_rules! capture {
-    ($struct:ident { $($field:ident: $value:expr),* $(,)? }) => {
-        $struct {
-            $($field: $value,)*
-            backtrace: ::backtrace::Backtrace::new(),
-        }
-    };
+pub macro capture() {
+    crate::backtrace::Backtrace::new()
 }

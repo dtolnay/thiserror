@@ -73,7 +73,7 @@ pub fn try_expand_to_derive(input: &mut DeriveInput, typical: bool) -> Result<To
                         new_fields.push(f1);
                     }
                     // Add backtrace field
-                    new_fields.push(parse_quote!(crate::backtrace::Backtrace));
+                    new_fields.push(parse_quote!(thiserror::backtrace::Backtrace));
 
                     parse_quote!(
                         #(#attrs)*
@@ -85,7 +85,7 @@ pub fn try_expand_to_derive(input: &mut DeriveInput, typical: bool) -> Result<To
                         #(#attrs)*
                         pub struct #ty {
                             #(#fields_mem,)*
-                            pub backtrace: crate::backtrace::Backtrace
+                            pub backtrace: thiserror::backtrace::Backtrace
                         }
                     )
                 };
@@ -142,10 +142,10 @@ pub fn try_expand_to_derive(input: &mut DeriveInput, typical: bool) -> Result<To
                 }
                 let bt: TokenStream = {
                     if tuple {
-                        parse_quote!(crate::backtrace::Backtrace)
+                        parse_quote!(thiserror::backtrace::Backtrace)
                     } else {
                         parse_quote!(
-                            backtrace: crate::backtrace::Backtrace
+                            backtrace: thiserror::backtrace::Backtrace
                         )
                     }
                 };

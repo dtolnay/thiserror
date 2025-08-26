@@ -44,7 +44,7 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn thiserror(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the input tokens as a struct or enum
-    let mut input:  DeriveInput = parse_macro_input!(item as DeriveInput);
+    let mut input: DeriveInput = parse_macro_input!(item as DeriveInput);
     let expanded = expand::try_expand_to_derive(&mut input, true).unwrap();
 
     TokenStream::from(expanded)

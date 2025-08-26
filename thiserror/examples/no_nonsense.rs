@@ -55,6 +55,9 @@ fn main() -> Result<(), EmptyError> {
 
 fn small_function() -> Result<(), EmptyError> {
     let err = with_backtrace!(EmptyError {});
+    let err = EmptyError {
+        backtrace: capture!(),
+    };
     let res: Result<(), EmptyError> = Result::Err(err);
     res?;
 
@@ -64,12 +67,12 @@ fn small_function() -> Result<(), EmptyError> {
 fn parent() -> Result<(), Errors> {
     f1()?;
     anyhow_function()?;
-    
+
     Ok(())
 }
 
 fn f1() -> Result<(), UnhandledException> {
-    Err(capture!(UnhandledException {
+    Err(with_backtrace!(UnhandledException {
         code: 1,
         more_code: 2
     }))
@@ -78,4 +81,3 @@ fn f1() -> Result<(), UnhandledException> {
 fn anyhow_function() -> Result<(), anyhow::Error> {
     Err(anyhow::anyhow!("This is an anyhow error"))
 }
-
