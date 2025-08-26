@@ -32,6 +32,7 @@ pub struct Enum<'a> {
     pub generics: &'a Generics,
     pub variants: Vec<Variant<'a>>,
     pub modifier: Modifier,
+    pub derive_input: DeriveInput,
 }
 
 pub struct Variant<'a> {
@@ -130,7 +131,8 @@ impl<'a> Enum<'a> {
             ident: node.ident.clone(),
             generics: &node.generics,
             variants,
-            modifier: Default::default()
+            modifier: Default::default(),
+            derive_input: node.clone()
         })
     }
 }

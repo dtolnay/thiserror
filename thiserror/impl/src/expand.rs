@@ -63,7 +63,84 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
 
             prepend.unwrap()
         }
-        Input::Enum(input) => impl_enum(input, typical),
+        Input::Enum(input) => {
+            let mut vars_modified = Vec::new();
+            for variant in input.variants {
+                let h = variant.original;
+                let any_name = h.fields.iter().any(|f| f.ident.is_some());
+                let tuple = !any_name;
+                let fields = h.fields.iter();
+                let mut new_fields = Vec::new();
+                let attrs = &h.attrs;
+                let name = &h.ident;
+                variant.backtrace_field();
+                for f in fields {
+                    let name = &f.ident;
+                    let ty = &f.ty;
+                    let f1: TokenStream = match name {
+                        Some(id) => {
+                            parse_quote!(
+                                #id: #ty
+                            )
+                        }
+                        None => {
+                            parse_quote!(
+                                #ty
+                            )
+                        }
+                    };
+                    new_fields.push(f1);
+                }
+                let bt: TokenStream = {
+                    if tuple {
+                        parse_quote!(::backtrace::Backtrace)
+                    } else {
+                        parse_quote!(
+                            backtrace: ::backtrace::Backtrace
+                        )
+                    }
+                };
+                new_fields.push(bt);
+                let display_derive: Option<TokenStream> = if variant.attrs.display.is_none() {
+                    Some(parse_quote!(
+                        #[error("{:?}", self)]
+                    ))
+                } else {
+                    None
+                };
+                let body: TokenStream = if tuple {
+                    parse_quote!(
+                    (
+                            #(#new_fields, )*
+                    )
+                        )
+                } else {
+                    parse_quote!({
+                            #(#new_fields,)*
+                        }
+                    )
+                };
+                let modified: TokenStream = parse_quote!(
+                    #display_derive
+                    #(#attrs)*
+                    #name #body
+                );
+                vars_modified.push(modified);
+            }
+
+            let attrs = &input.derive_input.attrs;
+            let ty = call_site_ident(&input.ident);
+
+            let attrs = &input.derive_input.attrs;
+
+            parse_quote!(
+                #[derive(Error, Debug)]
+                #(#attrs)*
+                pub enum #ty {
+                    #(#vars_modified,)*
+                }
+            )
+        }
     })
 }
 
@@ -74,8 +151,6 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
     });
 
     let ty = call_site_ident(&input.ident);
-
-    // let ty = Ident::new(&format!("{}Error", input.ident), Span::call_site());
 
     let attrs = &input.derive_input.attrs;
     let data_struct = input.node();
