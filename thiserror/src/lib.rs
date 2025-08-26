@@ -287,6 +287,8 @@ mod display;
 mod provide;
 mod var;
 
+pub use backtrace;
+
 pub use thiserror_impl::*;
 
 // Not public API.
@@ -307,7 +309,6 @@ pub mod __private {
     #[doc(hidden)]
     pub use ::backtrace::Backtrace;
 }
-
 
 pub macro with_backtrace($struct:ident { $($field:ident: $value:expr),* $(,)? }) {
     $struct {

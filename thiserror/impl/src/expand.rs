@@ -5,11 +5,11 @@ use crate::generics::{InferredBounds, ParamsInScope};
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::parse::Parse;
 use std::collections::BTreeSet as Set;
 use std::fmt::Debug;
 use syn::{
-    parse, parse_macro_input, parse_quote, Data, DeriveInput, GenericArgument, PathArguments,
-    Result, Token, Type,
+    Data, DeriveInput, GenericArgument, PathArguments, Result, Token, Type, TypePath, parse, parse_macro_input, parse_quote
 };
 
 pub fn derive(input: &DeriveInput, typical: bool) -> TokenStream {
@@ -66,7 +66,7 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                         new_fields.push(f1);
                     }
                     // Add backtrace field
-                    new_fields.push(parse_quote!(::backtrace::Backtrace));
+                    new_fields.push(parse_quote!(crate::backtrace::Backtrace));
 
                     parse_quote!(
                         #[derive(Error, Debug)]
@@ -80,7 +80,7 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                         #(#attrs)*
                         pub struct #ty {
                             #(#fields_mem,)*
-                            pub backtrace: ::backtrace::Backtrace
+                            pub backtrace: crate::backtrace::Backtrace
                         }
                     )
                 };
@@ -139,10 +139,10 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                 }
                 let bt: TokenStream = {
                     if tuple {
-                        parse_quote!(::backtrace::Backtrace)
+                        parse_quote!(crate::backtrace::Backtrace)
                     } else {
                         parse_quote!(
-                            backtrace: ::backtrace::Backtrace
+                            backtrace: crate::backtrace::Backtrace
                         )
                     }
                 };
