@@ -63,6 +63,8 @@ fn small_function() -> Result<(), EmptyError> {
 
 fn parent() -> Result<(), Errors> {
     f1()?;
+    anyhow_function()?;
+    
     Ok(())
 }
 
@@ -72,3 +74,8 @@ fn f1() -> Result<(), UnhandledException> {
         more_code: 2
     }))
 }
+
+fn anyhow_function() -> Result<(), anyhow::Error> {
+    Err(anyhow::anyhow!("This is an anyhow error"))
+}
+

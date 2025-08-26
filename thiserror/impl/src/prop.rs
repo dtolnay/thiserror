@@ -144,6 +144,9 @@ fn type_is_backtrace(ty: &Type) -> bool {
         _ => return false,
     };
 
-    let last = path.segments.last().unwrap();
+    let last = match path.segments.last() {
+        Some(last) => last,
+        None => return false,
+    };
     last.ident == "Backtrace" && last.arguments.is_empty()
 }

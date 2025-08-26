@@ -42,7 +42,9 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
 
             let attrs = &input.derive_input.attrs;
             let data_struct = input.node();
-            let bt = input.backtrace_field().is_none();
+            let bt = input.backtrace_field().is_none()
+                && input.from_field().is_none()
+                && input.source_field().is_none();
             let fields = &data_struct.fields;
             let fields_mem = fields.iter();
             let scope = ParamsInScope::new(&input.generics);
@@ -50,13 +52,17 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
             // Check if this is a tuple struct (unnamed fields)
             let is_tuple = fields.iter().any(|f| f.ident.is_none());
 
-            let prepend = if bt {
+            if bt {
                 let prepend: TokenStream = if is_tuple {
                     // Handle tuple struct
                     let mut new_fields = Vec::new();
                     for f in fields {
+                        let fa = &f.attrs;
                         let ty = &f.ty;
-                        let f1: TokenStream = parse_quote!(#ty);
+                        let f1: TokenStream = parse_quote!(
+                            #(#fa)*
+                            #ty
+                        );
                         new_fields.push(f1);
                     }
                     // Add backtrace field
@@ -78,12 +84,26 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
                         }
                     )
                 };
-                Some(prepend)
+                prepend
             } else {
-                None
-            };
-
-            prepend.unwrap()
+                if is_tuple {
+                    parse_quote!(
+                        #[derive(Error, Debug)]
+                        #(#attrs)*
+                        pub struct #ty (
+                            #(#fields_mem,)*
+                        );
+                    )
+                } else {
+                    parse_quote!(
+                        #[derive(Error, Debug)]
+                        #(#attrs)*
+                        pub struct #ty {
+                            #(#fields_mem,)*
+                        }
+                    )
+                }
+            }
         }
         Input::Enum(input) => {
             let mut vars_modified = Vec::new();
