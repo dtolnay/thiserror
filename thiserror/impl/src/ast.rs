@@ -23,7 +23,7 @@ pub struct Struct<'a> {
 
 #[derive(Default)]
 pub struct Modifier {
-    pub has_backtrace: bool,
+    pub add_default_backtrace: bool,
 }
 
 pub struct Enum<'a> {

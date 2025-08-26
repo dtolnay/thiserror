@@ -47,15 +47,37 @@ pub fn try_expand_to_derive(input: &DeriveInput, typical: bool) -> Result<TokenS
             let fields_mem = fields.iter();
             let scope = ParamsInScope::new(&input.generics);
 
+            // Check if this is a tuple struct (unnamed fields)
+            let is_tuple = fields.iter().any(|f| f.ident.is_none());
+
             let prepend = if bt {
-                let prepend: TokenStream = parse_quote!(
-                    #[derive(Error, Debug)]
-                    #(#attrs)*
-                    pub struct #ty {
-                        #(#fields_mem,)*
-                        pub backtrace: ::backtrace::Backtrace
+                let prepend: TokenStream = if is_tuple {
+                    // Handle tuple struct
+                    let mut new_fields = Vec::new();
+                    for f in fields {
+                        let ty = &f.ty;
+                        let f1: TokenStream = parse_quote!(#ty);
+                        new_fields.push(f1);
                     }
-                );
+                    // Add backtrace field
+                    new_fields.push(parse_quote!(::backtrace::Backtrace));
+
+                    parse_quote!(
+                        #[derive(Error, Debug)]
+                        #(#attrs)*
+                        pub struct #ty(#(#new_fields),*);
+                    )
+                } else {
+                    // Handle regular struct
+                    parse_quote!(
+                        #[derive(Error, Debug)]
+                        #(#attrs)*
+                        pub struct #ty {
+                            #(#fields_mem,)*
+                            pub backtrace: ::backtrace::Backtrace
+                        }
+                    )
+                };
                 Some(prepend)
             } else {
                 None
@@ -162,7 +184,9 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
 
     let attrs = &input.derive_input.attrs;
     let data_struct = input.node();
-    let bt = input.backtrace_field().is_none();
+    let bt = input.backtrace_field().is_none()
+        && input.from_field().is_none()
+        && input.source_field().is_none();
     let fields = &data_struct.fields;
     let fields_mem = fields.iter();
     let scope = ParamsInScope::new(&input.generics);
@@ -176,7 +200,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
                 backtrace: ::backtrace::Backtrace
             }
         );
-        input.modifier.has_backtrace = true;
+        input.modifier.add_default_backtrace = true;
 
         Some(prepend)
     } else {
@@ -276,7 +300,7 @@ fn impl_struct(mut input: Struct, typical: bool) -> Result<TokenStream> {
         }
     });
 
-    if input.modifier.has_backtrace {
+    if input.modifier.add_default_backtrace {
         let request = quote!(request);
         let backtrace = "backtrace";
         let body = quote! {
@@ -719,7 +743,7 @@ fn from_initializer(
             }
         }
     }).or_else(
-        || if modifier.has_backtrace {Some(
+        || if modifier.add_default_backtrace {Some(
             quote! {
                 backtrace: ::backtrace::Backtrace::new()
             }
