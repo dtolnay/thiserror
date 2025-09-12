@@ -11,6 +11,11 @@ error: argument never used
   |         -- ^^^^^^ argument never used
   |         |
   |         formatting specifier missing
+  |
+help: format specifiers use curly braces, consider adding a format specifier
+  |
+4 | #[error("{}".yellow)]
+  |          ++
 
 error[E0425]: cannot find value `yellow` in this scope
  --> tests/ui/expression-fallback.rs:4:12
