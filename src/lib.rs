@@ -273,6 +273,8 @@
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
 
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "std")]
@@ -299,8 +301,14 @@ pub mod __private {
     #[doc(hidden)]
     pub use crate::var::Var;
     #[doc(hidden)]
+    #[cfg(not(feature = "std"))]
+    pub use alloc::boxed::Box;
+    #[doc(hidden)]
     pub use core::error::Error;
     #[cfg(all(feature = "std", not(thiserror_no_backtrace_type)))]
     #[doc(hidden)]
     pub use std::backtrace::Backtrace;
+    #[doc(hidden)]
+    #[cfg(feature = "std")]
+    pub use std::boxed::Box;
 }

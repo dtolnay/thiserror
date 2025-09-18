@@ -45,12 +45,22 @@ pub enum ErrorEnumOptional {
 
 #[derive(Error, Debug)]
 #[error("...")]
+pub enum ErrorEnumBox {
+    Test {
+        #[from]
+        source: Box<io::Error>,
+    },
+}
+
+#[derive(Error, Debug)]
+#[error("...")]
 pub enum Many {
     Any(#[from] anyhow::Error),
     Io(#[from] io::Error),
 }
 
 fn assert_impl<T: From<io::Error>>() {}
+fn assert_impl_box<T: From<Box<io::Error>>>() {}
 
 #[test]
 fn test_from() {
@@ -60,5 +70,7 @@ fn test_from() {
     assert_impl::<ErrorTupleOptional>();
     assert_impl::<ErrorEnum>();
     assert_impl::<ErrorEnumOptional>();
+    assert_impl::<ErrorEnumBox>();
+    assert_impl_box::<ErrorEnumBox>();
     assert_impl::<Many>();
 }
