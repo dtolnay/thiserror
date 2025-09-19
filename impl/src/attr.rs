@@ -12,6 +12,7 @@ pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
     pub source: Option<Source<'a>>,
     pub backtrace: Option<&'a Attribute>,
+    pub location: Option<&'a Attribute>,
     pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
     pub fmt: Option<Fmt<'a>>,
@@ -71,6 +72,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         display: None,
         source: None,
         backtrace: None,
+        location: None,
         from: None,
         transparent: None,
         fmt: None,
@@ -97,6 +99,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 return Err(Error::new_spanned(attr, "duplicate #[backtrace] attribute"));
             }
             attrs.backtrace = Some(attr);
+        } else if attr.path().is_ident("location") {
+            attr.meta.require_path_only()?;
+            if attrs.location.is_some() {
+                return Err(Error::new_spanned(attr, "duplicate #[location] attribute"));
+            }
+            attrs.location = Some(attr);
         } else if attr.path().is_ident("from") {
             match attr.meta {
                 Meta::Path(_) => {}
