@@ -174,12 +174,23 @@ fn impl_struct(input: Struct) -> TokenStream {
                 #ty #body
             }
         };
-        let from_impl = quote_spanned! {span=>
+        let mut from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #from_function
             }
         };
+        if let Some(from) = type_parameter_of_box(from_field.ty) {
+            let body = from_some_source(from_field, backtrace_field, quote!(::thiserror::__private::Box::new(#source_var)));
+            from_impl.extend(quote_spanned! {span=>
+                #[automatically_derived]
+                impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
+                    fn from(#source_var: #from) -> Self {
+                        #ty #body
+                    }
+                }
+            });
+        } 
         Some(quote! {
             #[allow(
                 deprecated,
@@ -449,12 +460,23 @@ fn impl_enum(input: Enum) -> TokenStream {
                 #ty::#variant #body
             }
         };
-        let from_impl = quote_spanned! {span=>
+        let mut from_impl = quote_spanned! {span=>
             #[automatically_derived]
             impl #impl_generics ::core::convert::From<#from> for #ty #ty_generics #where_clause {
                 #from_function
             }
         };
+        if let Some(boxed) = type_parameter_of_box(from_field.ty) {
+            let body = from_some_source(from_field, backtrace_field, quote!(::thiserror::__private::Box::new(#source_var)));
+            from_impl.extend(quote_spanned! {span=>
+                #[automatically_derived]
+                impl #impl_generics ::core::convert::From<#boxed> for #ty #ty_generics #where_clause {
+                    fn from(#source_var: #boxed) -> Self {
+                        #ty::#variant #body
+                    }
+                }
+            });
+        }
         Some(quote! {
             #[allow(
                 deprecated,
@@ -523,12 +545,20 @@ fn from_initializer(
     backtrace_field: Option<&Field>,
     source_var: &Ident,
 ) -> TokenStream {
-    let from_member = &from_field.member;
     let some_source = if type_is_option(from_field.ty) {
         quote!(::core::option::Option::Some(#source_var))
     } else {
         quote!(#source_var)
     };
+    from_some_source(from_field, backtrace_field, some_source)
+}
+
+fn from_some_source(
+    from_field: &Field,
+    backtrace_field: Option<&Field<'_>>,
+    some_source: TokenStream,
+) -> TokenStream {
+    let from_member = &from_field.member;
     let backtrace = backtrace_field.map(|backtrace_field| {
         let backtrace_member = &backtrace_field.member;
         if type_is_option(backtrace_field.ty) {
@@ -564,6 +594,32 @@ fn type_parameter_of_option(ty: &Type) -> Option<&Type> {
 
     let last = path.segments.last().unwrap();
     if last.ident != "Option" {
+        return None;
+    }
+
+    let bracketed = match &last.arguments {
+        PathArguments::AngleBracketed(bracketed) => bracketed,
+        _ => return None,
+    };
+
+    if bracketed.args.len() != 1 {
+        return None;
+    }
+
+    match &bracketed.args[0] {
+        GenericArgument::Type(arg) => Some(arg),
+        _ => None,
+    }
+}
+
+fn type_parameter_of_box(ty: &Type) -> Option<&Type> {
+    let path = match ty {
+        Type::Path(ty) => &ty.path,
+        _ => return None,
+    };
+
+    let last = path.segments.last().unwrap();
+    if last.ident != "Box" {
         return None;
     }
 
