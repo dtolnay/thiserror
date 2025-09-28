@@ -31,10 +31,24 @@ mod unraw;
 mod valid;
 
 use proc_macro::TokenStream;
+use proc_macro2::{Ident, Span};
+use quote::{ToTokens, TokenStreamExt as _};
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(Error, attributes(backtrace, error, from, source))]
 pub fn derive_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     expand::derive(&input).into()
+}
+
+#[allow(non_camel_case_types)]
+struct private;
+
+impl ToTokens for private {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.append(Ident::new(
+            concat!("__private", env!("CARGO_PKG_VERSION_PATCH")),
+            Span::call_site(),
+        ));
+    }
 }
