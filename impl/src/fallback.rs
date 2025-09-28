@@ -1,4 +1,5 @@
 use crate::expand::call_site_ident;
+use crate::private;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
@@ -14,7 +15,7 @@ pub(crate) fn expand(input: &DeriveInput, error: syn::Error) -> TokenStream {
 
         #[allow(unused_qualifications)]
         #[automatically_derived]
-        impl #impl_generics ::thiserror::__private::Error for #ty #ty_generics #where_clause
+        impl #impl_generics ::thiserror::#private::Error for #ty #ty_generics #where_clause
         where
             // Work around trivial bounds being unstable.
             // https://github.com/rust-lang/rust/issues/48214
