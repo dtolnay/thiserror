@@ -10,6 +10,7 @@ keywords = ["error", "error-handling", "derive"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
 rust-version = "1.61"
+include = ["src/**/*.rs", "Cargo.toml", "build.rs", "build/probe.rs", "tests/test_*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [features]
 default = ["std"]
