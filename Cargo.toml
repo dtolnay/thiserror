@@ -9,7 +9,7 @@ edition = "2021"
 keywords = ["error", "error-handling", "derive"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/thiserror"
-rust-version = "1.65"
+rust-version = "1.68"
 
 [features]
 default = ["std"]
