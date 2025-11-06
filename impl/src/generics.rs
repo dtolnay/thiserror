@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use vector_map::set::VecSet;
 use syn::punctuated::Punctuated;
 use syn::{parse_quote, GenericArgument, Generics, Ident, PathArguments, Token, Type, WhereClause};
+use vector_map::set::VecSet;
 use vector_map::{Entry, VecMap};
 
 pub struct ParamsInScope<'a> {
@@ -65,6 +65,7 @@ impl InferredBounds {
         if let Entry::Vacant(_) = entry {
             self.order.push(ty);
         }
+        // TODO: entry.or_default()
         let (set, tokens) = match entry {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(Default::default()),

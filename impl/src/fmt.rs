@@ -5,13 +5,13 @@ use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned, ToTokens as _};
-use vector_map::set::VecSet;
-use vector_map::VecMap;
 use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Error, ParseStream, Parser, Result};
 use syn::{Expr, Ident, Index, LitStr, Token};
+use vector_map::set::VecSet;
+use vector_map::VecMap;
 
 impl Display<'_> {
     pub fn expand_shorthand(&mut self, fields: &[Field], container: ContainerKind) -> Result<()> {

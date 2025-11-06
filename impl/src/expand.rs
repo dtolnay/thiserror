@@ -6,8 +6,8 @@ use crate::private;
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use vector_map::set::VecSet;
 use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
+use vector_map::set::VecSet;
 
 pub fn derive(input: &DeriveInput) -> TokenStream {
     match try_expand(input) {

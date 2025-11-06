@@ -1,12 +1,12 @@
 use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use vector_map::set::VecSet;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
     LitInt, LitStr, Meta, Result, Token,
 };
+use vector_map::set::VecSet;
 
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
