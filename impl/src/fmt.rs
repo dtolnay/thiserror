@@ -5,7 +5,8 @@ use crate::scan_expr::scan_expr;
 use crate::unraw::{IdentUnraw, MemberUnraw};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned, ToTokens as _};
-use std::collections::{BTreeSet, HashMap};
+use vector_map::set::VecSet;
+use vector_map::VecMap;
 use std::iter;
 use syn::ext::IdentExt;
 use syn::parse::discouraged::Speculative;
@@ -20,7 +21,7 @@ impl Display<'_> {
             first_unnamed,
         } = explicit_named_args.parse2(raw_args).unwrap();
 
-        let mut member_index = HashMap::new();
+        let mut member_index = VecMap::new();
         let mut extra_positional_arguments_allowed = true;
         for (i, field) in fields.iter().enumerate() {
             member_index.insert(&field.member, i);
@@ -33,9 +34,9 @@ impl Display<'_> {
         let mut out = String::new();
         let mut has_bonus_display = false;
         let mut infinite_recursive = false;
-        let mut implied_bounds = BTreeSet::new();
+        let mut implied_bounds = VecSet::new();
         let mut bindings = Vec::new();
-        let mut macro_named_args = BTreeSet::new();
+        let mut macro_named_args = VecSet::new();
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
 
@@ -108,7 +109,7 @@ impl Display<'_> {
                 }
             };
             infinite_recursive |= member == *"self" && bound == Trait::Display;
-            let field = match member_index.get(&member) {
+            let field = match member_index.get(&&member) {
                 Some(&field) => field,
                 None => {
                     out += &member.to_string();
@@ -164,7 +165,7 @@ impl Display<'_> {
 }
 
 struct FmtArguments {
-    named: BTreeSet<IdentUnraw>,
+    named: VecSet<IdentUnraw>,
     first_unnamed: Option<TokenStream>,
 }
 
@@ -184,7 +185,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
     input.parse::<TokenStream>().unwrap();
     Ok(FmtArguments {
-        named: BTreeSet::new(),
+        named: VecSet::new(),
         first_unnamed: None,
     })
 }
@@ -192,7 +193,7 @@ fn explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut syn_full = None;
     let mut args = FmtArguments {
-        named: BTreeSet::new(),
+        named: VecSet::new(),
         first_unnamed: None,
     };
 
@@ -230,7 +231,7 @@ fn try_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
 
 fn fallback_explicit_named_args(input: ParseStream) -> Result<FmtArguments> {
     let mut args = FmtArguments {
-        named: BTreeSet::new(),
+        named: VecSet::new(),
         first_unnamed: None,
     };
 

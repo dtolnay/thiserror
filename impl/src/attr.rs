@@ -1,6 +1,6 @@
 use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use std::collections::BTreeSet as Set;
+use vector_map::set::VecSet;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
@@ -25,7 +25,7 @@ pub struct Display<'a> {
     pub requires_fmt_machinery: bool,
     pub has_bonus_display: bool,
     pub infinite_recursive: bool,
-    pub implied_bounds: Set<(usize, Trait)>,
+    pub implied_bounds: VecSet<(usize, Trait)>,
     pub bindings: Vec<(Ident, TokenStream)>,
 }
 
@@ -179,7 +179,7 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             requires_fmt_machinery,
             has_bonus_display: false,
             infinite_recursive: false,
-            implied_bounds: Set::new(),
+            implied_bounds: VecSet::new(),
             bindings: Vec::new(),
         };
         if attrs.display.is_some() {

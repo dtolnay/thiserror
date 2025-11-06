@@ -1,12 +1,12 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap as Map, BTreeSet as Set};
+use vector_map::set::VecSet;
 use syn::punctuated::Punctuated;
 use syn::{parse_quote, GenericArgument, Generics, Ident, PathArguments, Token, Type, WhereClause};
+use vector_map::{Entry, VecMap};
 
 pub struct ParamsInScope<'a> {
-    names: Set<&'a Ident>,
+    names: VecSet<&'a Ident>,
 }
 
 impl<'a> ParamsInScope<'a> {
@@ -29,7 +29,7 @@ fn crawl(in_scope: &ParamsInScope, ty: &Type, found: &mut bool) {
             crawl(in_scope, &qself.ty, found);
         } else {
             let front = ty.path.segments.first().unwrap();
-            if front.arguments.is_none() && in_scope.names.contains(&front.ident) {
+            if front.arguments.is_none() && in_scope.names.contains(&&front.ident) {
                 *found = true;
             }
         }
@@ -46,14 +46,14 @@ fn crawl(in_scope: &ParamsInScope, ty: &Type, found: &mut bool) {
 }
 
 pub struct InferredBounds {
-    bounds: Map<String, (Set<String>, Punctuated<TokenStream, Token![+]>)>,
+    bounds: VecMap<String, (VecSet<String>, Punctuated<TokenStream, Token![+]>)>,
     order: Vec<TokenStream>,
 }
 
 impl InferredBounds {
     pub fn new() -> Self {
         InferredBounds {
-            bounds: Map::new(),
+            bounds: VecMap::new(),
             order: Vec::new(),
         }
     }
@@ -65,7 +65,10 @@ impl InferredBounds {
         if let Entry::Vacant(_) = entry {
             self.order.push(ty);
         }
-        let (set, tokens) = entry.or_default();
+        let (set, tokens) = match entry {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(Default::default()),
+        };
         if set.insert(bound.to_string()) {
             tokens.push(bound);
         }

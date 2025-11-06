@@ -6,7 +6,7 @@ use crate::private;
 use crate::unraw::MemberUnraw;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use std::collections::BTreeSet as Set;
+use vector_map::set::VecSet;
 use syn::{DeriveInput, GenericArgument, PathArguments, Result, Token, Type};
 
 pub fn derive(input: &DeriveInput) -> TokenStream {
@@ -123,7 +123,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
     });
 
-    let mut display_implied_bounds = Set::new();
+    let mut display_implied_bounds = VecSet::new();
     let display_body = if input.attrs.transparent.is_some() {
         let only_field = &input.fields[0].member;
         display_implied_bounds.insert((0, Trait::Display));
@@ -387,7 +387,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             None
         };
         let arms = input.variants.iter().map(|variant| {
-            let mut display_implied_bounds = Set::new();
+            let mut display_implied_bounds = VecSet::new();
             let display = if let Some(display) = &variant.attrs.display {
                 display_implied_bounds.clone_from(&display.implied_bounds);
                 display.to_token_stream()
