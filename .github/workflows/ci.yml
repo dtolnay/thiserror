@@ -42,7 +42,7 @@ jobs:
       - run: cargo test --manifest-path tests/no-std/Cargo.toml
         if: matrix.rust != '1.76.0'
       - run: cargo test --no-default-features
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: matrix.rust == 'nightly' && always()
         with:
           name: Cargo.lock
