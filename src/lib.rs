@@ -273,6 +273,8 @@
 #[cfg(all(thiserror_nightly_testing, not(error_generic_member_access)))]
 compile_error!("Build script probe failed to compile.");
 
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "std")]
