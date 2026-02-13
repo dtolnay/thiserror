@@ -245,10 +245,22 @@
 //!   // Private and free to change across minor version of the crate.
 //!   #[derive(Error, Debug)]
 //!   enum ErrorRepr {
-//!       # /*
-//!       ...
-//!       # */
+//!       #[error("invalid input")]
+//!       InvalidInput(#[from] InvalidInputError),
 //!   }
+//!   #
+//!   # #[derive(Error, Debug)]
+//!   # #[error("invalid input")]
+//!   # struct InvalidInputError;
+//!   #
+//!   # fn process() -> Result<(), ErrorRepr> {
+//!   #     Err(InvalidInputError.into())
+//!   # }
+//!   #
+//!   # fn example() -> Result<(), PublicError> {
+//!   #     process()?;
+//!   #     Ok(())
+//!   # }
 //!   ```
 //!
 //! - See also the [`anyhow`] library for a convenient single error type to use

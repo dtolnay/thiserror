@@ -197,7 +197,9 @@ pub enum DataStoreError {
   // Private and free to change across minor version of the crate.
   #[derive(Error, Debug)]
   enum ErrorRepr {
-      ...
+      #[error("invalid input")]
+      InvalidInput(#[from] InvalidInputError),
+      // Additional error variants can be added here
   }
   ```
 
