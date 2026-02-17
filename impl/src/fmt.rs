@@ -78,7 +78,7 @@ impl Display<'_> {
                     }
                     let ident = IdentUnraw::new(Ident::new(repr, span));
                     if user_named_args.contains(&ident) {
-                        // Refers to a named argument written by the user, not to field.
+                        // Refers to a named argument written by the user, not to a field.
                         out += repr;
                         continue;
                     }
