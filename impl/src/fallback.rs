@@ -7,6 +7,7 @@ use syn::DeriveInput;
 pub(crate) fn expand(input: &DeriveInput, error: syn::Error) -> TokenStream {
     let ty = call_site_ident(&input.ident);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let krate = crate::attr::crate_path(&input.attrs);
 
     let error = error.to_compile_error();
 
@@ -15,7 +16,7 @@ pub(crate) fn expand(input: &DeriveInput, error: syn::Error) -> TokenStream {
 
         #[allow(unused_qualifications)]
         #[automatically_derived]
-        impl #impl_generics ::thiserror::#private::Error for #ty #ty_generics #where_clause
+        impl #impl_generics #krate::#private::Error for #ty #ty_generics #where_clause
         where
             // Work around trivial bounds being unstable.
             // https://github.com/rust-lang/rust/issues/48214

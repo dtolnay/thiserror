@@ -5,7 +5,7 @@ use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
     braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
-    LitInt, LitStr, Meta, Result, Token,
+    LitInt, LitStr, Meta, Path, Result, Token,
 };
 
 pub struct Attrs<'a> {
@@ -15,6 +15,7 @@ pub struct Attrs<'a> {
     pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
     pub fmt: Option<Fmt<'a>>,
+    pub crate_path: Option<Path>,
 }
 
 #[derive(Clone)]
@@ -74,6 +75,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         from: None,
         transparent: None,
         fmt: None,
+        crate_path: None,
     };
 
     for attr in input {
@@ -115,10 +117,43 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 original: attr,
                 span,
             });
+        } else if attr.path().is_ident("thiserror") {
+            attr.parse_nested_meta(|meta| {
+                if !meta.path.is_ident("crate") {
+                    let path_str = meta.path.to_token_stream().to_string().replace(' ', "");
+                    return Err(
+                        meta.error(format_args!("unknown thiserror attribute `{path_str}`"))
+                    );
+                }
+                let crate_path_lit: LitStr = meta.value()?.parse()?;
+                let path = crate_path_lit
+                    .parse::<Path>()
+                    .map_err(|e| Error::new(crate_path_lit.span(), e))?;
+                if attrs.crate_path.is_some() {
+                    return Err(Error::new_spanned(
+                        attr,
+                        "duplicate #[thiserror(crate)] attribute",
+                    ));
+                }
+                attrs.crate_path = Some(path);
+                Ok(())
+            })?;
         }
     }
 
     Ok(attrs)
+}
+
+/// Extract the thiserror crate path from `#[thiserror(crate = "...")]` on the container,
+/// defaulting to `::thiserror` if the attribute is absent or malformed.
+///
+/// # Returns
+/// The explicit crate path if provided, otherwise `::thiserror`.
+pub fn crate_path(attrs: &[Attribute]) -> syn::Path {
+    get(attrs)
+        .ok()
+        .and_then(|a| a.crate_path)
+        .unwrap_or_else(|| syn::parse_quote!(::thiserror))
 }
 
 fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
