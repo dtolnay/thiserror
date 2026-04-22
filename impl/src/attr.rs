@@ -144,11 +144,6 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
     Ok(attrs)
 }
 
-/// Extract the thiserror crate path from `#[thiserror(crate = "...")]` on the container,
-/// defaulting to `::thiserror` if the attribute is absent or malformed.
-///
-/// # Returns
-/// The explicit crate path if provided, otherwise `::thiserror`.
 pub fn crate_path(attrs: &[Attribute]) -> syn::Path {
     get(attrs)
         .ok()
