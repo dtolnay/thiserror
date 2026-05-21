@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_statements)]
+
 use anyhow::anyhow;
 use std::error::Error as _;
 use std::io;
