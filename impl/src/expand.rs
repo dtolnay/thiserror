@@ -1,5 +1,5 @@
 use crate::ast::{Enum, Field, Input, Struct};
-use crate::attr::Trait;
+use crate::attr::{Display, Trait};
 use crate::fallback;
 use crate::generics::InferredBounds;
 use crate::private;
@@ -133,10 +133,12 @@ fn impl_struct(input: Struct) -> TokenStream {
     } else if let Some(display) = &input.attrs.display {
         display_implied_bounds.clone_from(&display.implied_bounds);
         let use_as_display = use_as_display(display.has_bonus_display);
-        let pat = fields_pat(&input.fields);
+        // Extract fields used in format string for selective binding
+        let used = used_fields(display);
+        let pat = fields_pat(&input.fields, &used);
         Some(quote! {
             #use_as_display
-            #[allow(unused_variables, deprecated)]
+            #[allow(deprecated)]
             let Self #pat = self;
             #display
         })
@@ -395,23 +397,34 @@ fn impl_enum(input: Enum) -> TokenStream {
         };
         let arms = input.variants.iter().map(|variant| {
             let mut display_implied_bounds = Set::new();
-            let display = if let Some(display) = &variant.attrs.display {
+            let (display, used) = if let Some(display) = &variant.attrs.display {
                 display_implied_bounds.clone_from(&display.implied_bounds);
-                display.to_token_stream()
+                let used = used_fields(display);
+                (display.to_token_stream(), used)
             } else if let Some(fmt) = &variant.attrs.fmt {
+                // For #[error(fmt = path)], all fields are passed to the formatter function,
+                // so all fields are considered "used"
                 let fmt_path = &fmt.path;
                 let vars = variant.fields.iter().map(|field| match &field.member {
                     MemberUnraw::Named(ident) => ident.to_local(),
                     MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 });
-                quote!(#fmt_path(#(#vars,)* __formatter))
+                // Collect binding names in the format used by fields_pat
+                let used: Set<String> = variant.fields.iter().map(|f| match &f.member {
+                    MemberUnraw::Named(_) => f.member.to_string(),
+                    MemberUnraw::Unnamed(index) => format_ident!("_{}", index).to_string(),
+                }).collect();
+                (quote!(#fmt_path(#(#vars,)* __formatter)), used)
             } else {
+                // For transparent display (only first field is used)
                 let only_field = match &variant.fields[0].member {
                     MemberUnraw::Named(ident) => ident.to_local(),
                     MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
                 };
                 display_implied_bounds.insert((0, Trait::Display));
-                quote!(::core::fmt::Display::fmt(#only_field, __formatter))
+                let mut used = Set::new();
+                used.insert(only_field.to_string());
+                (quote!(::core::fmt::Display::fmt(#only_field, __formatter)), used)
             };
             for (field, bound) in display_implied_bounds {
                 let field = &variant.fields[field];
@@ -420,7 +433,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
             }
             let ident = &variant.ident;
-            let pat = fields_pat(&variant.fields);
+            let pat = fields_pat(&variant.fields, &used);
             quote! {
                 #ty::#ident #pat => #display
             }
@@ -433,7 +446,7 @@ fn impl_enum(input: Enum) -> TokenStream {
             impl #impl_generics ::core::fmt::Display for #ty #ty_generics #display_where_clause {
                 fn fmt(&self, __formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                     #use_as_display
-                    #[allow(unused_variables, deprecated, clippy::used_underscore_binding)]
+                    #[allow(deprecated, clippy::used_underscore_binding)]
                     match #void_deref self {
                         #(#arms,)*
                     }
@@ -508,13 +521,53 @@ pub(crate) fn call_site_ident(ident: &Ident) -> Ident {
     ident
 }
 
-fn fields_pat(fields: &[Field]) -> TokenStream {
+/// Extracts the set of field binding names used in Display.
+/// For named fields: returns the local binding name (e.g., "host" or "r#fn" for raw identifiers)
+/// For unnamed fields: returns the binding name (e.g., "_0", "_1")
+/// This is needed for selective variable binding to avoid unused_variables warnings
+/// on fields that are not referenced in the #[error(...)] format string.
+fn used_fields(display: &Display) -> Set<String> {
+    display.used_field_names.clone()
+}
+
+/// Generates the pattern for matching fields in a struct or enum variant.
+/// For fields that are not used in the Display format string, we generate
+/// `field: _` to avoid triggering unused_variables warnings.
+/// This implements selective variable binding as per issue #446.
+fn fields_pat(fields: &[Field], used_fields: &Set<String>) -> TokenStream {
     let mut members = fields.iter().map(|field| &field.member).peekable();
     match members.peek() {
-        Some(MemberUnraw::Named(_)) => quote!({ #(#members),* }),
+        Some(MemberUnraw::Named(_)) => {
+            let patterns = fields.iter().map(|field| {
+                let member = &field.member;
+                // Get the local binding name (same as ToTokens uses)
+                let binding_name = match member {
+                    MemberUnraw::Named(ident) => ident.to_local().to_string(),
+                    MemberUnraw::Unnamed(_) => unreachable!(),
+                };
+                if used_fields.contains(&binding_name) {
+                    // Field is used in format string - bind normally
+                    quote! { #member }
+                } else {
+                    // Field is NOT used in format string - bind to _ to avoid warning
+                    quote! { #member: _ }
+                }
+            });
+            quote!({ #(#patterns),* })
+        }
         Some(MemberUnraw::Unnamed(_)) => {
-            let vars = members.map(|member| match member {
-                MemberUnraw::Unnamed(index) => format_ident!("_{}", index),
+            let vars = fields.iter().map(|field| match &field.member {
+                MemberUnraw::Unnamed(index) => {
+                    // For unnamed fields, the binding name is "_0", "_1", etc.
+                    let var_name = format_ident!("_{}", index);
+                    if used_fields.contains(&var_name.to_string()) {
+                        // Field is used in format string - bind normally
+                        quote! { #var_name }
+                    } else {
+                        // Field is NOT used in format string - use _ to avoid warning
+                        quote! { _ }
+                    }
+                }
                 MemberUnraw::Named(_) => unreachable!(),
             });
             quote!((#(#vars),*))
