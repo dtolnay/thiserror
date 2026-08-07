@@ -245,10 +245,20 @@
 //!   // Private and free to change across minor version of the crate.
 //!   #[derive(Error, Debug)]
 //!   enum ErrorRepr {
-//!       # /*
-//!       ...
-//!       # */
+//!       #[error("foo failed")]
+//!       Foo(#[from] FooError),
 //!   }
+//!
+//!   #[derive(Error, Debug)]
+//!   #[error("foo failed")]
+//!   pub struct FooError;
+//!
+//!   // `?` converts one step at a time: FooError -> ErrorRepr -> PublicError.
+//!   fn example() -> Result<(), PublicError> {
+//!       Err(ErrorRepr::from(FooError))?;
+//!       Ok(())
+//!   }
+//!   # let _ = example;
 //!   ```
 //!
 //! - See also the [`anyhow`] library for a convenient single error type to use
