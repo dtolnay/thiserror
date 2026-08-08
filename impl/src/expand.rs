@@ -171,6 +171,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         let from_function = quote! {
+            #[allow(clippy::redundant_field_names)]
             fn from(#source_var: #from) -> Self {
                 #ty #body
             }
@@ -453,6 +454,7 @@ fn impl_enum(input: Enum) -> TokenStream {
         let source_var = Ident::new("source", span);
         let body = from_initializer(from_field, backtrace_field, &source_var);
         let from_function = quote! {
+            #[allow(clippy::redundant_field_names)]
             fn from(#source_var: #from) -> Self {
                 #ty::#variant #body
             }
