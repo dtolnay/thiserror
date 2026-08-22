@@ -12,9 +12,7 @@ error[E0599]: the method `as_dyn_error` exists for reference `&String`, but its 
   = note: the following trait bounds were not satisfied:
           `String: std::error::Error`
           which is required by `String: thiserror::__private20::AsDynError<'_>`
-          `&String: std::error::Error`
+          `String: std::error::Error`
           which is required by `&String: thiserror::__private20::AsDynError<'_>`
           `str: Sized`
-          which is required by `str: thiserror::__private20::AsDynError<'_>`
-          `str: std::error::Error`
           which is required by `str: thiserror::__private20::AsDynError<'_>`
