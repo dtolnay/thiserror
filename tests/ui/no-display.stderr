@@ -2,26 +2,19 @@ error[E0599]: the method `as_display` exists for reference `&NoDisplay`, but its
  --> tests/ui/no-display.rs:7:9
   |
 4 | struct NoDisplay;
-  | ---------------- doesn't satisfy `NoDisplay: std::fmt::Display` or `NoDisplay: thiserror::display::Sealed`
+  | ---------------- doesn't satisfy `NoDisplay: std::fmt::Display`
 ...
 7 | #[error("thread: {thread}")]
   |         ^^^^^^^^^^^^^^^^^^ method cannot be called on `&NoDisplay` due to unsatisfied trait bounds
   |
   = note: the following trait bounds were not satisfied:
-          `NoDisplay: thiserror::display::Sealed`
           `NoDisplay: std::fmt::Display`
           which is required by `&NoDisplay: thiserror::__private20::AsDisplay<'_>`
-          `NoDisplay: std::fmt::Display`
-note: the traits `std::fmt::Display` and `thiserror::display::Sealed` must be implemented
+note: the trait `std::fmt::Display` must be implemented
  --> $RUST/core/src/fmt/mod.rs
   |
   | pub trait Display: PointeeSized {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
- ::: src/display.rs
-  |
-  | pub trait Sealed {}
-  | ^^^^^^^^^^^^^^^^
   = help: items from traits can only be used if the trait is implemented and in scope
   = note: the following trait defines an item `as_display`, perhaps you need to implement it:
           candidate #1: `thiserror::__private20::AsDisplay`
