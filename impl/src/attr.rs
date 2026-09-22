@@ -4,8 +4,8 @@ use std::collections::BTreeSet as Set;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{End, ParseStream};
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
-    LitInt, LitStr, Meta, Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Error, Expr, ExprPath, Ident, Index,
+    LitFloat, LitInt, LitStr, Meta, Result, Token,
 };
 
 pub struct Attrs<'a> {
@@ -205,18 +205,22 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
 
         if begin_expr && input.peek(Token![.]) {
             if input.peek2(Ident) {
-                input.parse::<Token![.]>()?;
-                begin_expr = false;
-                continue;
+                if !is_expr_prefix(&tokens) {
+                    input.parse::<Token![.]>()?;
+                    begin_expr = false;
+                    continue;
+                }
             } else if input.peek2(LitInt) {
-                input.parse::<Token![.]>()?;
-                let int: Index = input.parse()?;
-                tokens.push({
-                    let ident = format_ident!("_{}", int.index, span = int.span);
-                    TokenTree::Ident(ident)
-                });
-                begin_expr = false;
-                continue;
+                if !is_expr_prefix(&tokens) {
+                    input.parse::<Token![.]>()?;
+                    let int: Index = input.parse()?;
+                    tokens.push({
+                        let ident = format_ident!("_{}", int.index, span = int.span);
+                        TokenTree::Ident(ident)
+                    });
+                    begin_expr = false;
+                    continue;
+                }
             } else if input.peek2(LitFloat) {
                 let ahead = input.fork();
                 ahead.parse::<Token![.]>()?;
@@ -297,6 +301,22 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
         tokens.push(token);
     }
     Ok(TokenStream::from_iter(tokens))
+}
+
+fn is_expr_prefix(tokens: &[TokenTree]) -> bool {
+    let mut start = 0;
+    loop {
+        if syn::parse2::<Expr>(TokenStream::from_iter(tokens[start..].iter().cloned())).is_ok() {
+            return true;
+        }
+        let Some(offset) = tokens[start..]
+            .iter()
+            .position(|token| matches!(token, TokenTree::Punct(punct) if punct.as_char() == ','))
+        else {
+            return false;
+        };
+        start += offset + 1;
+    }
 }
 
 impl ToTokens for Display<'_> {
