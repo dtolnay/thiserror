@@ -1,0 +1,17 @@
+error: cannot find attribute `error` in this scope
+  --> tests/ui/unused_variables.rs:21:7
+   |
+21 |     #[error("First: {0}")]
+   |       ^^^^^
+
+error: cannot find attribute `error` in this scope
+  --> tests/ui/unused_variables.rs:13:3
+   |
+13 | #[error("Failed to connect to {host}")]
+   |   ^^^^^
+
+error: cannot find attribute `error` in this scope
+ --> tests/ui/unused_variables.rs:4:7
+  |
+4 |     #[error("Connection timeout to {host}")]
+  |       ^^^^^
