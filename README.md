@@ -201,6 +201,19 @@ pub enum DataStoreError {
   }
   ```
 
+  Note that `#[from]` on the outer opaque type only supplies `From<ErrorRepr>`.
+  The `?` operator performs a single conversion step, so code returning
+  `PublicError` that uses `?` on one of the underlying error types directly
+  needs its own forwarding implementation on `PublicError`:
+
+  ```rust
+  impl From<Foo> for PublicError {
+      fn from(err: Foo) -> Self {
+          Self(ErrorRepr::from(err))
+      }
+  }
+  ```
+
 - See also the [`anyhow`] library for a convenient single error type to use in
   application code.
 
