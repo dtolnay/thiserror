@@ -20,5 +20,7 @@ help: format specifiers use curly braces, consider adding a format specifier
 error[E0425]: cannot find value `yellow` in this scope
  --> tests/ui/expression-fallback.rs:4:12
   |
+3 | #[derive(Error, Debug)]
+  |          ----- in this derive macro
 4 | #[error("".yellow)]
   |            ^^^^^^ not found in this scope
