@@ -36,6 +36,8 @@ impl Display<'_> {
         let mut implied_bounds = BTreeSet::new();
         let mut bindings = Vec::new();
         let mut macro_named_args = BTreeSet::new();
+        // Track which field names are used in the format string for selective binding
+        let mut used_field_names = BTreeSet::new();
 
         self.requires_fmt_machinery = self.requires_fmt_machinery || fmt.contains('}');
 
@@ -143,6 +145,8 @@ impl Display<'_> {
                 MemberUnraw::Named(ident) => ident.to_local(),
             };
             binding_value.set_span(span.resolved_at(fields[field].member.span()));
+            // Track the original binding name for selective variable binding
+            used_field_names.insert(binding_value.to_string());
             let wrapped_binding_value = if bonus_display {
                 quote_spanned!(span=> #binding_value.as_display())
             } else if bound == Trait::Pointer {
@@ -159,6 +163,12 @@ impl Display<'_> {
         self.infinite_recursive = infinite_recursive;
         self.implied_bounds = implied_bounds;
         self.bindings = bindings;
+        self.used_field_names = used_field_names;
+
+        // Also scan args for field references like .field or .0
+        // These are used directly in expressions and need to be bound in the pattern
+        self.used_field_names.extend(scan_field_refs(&self.args, fields));
+
         Ok(())
     }
 }
@@ -320,4 +330,43 @@ fn between<'a>(begin: ParseStream<'a>, end: ParseStream<'a>) -> TokenStream {
     }
 
     tokens
+}
+
+/// Scans a TokenStream for field binding references that were already transformed.
+/// The `parse_token_expr` function in `attr.rs` transforms `.field` to `field` and `.0` to `_0`.
+/// So we look for these already-transformed identifiers.
+/// Returns the set of binding names that need to be available in the pattern.
+fn scan_field_refs(tokens: &TokenStream, fields: &[Field]) -> BTreeSet<String> {
+    let mut used = BTreeSet::new();
+    let mut tokens = tokens.clone().into_iter().peekable();
+
+    // Build sets of valid binding names for validation
+    // For named fields: binding name is the local binding name (via to_local())
+    // For unnamed fields: binding name is "_0", "_1", etc.
+    let valid_binding_names: BTreeSet<String> = fields
+        .iter()
+        .map(|f| match &f.member {
+            MemberUnraw::Named(ident) => ident.to_local().to_string(),
+            MemberUnraw::Unnamed(index) => format_ident!("_{}", index).to_string(),
+        })
+        .collect();
+
+    while let Some(token) = tokens.next() {
+        // Look for Ident tokens that match field binding names
+        if let TokenTree::Ident(ident) = &token {
+            let name = ident.to_string();
+            // Check if this is a field binding name
+            if valid_binding_names.contains(&name) {
+                used.insert(name);
+            }
+        }
+
+        // Recursively scan inside groups (parentheses, brackets, braces)
+        if let TokenTree::Group(group) = &token {
+            let inner_used = scan_field_refs(&group.stream(), fields);
+            used.extend(inner_used);
+        }
+    }
+
+    used
 }

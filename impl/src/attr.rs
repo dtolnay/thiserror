@@ -27,6 +27,11 @@ pub struct Display<'a> {
     pub infinite_recursive: bool,
     pub implied_bounds: Set<(usize, Trait)>,
     pub bindings: Vec<(Ident, TokenStream)>,
+    /// Names of the fields used in the format string.
+    /// For named fields: the field name (e.g., "host")
+    /// For unnamed fields: the binding name (e.g., "_0", "_1")
+    /// Used for selective variable binding to avoid unused_variables warnings.
+    pub used_field_names: Set<String>,
 }
 
 #[derive(Copy, Clone)]
@@ -181,6 +186,7 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             infinite_recursive: false,
             implied_bounds: Set::new(),
             bindings: Vec::new(),
+            used_field_names: Set::new(),
         };
         if attrs.display.is_some() {
             return Err(Error::new_spanned(
