@@ -1,4 +1,7 @@
-#![allow(clippy::mixed_attributes_style)]
+#![allow(
+    clippy::deprecated_attributes_without_since,
+    clippy::mixed_attributes_style
+)]
 
 use thiserror::Error;
 
