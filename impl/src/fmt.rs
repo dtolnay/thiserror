@@ -53,6 +53,14 @@ impl Display<'_> {
                 None => return Ok(()),
             };
             let member = match next {
+                '}' => {
+                    // `{}` displays extra argument 0. `#[error("{}", self)]`
+                    // recurses through Display the same way `{self}` does.
+                    if first_unnamed.as_ref().is_some_and(extra_arg_is_self) {
+                        infinite_recursive = true;
+                    }
+                    continue;
+                }
                 '0'..='9' => {
                     let int = take_int(&mut read);
                     if !extra_positional_arguments_allowed {
@@ -108,6 +116,9 @@ impl Display<'_> {
                 }
             };
             infinite_recursive |= member == *"self" && bound == Trait::Display;
+            infinite_recursive |= bound == Trait::Display
+                && matches!(&member, MemberUnraw::Unnamed(index) if index.index == 0)
+                && first_unnamed.as_ref().is_some_and(extra_arg_is_self);
             let field = match member_index.get(&member) {
                 Some(&field) => field,
                 None => {
@@ -267,6 +278,14 @@ fn is_syn_full() -> bool {
         Ok(Expr::Verbatim(_)) | Err(_) => false,
         Ok(Expr::Block(_)) => true,
         Ok(_) => unreachable!(),
+    }
+}
+
+fn extra_arg_is_self(tokens: &TokenStream) -> bool {
+    let mut iter = tokens.clone().into_iter();
+    match (iter.next(), iter.next()) {
+        (Some(TokenTree::Ident(ident)), None) => ident == "self",
+        _ => false,
     }
 }
 
