@@ -194,7 +194,7 @@ pub enum DataStoreError {
       // Accessors for anything we do want to expose publicly.
   }
 
-  // Private and free to change across minor version of the crate.
+  // Private and free to change across minor versions of the crate.
   #[derive(Error, Debug)]
   enum ErrorRepr {
       ...
