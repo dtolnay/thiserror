@@ -1,4 +1,4 @@
-error[E0599]: the method `as_dyn_error` exists for struct `String`, but its trait bounds were not satisfied
+error[E0599]: the method `__thiserror_as_dyn_error` exists for struct `String`, but its trait bounds were not satisfied
  --> tests/ui/transparent-struct-unnamed-field-not-error.rs:4:9
   |
 4 | #[error(transparent)]

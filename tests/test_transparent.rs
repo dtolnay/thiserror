@@ -127,3 +127,104 @@ fn test_non_static() {
     assert_eq!("unexpected token: \"error\"", error.to_string());
     assert!(error.source().is_none());
 }
+
+#[test]
+fn test_inherent_as_dyn_error_does_not_shadow_conversion() {
+    #[derive(Debug)]
+    struct Inner;
+
+    impl std::fmt::Display for Inner {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("inner")
+        }
+    }
+
+    #[derive(Debug)]
+    struct InnerSource;
+
+    impl std::fmt::Display for InnerSource {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("inner-source")
+        }
+    }
+
+    impl std::error::Error for InnerSource {}
+
+    impl std::error::Error for Inner {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            static SOURCE: InnerSource = InnerSource;
+            Some(&SOURCE)
+        }
+    }
+
+    #[derive(Debug)]
+    struct Other;
+
+    impl std::fmt::Display for Other {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("other")
+        }
+    }
+
+    impl std::error::Error for Other {}
+
+    impl Inner {
+        // An inherent method with the same name as thiserror's hidden conversion
+        // helper used to shadow it through method-call resolution.
+        #[allow(dead_code)]
+        fn as_dyn_error(&self) -> &(dyn std::error::Error + 'static) {
+            static OTHER: Other = Other;
+            &OTHER
+        }
+    }
+
+    #[derive(Error, Debug)]
+    #[error(transparent)]
+    struct TransparentStruct(Inner);
+
+    #[derive(Error, Debug)]
+    enum TransparentEnum {
+        #[error(transparent)]
+        Inner(Inner),
+    }
+
+    #[derive(Error, Debug)]
+    #[error("struct source")]
+    struct SourceStruct {
+        #[source]
+        inner: Inner,
+    }
+
+    #[derive(Error, Debug)]
+    enum SourceEnum {
+        #[error("enum source")]
+        Variant {
+            #[source]
+            inner: Inner,
+        },
+    }
+
+    // For a transparent error, `source()` is forwarded to the field's own `source()`.
+    assert_eq!(
+        "inner-source",
+        TransparentStruct(Inner).source().unwrap().to_string()
+    );
+    assert_eq!(
+        "inner-source",
+        TransparentEnum::Inner(Inner)
+            .source()
+            .unwrap()
+            .to_string()
+    );
+    assert_eq!(
+        "inner",
+        SourceStruct { inner: Inner }.source().unwrap().to_string()
+    );
+    assert_eq!(
+        "inner",
+        SourceEnum::Variant { inner: Inner }
+            .source()
+            .unwrap()
+            .to_string()
+    );
+}

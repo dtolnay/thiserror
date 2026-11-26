@@ -40,7 +40,7 @@ fn impl_struct(input: Struct) -> TokenStream {
         }
         let member = &only_field.member;
         Some(quote_spanned! {transparent_attr.span=>
-            ::thiserror::#private::Error::source(self.#member.as_dyn_error())
+            ::thiserror::#private::Error::source(self.#member.__thiserror_as_dyn_error())
         })
     } else if let Some(source_field) = input.source_field() {
         let source = &source_field.member;
@@ -54,7 +54,7 @@ fn impl_struct(input: Struct) -> TokenStream {
             None
         };
         let dyn_error = quote_spanned! {source_field.source_span()=>
-            self.#source #asref.as_dyn_error()
+            self.#source #asref.__thiserror_as_dyn_error()
         };
         Some(quote! {
             ::core::option::Option::Some(#dyn_error)
@@ -234,7 +234,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 }
                 let member = &only_field.member;
                 let source = quote_spanned! {transparent_attr.span=>
-                    ::thiserror::#private::Error::source(transparent.as_dyn_error())
+                    ::thiserror::#private::Error::source(transparent.__thiserror_as_dyn_error())
                 };
                 quote! {
                     #ty::#ident {#member: transparent} => #source,
@@ -252,7 +252,7 @@ fn impl_enum(input: Enum) -> TokenStream {
                 };
                 let varsource = quote!(source);
                 let dyn_error = quote_spanned! {source_field.source_span()=>
-                    #varsource #asref.as_dyn_error()
+                    #varsource #asref.__thiserror_as_dyn_error()
                 };
                 quote! {
                     #ty::#ident {#source: #varsource, ..} => ::core::option::Option::Some(#dyn_error),
