@@ -1,4 +1,4 @@
-error[E0599]: the method `as_dyn_error` exists for reference `&NotError`, but its trait bounds were not satisfied
+error[E0599]: the method `__thiserror_as_dyn_error` exists for reference `&NotError`, but its trait bounds were not satisfied
  --> tests/ui/source-enum-not-error.rs:9:14
   |
 4 | pub struct NotError;
@@ -18,5 +18,5 @@ note: the trait `std::error::Error` must be implemented
   | pub trait Error: Debug + Display {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = help: items from traits can only be used if the trait is implemented and in scope
-  = note: the following trait defines an item `as_dyn_error`, perhaps you need to implement it:
+  = note: the following trait defines an item `__thiserror_as_dyn_error`, perhaps you need to implement it:
           candidate #1: `thiserror::__private21::AsDynError`

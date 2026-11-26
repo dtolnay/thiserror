@@ -1,8 +1,8 @@
-error[E0599]: the method `as_dyn_error` exists for struct `NotError`, but its trait bounds were not satisfied
+error[E0599]: the method `__thiserror_as_dyn_error` exists for struct `NotError`, but its trait bounds were not satisfied
  --> tests/ui/source-struct-not-error.rs:9:5
   |
 4 | struct NotError;
-  | --------------- method `as_dyn_error` not found for this struct because it doesn't satisfy `NotError: std::error::Error` or `NotError: thiserror::__private21::AsDynError<'_>`
+  | --------------- method `__thiserror_as_dyn_error` not found for this struct because it doesn't satisfy `NotError: std::error::Error` or `NotError: thiserror::__private21::AsDynError<'_>`
 ...
 9 |     source: NotError,
   |     ^^^^^^ method cannot be called on `NotError` due to unsatisfied trait bounds
@@ -16,5 +16,5 @@ note: the trait `std::error::Error` must be implemented
   | pub trait Error: Debug + Display {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = help: items from traits can only be used if the trait is implemented and in scope
-  = note: the following trait defines an item `as_dyn_error`, perhaps you need to implement it:
+  = note: the following trait defines an item `__thiserror_as_dyn_error`, perhaps you need to implement it:
           candidate #1: `thiserror::__private21::AsDynError`
