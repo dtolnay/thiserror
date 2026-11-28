@@ -19,7 +19,7 @@
 //!
 //! #[derive(Error, Debug)]
 //! pub enum DataStoreError {
-//!     #[error("data store disconnected")]
+//!     #[error("data store disconnected: {0}")]
 //!     Disconnect(#[from] io::Error),
 //!     #[error("the data for key `{0}` is not available")]
 //!     Redaction(String),
@@ -103,6 +103,10 @@
 //!   source error (and possibly a backtrace &mdash; see below). Usually
 //!   `#[from]` fields are unnamed, but `#[from]` is allowed on a named field
 //!   too.
+//!
+//!   To include the source's [`Display`] output in your error message, use
+//!   `{0}` (or `{var}` for a named field) in the `#[error("...")]` format
+//!   string, as in the `Disconnect` example above.
 //!
 //!   ```rust
 //!   # use core::fmt::{self, Display};
